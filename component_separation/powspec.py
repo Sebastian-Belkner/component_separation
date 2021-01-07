@@ -40,7 +40,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-import plancklens
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
 from MSC import pospace as ps
