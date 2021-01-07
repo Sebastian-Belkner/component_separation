@@ -1,0 +1,7 @@
+numpy
+matplotlib
+pandas
+healpy
+astropy
+MSC
+logdecorator
