@@ -18,9 +18,7 @@ Component Separation - summary
 Project to calculate the weightings of the latest (NPIPE) Placnk frequency channel data using SMICA
 
 
-
-
 Documentation
 ==================
 
-May be found here: 
+May be found at readthedocs: https://component-separation.readthedocs.io/en/master/
