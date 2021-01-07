@@ -4,8 +4,8 @@
    :alt:
 
 
-.. image:: https://img.shields.io/badge/Python-3.7-green.svg
-   :target: https://img.shields.io/badge/Python-3.7-green.svg
+.. image:: https://img.shields.io/badge/Python-3.8.6-green.svg
+   :target: https://img.shields.io/badge/Python-3.8.6-green.svg
    :alt:
 
 
