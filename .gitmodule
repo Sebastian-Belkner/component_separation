@@ -1,0 +1,3 @@
+[submodule "MSC"]
+    path = MSC
+    url = https://github.com/carronj/MSC.git
