@@ -12,6 +12,10 @@
    :target: https://component-separation.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
+.. image:: https://github.com/Sebastian-Belkner/component_separation/workflows/Python%20application/badge.svg
+   :target: https://github.com/Sebastian-Belkner/component_separation/workflows/Python%20application/badge.svg
+   :alt: Test status
+
 Component Separation - summary
 ====================================
 
