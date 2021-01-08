@@ -1,5 +1,6 @@
 # %%
 import unittest
+import pytest
 import component_separation.powspec as pows
 import logging
 from cs_util import Planckf, Plancks
