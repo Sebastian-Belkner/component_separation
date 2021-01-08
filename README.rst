@@ -3,7 +3,6 @@
    :target: https://img.shields.io/badge/Status-in%20development-red.svg
    :alt:
 
-
 .. image:: https://img.shields.io/badge/Python-3.8.6-green.svg
    :target: https://img.shields.io/badge/Python-3.8.6-green.svg
    :alt:
@@ -12,8 +11,8 @@
    :target: https://component-separation.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
-.. image:: https://github.com/Sebastian-Belkner/component_separation/workflows/Python%20application/badge.svg
-   :target: https://github.com/Sebastian-Belkner/component_separation/workflows/Python%20application/badge.svg
+.. image:: https://github.com/Sebastian-Belkner/component_separation/workflows/Test/badge.svg
+   :target: https://github.com/Sebastian-Belkner/component_separation/workflows/Test/badge.svg
    :alt: Test status
 
 Component Separation - summary
