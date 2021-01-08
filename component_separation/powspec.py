@@ -332,7 +332,8 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
     cov_inv_l = {
         spec: {
             l: np.linalg.inv(cov[spec][:,:,l])
-                for l in range(lmax) if is_invertible(cov[spec][:,:,l])
+                for l in range(lmax)
+                    if is_invertible(cov[spec][:,:,l])
             }for spec in PLANCKSPECTRUM 
                 if spec not in specfilter
         }
