@@ -1,3 +1,5 @@
+#provides some constants and file formatters
+
 from enum import Enum
 
 class Planckf(Enum):
