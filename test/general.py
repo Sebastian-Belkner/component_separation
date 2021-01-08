@@ -11,7 +11,8 @@ freqfilter = [
     Planckf.LFI_2.value,
     Planckf.HFI_1.value,
     Planckf.HFI_5.value,
-    Planckf.HFI_6.value]
+    Planckf.HFI_6.value
+    ]
     
 specfilter = ["TE", "TB", "ET", "BT"]
 
