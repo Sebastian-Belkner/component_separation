@@ -4,3 +4,4 @@ pandas
 healpy
 astropy
 logdecorator
+setuptools
