@@ -18,6 +18,8 @@ jobs:
     - name: Checkout reposistory
 #      uses: actions/checkout@v1
       uses: actions/checkout@v2
+    - name: Install Plancklens
+      run: pip3 install git+https://github.com/carronj/plancklens.git
     # - name: Checkout submodule
     #   run: |
     #     git submodule init
