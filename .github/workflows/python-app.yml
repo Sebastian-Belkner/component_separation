@@ -26,7 +26,7 @@ jobs:
       #   path: MSC/
       #   ref: 'master'
       run: |
-        git config --file=.gitmodules submodule.lib/MSC.url https://${{ secrets.GITHUB_TOKEN }}:${{ secrets.GITHUB_TOKEN }}@github.com/carronj/MSC.git
+        git config --file=.gitmodules MSC.url https://${{ secrets.GITHUB_TOKEN }}:${{ secrets.GITHUB_TOKEN }}@github.com/carronj/MSC.git
         git submodule sync
         git submodule update --init --recursive
     - name: Set up Python 3.8.6
