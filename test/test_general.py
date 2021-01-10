@@ -2,7 +2,7 @@
 import unittest
 import component_separation.powspec as pows
 import logging
-from from component_separation.cs_util import Planckf, Plancks
+from component_separation.cs_util import Planckf, Plancks
 
 logging.basicConfig(format='   %(levelname)s:      %(message)s', level=logging.DEBUG)
 
