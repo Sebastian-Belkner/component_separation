@@ -44,7 +44,7 @@ from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
 import component_separation.pospace as ps
 
-from cs_util import Planckf
+from component_separation.cs_util import Planckf
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = ["TT", "EE", "BB", "TE", "TB", "EB", "ET", "BT", "BE"]
