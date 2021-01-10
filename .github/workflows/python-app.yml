@@ -17,9 +17,9 @@ jobs:
     steps:
     - name: Checkout reposistory
       uses: actions/checkout@v2
-    - name: Checkout submodules using a PAT
-      run: |
-      git config --file .gitmodules --get-regexp url | while read url; do git config --file=.gitmodules $(echo "$url" | sed -E "s/git@github.com:|https:\/\/github.com\//https:\/\/${{ secrets.CI_PAT }}:${{ secrets.CI_PAT }}@github.com\//") done
+    - name: Checkout submodule
+    run: |
+      git config --file=.gitmodules submodule.lib/MSC.url https://${{ secrets.CI_PAT }}:${{ secrets.CI_PAT }}@github.com/carronj/MSC.git
       git submodule sync
       git submodule update --init --recursive
     - name: Set up Python 3.8.6
