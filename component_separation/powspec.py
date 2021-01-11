@@ -60,14 +60,13 @@ specfilter = ["TE", "TB", "ET", "BT"]
 lmax = 20
 lmax_mask = 80
 
-
 def set_logger(loglevel=logging.INFO):
     logging.basicConfig(format='   %(levelname)s:      %(message)s', level=loglevel)
 
 #%% Collect maps
 @log_on_start(INFO, "Starting to grab data without {freqfilter}")
 @log_on_end(DEBUG, "Data without '{freqfilter}' loaded successfully: '{result}' ")
-def get_data(path: str, freqfilter: List[str]) -> List[Dict]:
+def get_data(path: str, freqfilter: List[str], nside: List[int] = PLANCKMAPNSIDE) -> List[Dict]:
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
@@ -87,7 +86,7 @@ def get_data(path: str, freqfilter: List[str]) -> List[Dict]:
                 path = path,
                 LorH = PLANCKMAPAR[0] if int(FREQ)<100 else PLANCKMAPAR[1],
                 freq = FREQ,
-                nside = PLANCKMAPNSIDE[0] if int(FREQ)<100 else PLANCKMAPNSIDE[1])
+                nside = nside[0] if int(FREQ)<100 else nside[1])
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
     tmask = hp.read_map('{}/mask/HFI_Mask_GalPlane-apo0_2048_R2.00.fits'.format(path), field=2, dtype=np.float64)
@@ -407,7 +406,7 @@ def general_pipeline():
 
     set_logger()
     
-    tqumap = get_data(freqfilter=freqfilter)
+    tqumap = get_data(path='data/', freqfilter=freqfilter)
     spectrum = powerspectrum(tqumap, lmax, lmax_mask, freqfilter, specfilter)
     df = create_df(spectrum, freqfilter, specfilter)
     df_sc = apply_scale(df, specfilter)
