@@ -11,30 +11,31 @@ os.chdir("..")
 
 #%%
 size=128
-mappath = "data/map/frequency/HFI_SkyMap_143-field_2048_R3.00_full.fits"
-testmappath = 'test/data/map/newtable.fits'
+freqpath = "data/map/frequency/HFI_SkyMap_143-field_2048_R3.00_full.fits"
+testfreqpath = 'test/data/map/HFI_SkyMap_143-field_128_R3.00_full.fits'
+
+maskpath = "data/mask/HFI_Mask_GalPlane-apo0_2048_R2.00.fits"
+testmaskpath = "test/data/mask/HFI_Mask_GalPlane-apo0_{}_R2.00.fits".format(size)
+
+
+beampath = "data/beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(143, 143)
+testbeampath = "test/data/beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(143, 143)
+#%%
+hdul = fits.open(beampath)
+hdul.writeto(testbeampath)
 
 #%%
-hdul = fits.open(mappath)
-hdul.writeto(testmappath)
+hdul_maps = fits.open(beampath)
+print(hdul_maps[1].header)
+# reduced_maps = hp.pixelfunc.ud_grade(hdul_maps, nside_out=size)
 
 #%%
-hdul_maps = hp.read_map(mappath, field=(0,1,2))
-reduced_maps = hp.pixelfunc.ud_grade(hdul_maps, nside_out=size)
-
-#%%
-hdul[1].header['comment'][-2]
-
-#%%
-hdul = fits.open(testmappath)
+hdul = fits.open(testbeampath)
 hp_map = hp.read_map(
-    testmappath,
+    testbeampath,
     field=(0,1,2),
     nest=True)
-reduced_maps = hp.pixelfunc.ud_grade(hp_map, nside_out=256)
-print(hdul[1].data)
-print(hp_map)
-print(reduced_maps)
+reduced_maps = hp.pixelfunc.ud_grade(hp_map, nside_out=size)
 
 #%%
 a = fits.Column(
@@ -59,21 +60,20 @@ c = fits.Column(
 table_hdu = fits.BinTableHDU.from_columns([a, b, c])
 
 #%%
-hdul_keepo = fits.open('test/data/map/newtable.fits')
+hdul_keepo = fits.open(testbeampath)
 print(table_hdu.data)
 print(hdul_keepo[1].data)
 
 #%%
-with fits.open('test/data/map/newtable.fits', mode='update') as hdul:
+with fits.open(testbeampath, mode='update') as hdul:
     hdul[1]=table_hdu
 
 #%%
-
-with fits.open('test/data/map/newtable.fits', mode='update') as hdtest:
-    hdtest[1].header['comment'] = "It's sole purpose is for testing the component_separation pipeline from 'https://github.com/Sebastian-Belkner/component_separation'"
+with fits.open(testbeampath, mode='update') as hdtest:
+    hdtest[1].header['comment'] = "This is a modified file for testpurposes only It's sole purpose is for testing the component_separation pipeline from 'https://github.com/Sebastian-Belkner/component_separation' NSIDE is reduced to 128, using hp.ud_grade(). USE WITH CARE"
 
 #%%
-hdtest = fits.open('test/data/map/newtable.fits')
+hdtest = fits.open(testbeampath)
 hdtest[1].header
 
 #%%
