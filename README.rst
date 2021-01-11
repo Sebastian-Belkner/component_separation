@@ -3,8 +3,8 @@
    :target: https://img.shields.io/badge/Status-in%20development-red.svg
    :alt:
 
-.. image:: https://readthedocs.org/projects/component-separation/badge/?version=latest
-   :target: https://component-separation.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/component-separation/badge/?version=master
+   :target: https://component-separation.readthedocs.io/?badge=master
    :alt: Documentation Status
 
 .. image:: https://github.com/Sebastian-Belkner/component_separation/workflows/Test/badge.svg
