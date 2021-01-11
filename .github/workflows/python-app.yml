@@ -6,7 +6,7 @@ on:
   push:
     branches: [ development ]
   pull_request:
-    branches: [ development ]
+    branches: [ development, master ]
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
     - name: Checkout reposistory
 #      uses: actions/checkout@v1
       uses: actions/checkout@v2
-    - name: Checkout submodule
+    # - name: Checkout submodule
       # uses: actions/checkout@v2.0.0
       # with:
       #   token: '${{ secrets.GITHUB_TOKEN }}'
