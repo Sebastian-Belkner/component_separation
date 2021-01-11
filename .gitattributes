@@ -3,3 +3,5 @@
 .fits filter=lfs diff=lfs merge=lfs -text
 test/data/map/*.fits filter=lfs diff=lfs merge=lfs -text
 test/data/map/HFI_SkyMap_143-field_128_R3.00_full.fits filter=lfs diff=lfs merge=lfs -text
+test/data/mask/HFI_Mask_GalPlane-apo0_128_R2.00.fits filter=lfs diff=lfs merge=lfs -text
+test/data/beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_143x143.fits filter=lfs diff=lfs merge=lfs -text
