@@ -89,11 +89,11 @@ def get_data(path: str, freqfilter: List[str], nside: List[int] = PLANCKMAPNSIDE
                 nside = nside[0] if int(FREQ)<100 else nside[1])
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
-    tmask = hp.read_map('{}/mask/HFI_Mask_GalPlane-apo0_2048_R2.00.fits'.format(path), field=2, dtype=np.float64)
+    tmask = hp.read_map('{}mask/HFI_Mask_GalPlane-apo0_2048_R2.00.fits'.format(path), field=2, dtype=np.float64)
     tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=1024)
 
-    hp_psmask = hp.read_map('{}/mask/psmaskP_2048.fits.gz'.format(path), dtype=np.bool)
-    hp_gmask = hp.read_map('{}/mask/gmaskP_apodized_0_2048.fits.gz'.format(path), dtype=np.bool)
+    hp_psmask = hp.read_map('{}mask/psmaskP_2048.fits.gz'.format(path), dtype=np.bool)
+    hp_gmask = hp.read_map('{}mask/gmaskP_apodized_0_2048.fits.gz'.format(path), dtype=np.bool)
     pmask = hp_psmask*hp_gmask
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=1024)
 
