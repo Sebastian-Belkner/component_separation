@@ -17,13 +17,13 @@ jobs:
     - name: Checkout reposistory
 #      uses: actions/checkout@v1
       uses: actions/checkout@v2
-    # - name: Checkout submodule
-      # uses: actions/checkout@v2.0.0
-      # with:
-      #   token: '${{ secrets.GITHUB_TOKEN }}'
-      #   repository: Sebastian-Belkner/component_separation
-      #   path: MSC/
-      #   ref: 'master'
+    - name: Checkout submodule
+      uses: actions/checkout@v2.0.0
+      with:
+        token: '${{ secrets.PAT }}'
+        repository: Sebastian-Belkner/component_separation
+        path: MSC/
+        ref: 'master'
       # run: |
       #   git config --file=.gitmodules MSC.url https://${{ secrets.GITHUB_TOKEN }}:${{ secrets.GITHUB_TOKEN }}@github.com/carronj/MSC.git
       #   git submodule sync
