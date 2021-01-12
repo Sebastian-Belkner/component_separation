@@ -1,9 +1,5 @@
 git+https://github.com/carronj/plancklens.git
-numpy
-matplotlib
-pandas
 healpy
 astropy
 logdecorator
-sphinx==3.2.1
 sphinx_rtd_theme

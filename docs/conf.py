@@ -25,6 +25,7 @@ author = 'Sebastian Belkner'
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'
 master_doc = 'index'
+autodoc_mock_imports = ["fortran"]
 
 # -- General configuration ---------------------------------------------------
 
