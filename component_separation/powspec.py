@@ -45,8 +45,7 @@ from pandas import DataFrame
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
 
-import component_separation.pospace as ps #TODO change to MSC.pospace once submodule issue is fixed
-
+import component_separation.MSC.MSC.pospace as ps #TODO change to MSC.pospace once submodule issue is fixed
 from component_separation.cs_util import Planckf
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
@@ -54,7 +53,7 @@ PLANCKSPECTRUM = ["TT", "EE", "BB", "TE", "TB", "EB", "ET", "BT", "BE"]
 PLANCKMAPAR = ["LFI", "HFI"]
 PLANCKMAPNSIDE = [1024, 2048]
 
-
+path='data/'
 freqfilter = [Planckf.LFI_1.value, Planckf.LFI_2.value, Planckf.HFI_1.value, Planckf.HFI_5.value, Planckf.HFI_6.value]
 specfilter = ["TE", "TB", "ET", "BT"]
 lmax = 20
@@ -77,7 +76,7 @@ def get_data(path: str, freqfilter: List[str], nside: List[int] = PLANCKMAPNSIDE
         List[Dict]: Planck maps (data and masks) and some header information
 
     Doctest:
-    >>> get_data(freqfilter=freqfilter) 
+    >>> get_data(path=path, freqfilter=freqfilter) 
     NotSureWhatToExpect
     """    
     mappath = {
