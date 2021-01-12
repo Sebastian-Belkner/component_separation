@@ -1,3 +1,11 @@
+"""
+io.py: Filehandling functions
+
+"""
+
+__author__ = "S. Belkner"
+
+
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
@@ -9,6 +17,7 @@ from component_separation.cs_util import Planckf, Plancks, Planckr
 import healpy as hp
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
+PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
 #%% Collect maps
 @log_on_start(INFO, "Starting to grab data without {freqfilter}")
@@ -56,7 +65,7 @@ def get_data(path: str, freqfilter: List[str]) -> List[Dict]:
             }for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter
     }
-    
+
     qmap = {
         FREQ: {
             "header": {
@@ -83,4 +92,12 @@ def get_data(path: str, freqfilter: List[str]) -> List[Dict]:
                 if FREQ not in freqfilter
     }
     return [tmap, qmap, umap]
+
+
+def get_beamf(freqcomb: List) -> Dict:
+    beamf = dict()
+    for fkey in freqcomb:
+        freqs = fkey.split('-')
+        beamf.update({fkey: fits.open("data/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(*freqs))})
+    return beamf
 # %%

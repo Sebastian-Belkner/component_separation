@@ -152,7 +152,7 @@ def apply_scale(df: Dict, specfilter: List[str]) -> Dict:
 #%% Apply Beamfunction
 @log_on_start(INFO, "Starting to apply Beamfunnction on dataframe with {df}")
 @log_on_end(DEBUG, "Beamfunction applied successfully: '{result}' ")
-def apply_beamfunction(df: Dict, lmax: int, specfilter: List[str]) -> Dict:
+def apply_beamfunction(df: Dict,  beamf: Dict, lmax: int, specfilter: List[str]) -> Dict:
     """[summary]
 
     Args:
@@ -175,7 +175,7 @@ def apply_beamfunction(df: Dict, lmax: int, specfilter: List[str]) -> Dict:
         if spec not in specfilter:
             for fkey in df[spec]:
                 freqs = fkey.split('-')
-                hdul = fits.open("data/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(*freqs))
+                hdul = beamf[freqs[0]][freqs[1]]
                 df_bf[spec][fkey] = df[spec][fkey] \
                     .divide(hdul[1].data.field(TEB_dict[spec[0]])[:lmax+1], axis='index') \
                     .divide(hdul[1].data.field(TEB_dict[spec[1]])[:lmax+1], axis='index')
