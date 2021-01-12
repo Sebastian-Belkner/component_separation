@@ -25,7 +25,7 @@ author = 'Sebastian Belkner'
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'
 master_doc = 'index'
-autodoc_mock_imports = ["Fortran"]
+autodoc_mock_imports = ["plancklens"]
 
 # -- General configuration ---------------------------------------------------
 
