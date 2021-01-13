@@ -35,7 +35,7 @@ def general_pipeline():
     freqfilter = [
         Planckf.LFI_1.value,
         Planckf.LFI_2.value,
-        Planckf.HFI_1.value,
+        # Planckf.HFI_1.value,
         # Planckf.HFI_3.value,
         Planckf.HFI_4.value,
         Planckf.HFI_5.value,
