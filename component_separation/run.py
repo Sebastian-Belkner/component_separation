@@ -6,7 +6,7 @@ run.py: runner script for calling component_separation
 __author__ = "S. Belkner"
 
 
-import component_separation.pospace as ps
+import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks
 import logging
 import component_separation.powspec as pw

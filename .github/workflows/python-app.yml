@@ -1,13 +1,12 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ development ]
   pull_request:
-    branches: [ master ]
+    branches: [ development, master ]
 
 jobs:
   build:
@@ -16,13 +15,14 @@ jobs:
 
     steps:
     - name: Checkout reposistory
-#      uses: actions/checkout@v1
       uses: actions/checkout@v2
     - name: Checkout submodule
-      run: |
-        git config --file=.gitmodules MSC.url https://${{ secrets.GITHUB_TOKEN }}:${{ secrets.GITHUB_TOKEN }}@github.com/carronj/MSC.git
-        git submodule sync
-        git submodule update --init --recursive
+      uses: actions/checkout@v2.0.0
+      with:
+        token: '${{ secrets.PAT }}'
+        repository: carronj/MSC
+        path: component_separation/MSC
+        ref: 'fix'
     - name: Set up Python 3.8.6
       uses: actions/setup-python@v2
       with:

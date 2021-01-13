@@ -1,3 +1,4 @@
 [submodule "MSC"]
 	path = component_separation/MSC
 	url = https://github.com/carronj/MSC.git
+	branch = fix

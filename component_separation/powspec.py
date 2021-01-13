@@ -47,7 +47,7 @@ import pandas as pd
 from pandas import DataFrame
 from logdecorator import log_on_end, log_on_error, log_on_start
 
-import component_separation.pospace as ps
+import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks, Planckr
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
@@ -55,6 +55,7 @@ PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 PLANCKMAPAR = [p.value for p in list(Planckr)]
 PLANCKMAPNSIDE = [1024, 2048]
 
+path='data/'
 
 """ Doctest:
 The following constants be needed because functions are called with globals()
@@ -63,7 +64,6 @@ freqfilter = [Planckf.LFI_1.value, Planckf.LFI_2.value, Planckf.HFI_1.value, Pla
 specfilter = [Plancks.TE, Plancks.TB, Plancks.ET, Plancks.BT]
 lmax = 20
 lmax_mask = 80
-
 
 def set_logger(loglevel=logging.INFO):
     logging.basicConfig(format='   %(levelname)s:      %(message)s', level=loglevel)
