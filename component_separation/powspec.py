@@ -126,6 +126,7 @@ def create_df(spectrum: Dict[str, Dict[str, List]], freqfilter: List[str], specf
         if spec not in specfilter:
             for fkey, _ in df[spec].items():
                 df[spec][fkey].index.name = 'multipole'
+    
     return df
 
 #%% Apply 1e12*l(l+1)/2pi

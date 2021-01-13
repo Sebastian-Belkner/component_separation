@@ -145,3 +145,32 @@ hp.mollview(hpdata_1, norm=norm)
 hp.mollview(hpdata_2, norm=norm)
 
 # %%
+pmsk = hp.read_map('data/mask/gmaskP_apodized_0_2048.fits.gz', dtype=None).astype(np.bool)
+data = hp.read_map("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits", field=0, dtype=None)
+
+map_P_masked = hp.ma(data)
+# map_P_masked.mask = np.logical_not(pmsk)
+hp.mollview(map_P_masked, norm='hist')
+plt.show()
+
+# %%
+UNSEEN = -1.6375e30
+UNSEEN_tol = 2. * 1.e-7 * 1.6375e30
+for a in data:
+    if np.abs(a-UNSEEN) < UNSEEN_tol:
+        print(a)
+
+#%%
+plt.plot(data)
+plt.show()
+#%%
+len(data)
+# %%
+min(data)
+# %%
+a = np.array([False, True])
+
+if a:
+    print('cool')
+
+# %%

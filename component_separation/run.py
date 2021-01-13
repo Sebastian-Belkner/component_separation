@@ -18,17 +18,18 @@ from typing import Dict, List, Optional, Tuple
 
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+LOGFILE = 'messages.log'
+logger = logging.getLogger("")
+handler = logging.handlers.RotatingFileHandler(
+        LOGFILE, maxBytes=(1048576*5), backupCount=7
+)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 def set_logger(loglevel=logging.INFO):
-    LOGFILE = 'messages.log'
-    logger = logging.getLogger("")
     logger.setLevel(logging.DEBUG)
-    handler = logging.handlers.RotatingFileHandler(
-        LOGFILE, maxBytes=(1048576*5), backupCount=7
-    )
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    
 
 def general_pipeline():
 
@@ -36,7 +37,8 @@ def general_pipeline():
         Planckf.LFI_1.value,
         Planckf.LFI_2.value,
         # Planckf.HFI_1.value,
-        # Planckf.HFI_3.value,
+        Planckf.HFI_2.value,
+        Planckf.HFI_3.value,
         Planckf.HFI_4.value,
         Planckf.HFI_5.value,
         Planckf.HFI_6.value
@@ -50,13 +52,15 @@ def general_pipeline():
         Plancks.BE.value,
         Plancks.EB.value
         ]
-    lmax = 4000
-    lmax_mask = 8000
+    lmax = 400
+    lmax_mask = 800
 
     set_logger(DEBUG)
     
     path = 'data/'
     tqumap = io.get_data(path=path, freqfilter=freqfilter, nside=[1024,2048])
+    print(tqumap[0]['100']['map'])
+    logger.log(DEBUG, tqumap)
     spectrum = pw.powerspectrum(tqumap, lmax, lmax_mask, freqfilter, specfilter)
     
     df = pw.create_df(spectrum, freqfilter, specfilter)
