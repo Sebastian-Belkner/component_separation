@@ -55,11 +55,10 @@ PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 PLANCKMAPAR = [p.value for p in list(Planckr)]
 PLANCKMAPNSIDE = [1024, 2048]
 
-path='data/'
-
 """ Doctest:
 The following constants be needed because functions are called with globals()
 """
+path='test/data'
 freqfilter = [Planckf.LFI_1.value, Planckf.LFI_2.value, Planckf.HFI_1.value, Planckf.HFI_5.value, Planckf.HFI_6.value]
 specfilter = [Plancks.TE, Plancks.TB, Plancks.ET, Plancks.BT]
 lmax = 20
@@ -83,8 +82,8 @@ def powerspectrum(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freq
 
     Returns:
         Dict[str, Dict]: Powerspectra as provided from MSC.pospace
-    """   
-    
+    """
+
     spectrum = {
         FREQ+'-'+FREQ2: 
             {spec: ps.map2cls(
@@ -132,11 +131,12 @@ def create_df(spectrum: Dict[str, Dict[str, List]], freqfilter: List[str], specf
 #%% Apply 1e12*l(l+1)/2pi
 @log_on_start(INFO, "Starting to apply scaling onto data {df}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
-def apply_scale(df: Dict, specfilter: List[str]) -> Dict:
+def apply_scale(df: Dict, specfilter: List[str], llp1: bool = True) -> Dict:
     """Multiplies powerspectra by :math:`l(l+1)/(2\pi)1e12`
 
     Args:
         df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+        df (llp1, Optional): Set to False, if :math:`l(l+1)/(2\pi)` should not be applied. Default: True
 
     Returns:
         Dict: A "2D"-DataFrame of scaled powerspectra with spectrum and frequency-combinations in the columns
@@ -145,9 +145,11 @@ def apply_scale(df: Dict, specfilter: List[str]) -> Dict:
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             for fkey, fval in df_scaled[spec].items():
-                lnorm = pd.Series(fval.index.to_numpy()*(fval.index.to_numpy()+1))
-                df_scaled[spec][fkey] = df[spec][fkey].multiply(lnorm*1e12/(2*np.pi), axis='index')
-                # df_scaled[spec][fkey] = df[spec][fkey]*1e12
+                if llp1:
+                    lnorm = pd.Series(fval.index.to_numpy()*(fval.index.to_numpy()+1)/(2*np.pi))
+                    df_scaled[spec][fkey] = df[spec][fkey].multiply(lnorm*1e12, axis='index')
+                else:
+                    df_scaled[spec][fkey] = df[spec][fkey]*1e12
     return df_scaled
 
 #%% Apply Beamfunction
@@ -195,13 +197,11 @@ def plot_powspec(df: Dict, specfilter: List[str], subtitle: str= '') -> None:
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             df[spec].plot(
-                # y=[
-                # # "143-143",
-                # "217-217"
-                # ],
                 loglog=True,
                 ylabel="power spectrum",
+                grid=True,
                 title="{} spectrum - {}".format(spec, subtitle))
+            plt.savefig('vis/spectrum/{}_spectrum.jpg'.format(spec))
 
     #%% Compare to truth
     spectrum_truth = pd.read_csv(
@@ -320,8 +320,8 @@ def plotsave_weights(df: Dict):
             style= '--',
             grid=True,
             ylim=(-0.5,1.5),
-            title=spec+' spectrum')
-        plt.savefig('vis/{}_weighting.jpg'.format(spec))
+            title=spec+' weighting')
+        plt.savefig('vis/weighting/{}_weighting.jpg'.format(spec))
 
 
 if __name__ == '__main__':

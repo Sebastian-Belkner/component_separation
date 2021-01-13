@@ -21,18 +21,18 @@ testmaskpath = "test/data/mask/HFI_Mask_GalPlane-apo0_{}_R2.00.fits".format(size
 beampath = "data/beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(143, 143)
 testbeampath = "test/data/beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(143, 143)
 #%%
-hdul = fits.open(beampath)
-hdul.writeto(testbeampath)
+hdul = fits.open(maskpath)
+hdul.writeto(testmaskpath)
 
 #%%
-hdul_maps = fits.open(beampath)
+hdul_maps = fits.open(testmaskpath)
 print(hdul_maps[1].header)
 # reduced_maps = hp.pixelfunc.ud_grade(hdul_maps, nside_out=size)
 
 #%%
-hdul = fits.open(testbeampath)
+hdul = fits.open(testmaskpath)
 hp_map = hp.read_map(
-    testbeampath,
+    testmaskpath,
     field=(0,1,2),
     nest=True)
 reduced_maps = hp.pixelfunc.ud_grade(hp_map, nside_out=size)
@@ -60,24 +60,24 @@ c = fits.Column(
 table_hdu = fits.BinTableHDU.from_columns([a, b, c])
 
 #%%
-hdul_keepo = fits.open(testbeampath)
+hdul_keepo = fits.open(testmaskpath)
 print(table_hdu.data)
 print(hdul_keepo[1].data)
 
 #%%
-with fits.open(testbeampath, mode='update') as hdul:
+with fits.open(testmaskpath, mode='update') as hdul:
     hdul[1]=table_hdu
 
 #%%
-with fits.open(testbeampath, mode='update') as hdtest:
+with fits.open(testmaskpath, mode='update') as hdtest:
     hdtest[1].header['comment'] = "This is a modified file for testpurposes only It's sole purpose is for testing the component_separation pipeline from 'https://github.com/Sebastian-Belkner/component_separation' NSIDE is reduced to 128, using hp.ud_grade(). USE WITH CARE"
 
 #%%
-hdtest = fits.open(testbeampath)
+hdtest = fits.open(testmaskpath)
 hdtest[1].header
 
 #%%
-int_mask = hp.read_map("data/mask/HFI_Mask_GalPlane-apo0_2048_R2.00.fits")
+int_mask = hp.read_map("test/data/mask/HFI_Mask_GalPlane-apo0_128_R2.00.fits")
 hp.mollview(int_mask)
 
 #%%
@@ -119,11 +119,29 @@ nest=True
 hp.mollview(map_P_masked, nest=True)
 hp.mollview(map_P_masked)
 hp.mollview(msk, nest=False)
+
 # %%
 pmsk, pmskheader = hp.read_map('data/mask/gmaskP_apodized_0_2048.fits.gz', h=True)
 print(pmskheader)
 hp.mollview(pmsk)
+
 # %%
 hd=fits.open('data/mask/gmaskP_apodized_0_2048.fits.gz', h=True)
 hd[1].header
+
+# %%
+data = fits.open("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits")
+data[1].data
+
+# %%
+hpdata_0 = hp.read_map("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits", field=0)
+hpdata_1 = hp.read_map("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits", field=1)
+hpdata_2 = hp.read_map("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits", field=2)
+
+# %%
+norm='hist'
+hp.mollview(hpdata_0, norm=norm)
+hp.mollview(hpdata_1, norm=norm)
+hp.mollview(hpdata_2, norm=norm)
+
 # %%
