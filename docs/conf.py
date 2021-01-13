@@ -14,7 +14,10 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
+<<<<<<< HEAD:docs/source/conf.py
 
+=======
+>>>>>>> 890b8d7cf70d5d0009089e099cb0dbc10c3f177c:docs/conf.py
 
 # -- Project information -----------------------------------------------------
 
@@ -25,6 +28,8 @@ author = 'Sebastian Belkner'
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'
 master_doc = 'index'
+pygments_style = 'sphinx'
+autodoc_mock_imports = ["plancklens"]
 
 # -- General configuration ---------------------------------------------------
 

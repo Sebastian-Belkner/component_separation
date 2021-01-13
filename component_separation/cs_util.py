@@ -22,3 +22,7 @@ class Plancks(Enum):
     ET = "ET"
     BT = "BT"
     BE = "BE"
+
+class Planckr(Enum):
+    LFI = "LFI"
+    HFI = "HFI"
