@@ -1,4 +1,4 @@
-git+https://github.com/carronj/plancklens.git
+# git+https://github.com/carronj/plancklens.git
 healpy
 astropy
 logdecorator

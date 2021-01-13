@@ -50,7 +50,7 @@ def general_pipeline():
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
                         for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
                         for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
-    print(freqcomb_list)
+    print(freqcomb)
     
     beamf = io.get_beamf(freqcomb=freqcomb)
     df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter)

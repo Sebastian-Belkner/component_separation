@@ -174,8 +174,7 @@ def apply_beamfunction(df: Dict,  beamf: Dict, lmax: int, specfilter: List[str])
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             for fkey in df[spec]:
-                freqs = fkey.split('-')
-                hdul = beamf[freqs[0]][freqs[1]]
+                hdul = beamf[freqs]
                 df_bf[spec][fkey] = df[spec][fkey] \
                     .divide(hdul[1].data.field(TEB_dict[spec[0]])[:lmax+1], axis='index') \
                     .divide(hdul[1].data.field(TEB_dict[spec[1]])[:lmax+1], axis='index')

@@ -98,6 +98,6 @@ def get_beamf(freqcomb: List) -> Dict:
     beamf = dict()
     for fkey in freqcomb:
         freqs = fkey.split('-')
-        beamf.update({fkey: fits.open("data/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(*freqs))})
+        beamf.update({fkey: fits.open("data/beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(*freqs))})
     return beamf
 # %%
