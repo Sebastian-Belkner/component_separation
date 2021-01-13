@@ -154,7 +154,8 @@ def apply_scale(df: Dict, specfilter: List[str]) -> Dict:
 @log_on_start(INFO, "Starting to apply Beamfunnction on dataframe with {df}")
 @log_on_end(DEBUG, "Beamfunction applied successfully: '{result}' ")
 def apply_beamfunction(df: Dict,  beamf: Dict, lmax: int, specfilter: List[str]) -> Dict:
-    """[summary]
+    """divides the spectrum derivded from channel `ij` and provided via `df_(ij)`,
+    by `beamf_i beamf_j` as described by the planck beamf .fits-file header.
 
     Args:
         df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
