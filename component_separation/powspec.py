@@ -47,7 +47,7 @@ import pandas as pd
 from pandas import DataFrame
 from logdecorator import log_on_end, log_on_error, log_on_start
 
-import component_separation.pospace as ps
+import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks, Planckr
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
