@@ -15,19 +15,20 @@ To use the following lines as a ``test``, execute,
 
 in your command line.
 
-
     General purpose doctest
 
-    # >>> tqumap = get_data('test/', freqfilter=freqfilter) # doctest: +SKIP 
-    # >>> spectrum = powerspectrum(tqumap, lmax, lmax_mask, freqfilter, specfilter)
-    # >>> df = create_df(spectrum, freqfilter, specfilter)
-    # >>> df_sc = apply_scale(df, specfilter)
-    # >>> df_scbf = apply_beamfunction(df_sc, lmax, specfilter)
-    # >>> plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
-    # >>> plot_powspec(df_scbf, specfilter, subtitle='scaled, w beamfunction')
-    # >>> cov = build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
-    # >>> cov_inv_l = invert_covmatrices(cov, lmax, freqfilter, specfilter)
-    # >>> weights = calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
+    .. code-block:: python
+
+        >>> tqumap = get_data('test/', freqfilter=freqfilter) # doctest: +SKIP 
+        >>> spectrum = powerspectrum(tqumap, lmax, lmax_mask, freqfilter, specfilter)
+        >>> df = create_df(spectrum, freqfilter, specfilter)
+        >>> df_sc = apply_scale(df, specfilter)
+        >>> df_scbf = apply_beamfunction(df_sc, lmax, specfilter)
+        >>> plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
+        >>> plot_powspec(df_scbf, specfilter, subtitle='scaled, w beamfunction')
+        >>> cov = build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
+        >>> cov_inv_l = invert_covmatrices(cov, lmax, freqfilter, specfilter)
+        >>> weights = calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
 
 
 """

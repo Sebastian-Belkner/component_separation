@@ -24,6 +24,7 @@ author = 'Sebastian Belkner'
 # The full version, including alpha/beta/rc tags
 release = '0.0.1'
 master_doc = 'index'
+pygments_style = 'sphinx'
 autodoc_mock_imports = ["plancklens"]
 
 # -- General configuration ---------------------------------------------------
