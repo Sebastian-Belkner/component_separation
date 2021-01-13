@@ -7,8 +7,8 @@
    :target: https://component-separation.readthedocs.io/?badge=master
    :alt: Documentation Status
 
-.. image:: https://github.com/Sebastian-Belkner/component_separation/workflows/Test/badge.svg
-   :target: https://github.com/Sebastian-Belkner/component_separation/workflows/Test/badge.svg
+.. image:: https://github.com/Sebastian-Belkner/component_separation/workflows/Test/badge.svg?branch=development
+   :target: https://github.com/Sebastian-Belkner/component_separation/workflows/Test/badge.svg?branch=development
    :alt: Test status
 
 Component Separation - summary
