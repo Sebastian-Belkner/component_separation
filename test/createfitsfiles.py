@@ -130,9 +130,33 @@ hd=fits.open('data/mask/gmaskP_apodized_0_2048.fits.gz', h=True)
 hd[1].header
 
 # %%
-data = fits.open("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits")
-data[1].data
+def count_bad(m):
+    i = 0
+    nbad = 0
+    size = m.size
+    for i in range(m.size):
+        if np.abs(m[i] - UNSEEN) < UNSEEN_tol:
+            nbad += 1
+    return nbad
 
+def mkmask(m):
+    nbad = 0
+    size = m.size
+    i = 0
+    # first, count number of bad pixels, to see if allocating a mask is needed
+    nbad = count_bad(m)
+    mask = np.ndarray(shape=(1,), dtype=np.int8)
+    #cdef np.ndarray[double, ndim=1] m_
+    if nbad == 0:
+        return False
+    else:
+        mask = np.zeros(size, dtype = np.int8)
+        #m_ = m
+        for i in range(size):
+            if np.abs(m[i] - UNSEEN) < UNSEEN_tol:
+                mask[i] = 1
+    mask.dtype = bool
+    return mask
 # %%
 hpdata_0 = hp.read_map("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits", field=0)
 hpdata_1 = hp.read_map("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits", field=1)
@@ -146,7 +170,7 @@ hp.mollview(hpdata_2, norm=norm)
 
 # %%
 pmsk = hp.read_map('data/mask/gmaskP_apodized_0_2048.fits.gz', dtype=None).astype(np.bool)
-data = hp.read_map("data/map/frequency/HFI_SkyMap_100-field_2048_R3.00_full.fits", field=0, dtype=None)
+data = hp.read_map("data/map/frequency/HFI_SkyMap_143-field_2048_R3.00_full.fits", field=0, dtype=None)
 
 map_P_masked = hp.ma(data)
 # map_P_masked.mask = np.logical_not(pmsk)
@@ -161,16 +185,20 @@ for a in data:
         print(a)
 
 #%%
-plt.plot(data)
-plt.show()
+maps = [hpdata_1 * pmsk, hpdata_2 * pmsk]
+maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]
+
 #%%
-len(data)
-# %%
-min(data)
-# %%
-a = np.array([False, True])
-
-if a:
-    print('cool')
+masks = [False if count_bad(m) == 0 else mkmask(m) for m in maps_c]
+#%%
+for m, mask in zip(maps_c, masks):
+    if mask.any():
+        m[mask] = 0.0
 
 # %%
+maps = [hpdata_1 * pmsk, hpdata_2 * pmsk]
+maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]
+masks = [False if count_bad(m) == 0 else mkmask(m) for m in maps_c]
+for m, mask in zip(maps_c, masks):
+    if mask.any():
+        m[mask] = 0.0

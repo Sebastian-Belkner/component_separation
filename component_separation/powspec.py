@@ -67,6 +67,57 @@ lmax_mask = 80
 def set_logger(loglevel=logging.INFO):
     logging.basicConfig(format='   %(levelname)s:      %(message)s', level=loglevel)
 
+
+def hphack(tqumap: List[Dict]) -> List[Dict]:
+    """Replaces UNSEEN pixels in the polarisation maps (Q, U) with 0.0. This is a quickfix for healpy `_sphtools.pyx`,
+    as it throws errors when processing maps with UNSEEN pixels. reason being, one statement is ambigious: `if np.array([True, True])`.
+
+    Args:
+        tqumap (Dict): Data as coming from `pw.get_data()`
+
+    Returns:
+        Dict: The corrected data
+    """
+    UNSEEN = -1.6375e30
+    UNSEEN_tol = 1.e-7 * 1.6375e30
+    def count_bad(m):
+        i = 0
+        nbad = 0
+        size = m.size
+        for i in range(m.size):
+            if np.abs(m[i] - UNSEEN) < UNSEEN_tol:
+                nbad += 1
+        return nbad
+
+    def mkmask(m):
+        nbad = 0
+        size = m.size
+        i = 0
+        # first, count number of bad pixels, to see if allocating a mask is needed
+        nbad = count_bad(m)
+        mask = np.ndarray(shape=(1,), dtype=np.int8)
+        #cdef np.ndarray[double, ndim=1] m_
+        if nbad == 0:
+            return False
+        else:
+            mask = np.zeros(size, dtype = np.int8)
+            #m_ = m
+            for i in range(size):
+                if np.abs(m[i] - UNSEEN) < UNSEEN_tol:
+                    mask[i] = 1
+        mask.dtype = bool
+        return mask
+        
+    if '100' in tqumap[1].keys():
+        maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
+        maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]
+        masks = [False if count_bad(m) == 0 else mkmask(m) for m in maps_c]
+        for idx, (m, mask) in enumerate(zip(maps_c, masks)):
+            if mask.any():
+                m[mask] = 0.0
+            tqumap[idx+1]["100"]['map'] = m
+    return tqumap
+
 #%% Calculate spectrum
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")

@@ -59,9 +59,9 @@ def general_pipeline():
     
     path = 'data/'
     tqumap = io.get_data(path=path, freqfilter=freqfilter, nside=[1024,2048])
-    print(tqumap[0]['100']['map'])
     logger.log(DEBUG, tqumap)
-    spectrum = pw.powerspectrum(tqumap, lmax, lmax_mask, freqfilter, specfilter)
+    tqumap_hpcorrected = pw.hphack(tqumap)
+    spectrum = pw.powerspectrum(tqumap_hpcorrected, lmax, lmax_mask, freqfilter, specfilter)
     
     df = pw.create_df(spectrum, freqfilter, specfilter)
     df_sc = pw.apply_scale(df, specfilter, llp1=False)
