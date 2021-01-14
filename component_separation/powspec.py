@@ -68,6 +68,8 @@ def set_logger(loglevel=logging.INFO):
     logging.basicConfig(format='   %(levelname)s:      %(message)s', level=loglevel)
 
 
+@log_on_start(INFO, "Starting to replace UNSEEN pixels for 100Ghz map")
+@log_on_end(DEBUG, "UNSEEN pixels replaced successfully: '{result}' ")
 def hphack(tqumap: List[Dict]) -> List[Dict]:
     """Replaces UNSEEN pixels in the polarisation maps (Q, U) with 0.0. This is a quickfix for healpy `_sphtools.pyx`,
     as it throws errors when processing maps with UNSEEN pixels. reason being, one statement is ambigious: `if np.array([True, True])`.
@@ -107,7 +109,7 @@ def hphack(tqumap: List[Dict]) -> List[Dict]:
                     mask[i] = 1
         mask.dtype = bool
         return mask
-        
+
     if '100' in tqumap[1].keys():
         maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
         maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]

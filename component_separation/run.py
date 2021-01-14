@@ -37,8 +37,8 @@ def general_pipeline():
         Planckf.LFI_1.value,
         Planckf.LFI_2.value,
         # Planckf.HFI_1.value,
-        Planckf.HFI_2.value,
-        Planckf.HFI_3.value,
+        # Planckf.HFI_2.value,
+        # Planckf.HFI_3.value,
         Planckf.HFI_4.value,
         Planckf.HFI_5.value,
         Planckf.HFI_6.value
@@ -52,8 +52,8 @@ def general_pipeline():
         Plancks.BE.value,
         Plancks.EB.value
         ]
-    lmax = 400
-    lmax_mask = 800
+    lmax = 4000
+    lmax_mask = 8000
 
     set_logger(DEBUG)
     
@@ -75,8 +75,8 @@ def general_pipeline():
     beamf = io.get_beamf(path=path, freqcomb=freqcomb)
 
     df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter)
-    pw.plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
-    pw.plot_powspec(df_scbf, specfilter, subtitle='scaled, w beamfunction')
+    # pw.plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
+    pw.plot_powspec(df_scbf, specfilter, subtitle='scaled, w/ l(l+1), w beamfunction')
     
     cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
