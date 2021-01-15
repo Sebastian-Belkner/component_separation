@@ -238,37 +238,6 @@ def apply_beamfunction(df: Dict,  beamf: Dict, lmax: int, specfilter: List[str])
                     .divide(hdul[1].data.field(TEB_dict[spec[1]])[:lmax+1], axis='index')
     return df_bf
 
-#%% Plot
-def plot_powspec(df: Dict, specfilter: List[str], subtitle: str= '') -> None:
-    """Plotting
-
-    Args:
-        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
-
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-        subtitle (String, optional): Add some characters to the title. Defaults to ''.
-    """
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            df[spec].plot(
-                loglog=True,
-                ylabel="power spectrum",
-                grid=True,
-                title="{} spectrum - {}".format(spec, subtitle))
-            plt.savefig('vis/spectrum/{}_spectrum.jpg'.format(spec))
-
-    #%% Compare to truth
-    spectrum_truth = pd.read_csv(
-        'data/powspecplanck.txt',
-        header=0,
-        sep='    ',
-        index_col=0
-        )
-    spectrum_truth.plot(
-        loglog=True,
-        title="CMB powerspectrum from PLANCK".format(spec))
-    plt.show()
-
 #%% Build covariance matrices
 @log_on_start(INFO, "Starting to build convariance matrices with {df}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
@@ -350,9 +319,10 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     # TODO add dummy value for spec: np.array(..) when cov is not invertible
     elaw = np.ones(len([dum for dum in PLANCKMAPFREQ if dum not in freqfilter]))
     weighting = {spec: np.array([(cov[spec][l] @ elaw) / (elaw.T @ cov[spec][l] @ elaw)
-                     if cov[spec][l] is not None else np.array([None for n in range(len(elaw))])
+                     if cov[spec][l] is not None else np.array([0.0 for n in range(len(elaw))])
                         for l in range(lmax) if l in cov[spec].keys()])
                     for spec in PLANCKSPECTRUM if spec not in specfilter}
+    print(weighting['EE'])
     # print(cov)
     weights = {spec:
                 pd.DataFrame(
@@ -367,21 +337,55 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
             weights[spec].index.name = 'multipole'
     return weights
 
+# %% Plot
+def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', filetitle: str = '') -> None:
+    """Plotting
+
+    Args:
+        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+
+        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
+        subtitle (String, optional): Add some characters to the title. Defaults to ''.
+    """
+    plt.figure()
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            df[spec].plot(
+                loglog=True,
+                ylabel="power spectrum",
+                grid=True,
+                title="{} spectrum - {}".format(spec, subtitle))
+            plt.savefig('vis/spectrum/{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
+
+    # %% Compare to truth
+    plt.figure()
+    spectrum_truth = pd.read_csv(
+        'data/powspecplanck.txt',
+        header=0,
+        sep='    ',
+        index_col=0
+        )
+    spectrum_truth.plot(
+        loglog=True,
+        title="CMB powerspectrum from PLANCK".format(spec))
+
+
 # %% Plot weightings
-def plotsave_weights(df: Dict):
+def plotsave_weights(df: Dict, subtitle: str = '', filetitle: str = ''):
     """Plotting
     Args:
         df (Dict): Data to be plotted
     """
+    plt.figure()
     for spec in df.keys():
         df[spec].plot(
             ylabel='weigthing',
-            marker="x",
-            style= '--',
+            # marker="x",
+            # style= '--',
             grid=True,
-            ylim=(-0.5,1.5),
-            title=spec+' weighting')
-        plt.savefig('vis/weighting/{}_weighting.jpg'.format(spec))
+            ylim=(-5.5,5.5),
+            title="{} weighting - {}".format(spec, subtitle))
+        plt.savefig('vis/weighting/{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
 
 
 if __name__ == '__main__':

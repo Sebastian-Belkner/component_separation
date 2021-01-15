@@ -89,8 +89,8 @@ def general_pipeline():
         spectrum = pw.powerspectrum(tqumap_hpcorrected, lmax, lmax_mask, freqfilter, specfilter)
         io.save_spectrum(spectrum, spec_path, spec_filename)
     df = pw.create_df(spectrum, freqfilter, specfilter)
+
     df_sc = pw.apply_scale(df, specfilter, llp1=llp1)
-    
     
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
                         for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
@@ -99,16 +99,37 @@ def general_pipeline():
     
     beamf = io.get_beamf(path=path, freqcomb=freqcomb)
 
-    df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter)
+    df_scbf = df_sc #pw.apply_beamfunction(df_sc, beamf, lmax, specfilter)
     # pw.plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
-    pw.plot_powspec(df_scbf, specfilter, subtitle='scaled, {} l(l+1), w beamfunction'.format('w' if llp1 else 'w/'))
+    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}'.format(
+        lmax = lmax,
+        lmax_mask = lmax_mask,
+        tmask = tmask_filename[::5],
+        pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]))
+    subtitle = 'scaled, {} l(l+1), wout beamfunction'.format('w' if llp1 else 'wout')
+    pw.plotsave_powspec(
+        df_scbf,
+        specfilter,
+        subtitle=subtitle,
+        filetitle=filetitle)
     # print(df_scbf)
     cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
     # print(cov)
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
     # print(cov_inv_l)
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
-    pw.plotsave_weights(weights)
+
+    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}'.format(
+        lmax = lmax,
+        lmax_mask = lmax_mask,
+        tmask = tmask_filename[::5],
+        pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]),
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter])
+        )
+    pw.plotsave_weights(
+        weights,
+        subtitle=subtitle,
+        filetitle=filetitle)
 
 if __name__ == '__main__':
     general_pipeline()
