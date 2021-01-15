@@ -4,3 +4,5 @@ ext/
 .pytest_cache/
 *.pyc
 *.log
+messages*
+test/snippet.py

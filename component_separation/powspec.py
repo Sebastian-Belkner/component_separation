@@ -148,7 +148,7 @@ def powerspectrum(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freq
                     lmax_mask=lmax_mask)[idx]
                 for idx, spec in enumerate(PLANCKSPECTRUM) if spec not in specfilter}
             for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
-            for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and FREQ2>=FREQ}
+            for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and int(FREQ2)>=int(FREQ)}
     return spectrum
 
 #%% Create df for no apparent reason
@@ -317,13 +317,15 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         freqfilter (List[str]): Frequency channels which are to be ignored
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
     """
-    def is_invertible(a):
-        return a.shape[0] == a.shape[1] and np.linalg.matrix_rank(a) == a.shape[0]
+    def is_invertible(a, l):
+        truth = a.shape[0] == a.shape[1] and np.linalg.matrix_rank(a) == a.shape[0]
+        if not truth:
+            print('{} not invertible: {}'.format(l, a) )
+        return truth
     cov_inv_l = {
         spec: {
-            l: np.linalg.inv(cov[spec][:,:,l])
+            l: np.linalg.inv(cov[spec][:,:,l]) if is_invertible(cov[spec][:,:,l], l) else None
                 for l in range(lmax)
-                    if is_invertible(cov[spec][:,:,l])
             }for spec in PLANCKSPECTRUM 
                 if spec not in specfilter
         }
@@ -344,10 +346,14 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     Returns:
         Dict[str, DataFrame]: The weightings of the respective Frequency channels
     """
+
+    # TODO add dummy value for spec: np.array(..) when cov is not invertible
     elaw = np.ones(len([dum for dum in PLANCKMAPFREQ if dum not in freqfilter]))
     weighting = {spec: np.array([(cov[spec][l] @ elaw) / (elaw.T @ cov[spec][l] @ elaw)
+                     if cov[spec][l] is not None else np.array([None for n in range(len(elaw))])
                         for l in range(lmax) if l in cov[spec].keys()])
                     for spec in PLANCKSPECTRUM if spec not in specfilter}
+    # print(cov)
     weights = {spec:
                 pd.DataFrame(
                     data=weighting[spec],
@@ -380,27 +386,10 @@ def plotsave_weights(df: Dict):
 
 if __name__ == '__main__':
     import doctest
-    doctest.run_docstring_examples(get_data, globals(), verbose=True)
+    # doctest.run_docstring_examples(get_data, globals(), verbose=True)
 
 
 def general_pipeline():
-    freqfilter = ['030', '070', '100', '545', '217', '353', '857']
-    specfilter = ["TE", "TB", "ET", "BT", "EB", "BE"]
-    lmax = 2000
-    lmax_mask = 8000
-
-    set_logger()
-    
-    tqumap = get_data(path='data/', freqfilter=freqfilter)
-    spectrum = powerspectrum(tqumap, lmax, lmax_mask, freqfilter, specfilter)
-    df = create_df(spectrum, freqfilter, specfilter)
-    df_sc = apply_scale(df, specfilter)
-    df_scbf = apply_beamfunction(df_sc, lmax, specfilter)
-    plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
-    plot_powspec(df_scbf, specfilter, subtitle='scaled, w beamfunction')
-    cov = build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
-    cov_inv_l = invert_covmatrices(cov, lmax, freqfilter, specfilter)
-    weights = calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
-    plotsave_weights(weights)
+    pass
 
 # %%

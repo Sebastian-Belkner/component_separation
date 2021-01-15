@@ -11,6 +11,8 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
 import os
 import sys
+import functools
+import os.path
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 from component_separation.cs_util import Planckf, Plancks, Planckr
@@ -22,12 +24,14 @@ PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 #%% Collect maps
 @log_on_start(INFO, "Starting to grab data without {freqfilter}")
 @log_on_end(DEBUG, "Data without '{freqfilter}' loaded successfully: '{result}' ")
-def get_data(path: str, freqfilter: List[str], nside: List[int] = PLANCKMAPNSIDE) -> List[Dict]:
+def get_data(path: str, freqfilter: List[str], tmask_filename: str, pmask_filename: List[str], nside: List[int] = PLANCKMAPNSIDE) -> List[Dict]:
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
         path (str): Relative path to root dir of the data. Must end with '/'
         freqfilter (List[str]): Frequency channels which are to be ignored
+        tmask_filename (str): name of the mask for intensity maps
+        pmask_filename (List[str]): list of names of the masks for polarisation maps. They will be reduced to one mask
 
     Returns:
         List[Dict]: Planck maps (data and masks) and some header information
@@ -45,12 +49,16 @@ def get_data(path: str, freqfilter: List[str], nside: List[int] = PLANCKMAPNSIDE
                 nside = nside[0] if int(FREQ)<100 else nside[1])
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
-    tmask = hp.read_map('{}mask/HFI_Mask_GalPlane-apo0_{}_R2.00.fits'.format(path, nside[1]), field=2, dtype=np.float64)
+    tmask = hp.read_map('{}mask/{}'.format(path, tmask_filename), field=2, dtype=np.float64)
     tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
 
-    hp_psmask = hp.read_map('{}mask/psmaskP_{}.fits.gz'.format(path, nside[1]), dtype=np.bool)
-    hp_gmask = hp.read_map('{}mask/gmaskP_apodized_0_{}.fits.gz'.format(path, nside[1]), dtype=np.bool)
-    pmask = hp_psmask*hp_gmask
+    # hp_psmask = hp.read_map('{}mask/psmaskP_2048.fits.gz'.format(path), dtype=np.bool)
+    # hp_gmask = hp.read_map('{}mask/gmaskP_apodized_0_2048.fits.gz'.format(path), dtype=np.bool)
+    # pmask = hp_psmask*hp_gmask
+    def multi(a,b):
+        return a*b
+    pmasks = [hp.read_map('{}mask/{}'.format(path, a), dtype=np.bool) for a in pmask_filename]
+    pmask = functools.reduce(multi, pmasks)
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
     tmap = {
@@ -92,6 +100,16 @@ def get_data(path: str, freqfilter: List[str], nside: List[int] = PLANCKMAPNSIDE
                 if FREQ not in freqfilter
     }
     return [tmap, qmap, umap]
+
+def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
+    np.save(path+filename, data)
+
+def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
+    if os.path.isfile(path+filename):
+        data = np.load(path+filename, allow_pickle=True)
+        return data.item()
+    else:
+        return None
 
 @log_on_start(INFO, "Starting to grab data from frequency channels {freqcomb}")
 @log_on_end(DEBUG, "Beamfunction(s) loaded successfully: '{result}' ")
