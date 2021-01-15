@@ -395,7 +395,7 @@ def plotsave_weights(df: Dict, subtitle: str = '', filetitle: str = ''):
             # marker="x",
             # style= '--',
             grid=True,
-            ylim=(-5.5,5.5),
+            ylim=(-1,1.5),
             title="{} weighting - {}".format(spec, subtitle))
         plt.savefig('vis/weighting/{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
 
