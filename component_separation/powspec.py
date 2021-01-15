@@ -264,14 +264,16 @@ def build_covmatrices(df: Dict, lmax: int, freqfilter: List[str], specfilter: Li
             ifreq+=1
             for FREQ2 in PLANCKMAPFREQ:
                 if FREQ2 not in freqfilter:
+                    ifreq2+=1
                     if int(FREQ2) >= int(FREQ):
-                        ifreq2+=1
                         ispec=-1
                         for spec in PLANCKSPECTRUM:
                             if spec not in specfilter:
                                 ispec+=1
                                 cov[spec][ifreq][ifreq2] = df[spec][FREQ+'-'+FREQ2]
                                 cov[spec][ifreq2][ifreq] = df[spec][FREQ+'-'+FREQ2]
+    print('\n\nCovariance matrix EE:', cov['EE'].shape)
+    # print(cov['EE'])
     return cov
 
 #%% slice along l (3rd axis) and invert
@@ -298,6 +300,7 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
             }for spec in PLANCKSPECTRUM 
                 if spec not in specfilter
         }
+    # print(cov_inv_l)
     return cov_inv_l
 
 # %% Calculate weightings and store in df
@@ -322,7 +325,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
                      if cov[spec][l] is not None else np.array([0.0 for n in range(len(elaw))])
                         for l in range(lmax) if l in cov[spec].keys()])
                     for spec in PLANCKSPECTRUM if spec not in specfilter}
-    print(weighting['EE'])
+    
     # print(cov)
     weights = {spec:
                 pd.DataFrame(
@@ -335,6 +338,8 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             weights[spec].index.name = 'multipole'
+
+    # print(weights)
     return weights
 
 # %% Plot
@@ -347,27 +352,34 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
         subtitle (String, optional): Add some characters to the title. Defaults to ''.
     """
-    plt.figure()
+
+    spectrum_truth = pd.read_csv(
+        'data/powspecplanck.txt',
+        header=0,
+        sep='    ',
+        index_col=0)
+
+    # plt.figure()
+    
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
+            plt.figure()
             df[spec].plot(
                 loglog=True,
                 ylabel="power spectrum",
                 grid=True,
                 title="{} spectrum - {}".format(spec, subtitle))
+            if "Planck-"+spec in spectrum_truth.columns:
+                spectrum_truth["Planck-"+spec].plot(
+                    loglog=True,
+                    grid=True,
+                    ylabel="power spectrum",
+                    legend=True
+                    )
             plt.savefig('vis/spectrum/{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
 
     # %% Compare to truth
-    plt.figure()
-    spectrum_truth = pd.read_csv(
-        'data/powspecplanck.txt',
-        header=0,
-        sep='    ',
-        index_col=0
-        )
-    spectrum_truth.plot(
-        loglog=True,
-        title="CMB powerspectrum from PLANCK".format(spec))
+    # plt.figure()
 
 
 # %% Plot weightings

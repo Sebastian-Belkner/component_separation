@@ -34,8 +34,9 @@ def set_logger(loglevel=logging.INFO):
 def general_pipeline():
 
     freqfilter = [
-        # Planckf.LFI_1.value,
-        # Planckf.LFI_2.value,
+        Planckf.LFI_1.value,
+        Planckf.LFI_2.value,
+        Planckf.LFI_3.value,
         # Planckf.HFI_1.value,
         # Planckf.HFI_2.value,
         # Planckf.HFI_3.value,
@@ -52,9 +53,9 @@ def general_pipeline():
         Plancks.BE.value,
         Plancks.EB.value
         ]
-    lmax = 2000
-    lmax_mask = 6000
-    llp1=False
+    lmax = 4000
+    lmax_mask = 8000
+    llp1=True
     bf=True
 
     set_logger(DEBUG)
@@ -104,7 +105,6 @@ def general_pipeline():
     else:
         df_scbf = df_sc
 
-    # pw.plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
     filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}'.format(
         lmax = lmax,
         lmax_mask = lmax_mask,
