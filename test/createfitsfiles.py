@@ -265,3 +265,7 @@ print(spectrum['143-143'])
 # print(spectrum.item()['143-143']['EE'])
 # print(spectrum.item())
 # %%
+beamf = fits.open(
+    "data/beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_100x100.fits")
+beamf[1].data
+# %%

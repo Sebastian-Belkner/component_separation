@@ -34,12 +34,12 @@ def set_logger(loglevel=logging.INFO):
 def general_pipeline():
 
     freqfilter = [
-        Planckf.LFI_1.value,
-        Planckf.LFI_2.value,
+        # Planckf.LFI_1.value,
+        # Planckf.LFI_2.value,
         # Planckf.HFI_1.value,
         # Planckf.HFI_2.value,
         # Planckf.HFI_3.value,
-        Planckf.HFI_4.value,
+        # Planckf.HFI_4.value,
         Planckf.HFI_5.value,
         Planckf.HFI_6.value
         ]
@@ -52,9 +52,10 @@ def general_pipeline():
         Plancks.BE.value,
         Plancks.EB.value
         ]
-    lmax = 4000
-    lmax_mask = 8000
-    llp1=True   
+    lmax = 2000
+    lmax_mask = 6000
+    llp1=False
+    bf=True
 
     set_logger(DEBUG)
     
@@ -97,16 +98,19 @@ def general_pipeline():
                         for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
     print(freqcomb)
     
-    beamf = io.get_beamf(path=path, freqcomb=freqcomb)
+    if bf:
+        beamf = io.get_beamf(path=path, freqcomb=freqcomb)
+        df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter) #df_sc #
+    else:
+        df_scbf = df_sc
 
-    df_scbf = df_sc #pw.apply_beamfunction(df_sc, beamf, lmax, specfilter)
     # pw.plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
     filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}'.format(
         lmax = lmax,
         lmax_mask = lmax_mask,
         tmask = tmask_filename[::5],
         pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]))
-    subtitle = 'scaled, {} l(l+1), wout beamfunction'.format('w' if llp1 else 'wout')
+    subtitle = 'scaled, {} l(l+1), {} beamfunction'.format('w' if llp1 else 'wout', 'w' if bf else 'wout')
     pw.plotsave_powspec(
         df_scbf,
         specfilter,

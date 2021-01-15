@@ -49,18 +49,17 @@ def get_data(path: str, freqfilter: List[str], tmask_filename: str, pmask_filena
                 nside = nside[0] if int(FREQ)<100 else nside[1])
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
+
     tmask = hp.read_map('{}mask/{}'.format(path, tmask_filename), field=2, dtype=np.float64)
     tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
 
-    # hp_psmask = hp.read_map('{}mask/psmaskP_2048.fits.gz'.format(path), dtype=np.bool)
-    # hp_gmask = hp.read_map('{}mask/gmaskP_apodized_0_2048.fits.gz'.format(path), dtype=np.bool)
-    # pmask = hp_psmask*hp_gmask
     def multi(a,b):
         return a*b
     pmasks = [hp.read_map('{}mask/{}'.format(path, a), dtype=np.bool) for a in pmask_filename]
     pmask = functools.reduce(multi, pmasks)
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
+    print(mappath)
     tmap = {
         FREQ: {
             "header": {
