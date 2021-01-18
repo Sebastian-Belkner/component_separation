@@ -11,12 +11,12 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
 import os
 import sys
-import matplotlib.pyplot as plt
-import pandas as pd
 import functools
+import matplotlib.pyplot as plt
 import os.path
 import numpy as np
 from typing import Dict, List, Optional, Tuple
+import pandas as pd
 from component_separation.cs_util import Planckf, Plancks, Planckr
 import healpy as hp
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
@@ -41,23 +41,25 @@ def get_data(path: str, freqfilter: List[str], tmask_filename: str, pmask_filena
     Doctest:
     >>> get_data(freqfilter=freqfilter) 
     NotSureWhatToExpect
-    """    
+    """
+    
+    print(PLANCKMAPFREQ)
     mappath = {
-        FREQ:'{path}map/frequency/{LorH}_SkyMap_{freq}-field_{nside}_R3.00_full.fits'
+#         FREQ:'/project/projectdirs/planck/data/compsep/exchanges/dx12/maps/hfi/{freq}GHz_ful.all_ful.RD12_RC4.P.fits'
+          FREQ: "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/npipe6v20{split}_{freq}_map.fits"
             .format(
-                path = path,
-                LorH = Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value,
-                freq = FREQ,
-                nside = nside[0] if int(FREQ)<100 else nside[1])
+                split = "A",
+                freq = FREQ
+                )
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
 
-    tmask = hp.read_map('{}mask/{}'.format(path, tmask_filename), field=2, dtype=np.float64)
+    tmask = hp.read_map('{}'.format(tmask_filename), dtype=np.float64)
     tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
 
     def multi(a,b):
         return a*b
-    pmasks = [hp.read_map('{}mask/{}'.format(path, a), dtype=np.bool) for a in pmask_filename]
+    pmasks = [hp.read_map('{}'.format(a), dtype=np.bool) for a in pmask_filename]
     pmask = functools.reduce(multi, pmasks)
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
@@ -110,7 +112,6 @@ def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
         data = np.load(path+filename, allow_pickle=True)
         return data.item()
     else:
-        print("no existing spectrum at {}".format(path+filename))
         return None
 
 @log_on_start(INFO, "Starting to grab data from frequency channels {freqcomb}")
@@ -128,9 +129,8 @@ def get_beamf(path: str, freqcomb: List) -> Dict:
     beamf = dict()
     for fkey in freqcomb:
         freqs = fkey.split('-')
-        beamf.update({fkey: fits.open("{}beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(path, *freqs))})
+        beamf.update({fkey: fits.open("{}beamf/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(path, *freqs))})
     return beamf
-
 
 # %% Plot
 def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', filetitle: str = '') -> None:
@@ -156,13 +156,14 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
         if spec not in specfilter:
             plt.figure()
             df[spec].plot(
+#                 y=["{}-{}".format(a, b) for a,b in [c.split('-') for c in df[spec].columns] if a==b],
                 loglog=True,
                 alpha=(idx_max-idx)/idx_max,
                 xlim=(0,4000),
                 ylim=(1e-3,1e5),
                 ylabel="power spectrum",
                 grid=True,
-                title="{} spectrum - DX12 - {}".format(spec, subtitle))
+                title="{} spectrum - NPIPE - {}".format(spec, subtitle))
             if "Planck-"+spec in spectrum_truth.columns:
                 spectrum_truth["Planck-"+spec].plot(
                     loglog=True,
@@ -170,7 +171,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
                     ylabel="power spectrum",
                     legend=True
                     )
-            plt.savefig('vis/spectrum/DX12_{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
+            plt.savefig('vis/spectrum/NPIPE_{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
 
     # %% Compare to truth
     # plt.figure()
@@ -192,6 +193,6 @@ def plotsave_weights(df: Dict, subtitle: str = '', filetitle: str = ''):
             xlim=(0,4000),
             ylim=(-0.5,1.0),
             # logx=True,
-            title="{} weighting - DX12 - {}".format(spec, subtitle))
-        plt.savefig('vis/weighting/DX12_{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
+            title="{} weighting - NPIPE - {}".format(spec, subtitle))
+        plt.savefig('vis/weighting/NPIPE_{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
 # %%

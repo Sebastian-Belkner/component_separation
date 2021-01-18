@@ -70,7 +70,7 @@ def general_pipeline():
     # ['HFI_Mask_GalPlane-apo0_2048_R2.00.fits']
     # ['psmaskP_2048.fits.gz', 'gmaskP_apodized_0_2048.fits.gz']
 
-    spec_filename = 'DX12_lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_.npy'.format(
+    spec_filename = 'lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_.npy'.format(
         lmax = lmax,
         lmax_mask = lmax_mask,
         tmask = tmask_filename[::5],

@@ -40,6 +40,8 @@ import sys
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
@@ -111,7 +113,7 @@ def hphack(tqumap: List[Dict]) -> List[Dict]:
     if '100' in tqumap[1].keys():
         maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
         maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]
-        masks = [np.array([False]) if count_bad(m) == 0 else mkmask(m) for m in maps_c]
+        masks = [False if count_bad(m) == 0 else mkmask(m) for m in maps_c]
         for idx, (m, mask) in enumerate(zip(maps_c, masks)):
             if mask.any():
                 m[mask] = 0.0

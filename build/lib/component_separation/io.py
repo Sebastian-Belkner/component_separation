@@ -11,8 +11,6 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
 import os
 import sys
-import matplotlib.pyplot as plt
-import pandas as pd
 import functools
 import os.path
 import numpy as np
@@ -110,7 +108,6 @@ def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
         data = np.load(path+filename, allow_pickle=True)
         return data.item()
     else:
-        print("no existing spectrum at {}".format(path+filename))
         return None
 
 @log_on_start(INFO, "Starting to grab data from frequency channels {freqcomb}")
@@ -150,19 +147,15 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
         index_col=0)
 
     # plt.figure()
-    idx=1
-    idx_max = len(PLANCKSPECTRUM) - len(specfilter)
+    
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             plt.figure()
             df[spec].plot(
                 loglog=True,
-                alpha=(idx_max-idx)/idx_max,
-                xlim=(0,4000),
-                ylim=(1e-3,1e5),
                 ylabel="power spectrum",
                 grid=True,
-                title="{} spectrum - DX12 - {}".format(spec, subtitle))
+                title="{} spectrum - {}".format(spec, subtitle))
             if "Planck-"+spec in spectrum_truth.columns:
                 spectrum_truth["Planck-"+spec].plot(
                     loglog=True,
@@ -170,7 +163,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
                     ylabel="power spectrum",
                     legend=True
                     )
-            plt.savefig('vis/spectrum/DX12_{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
+            plt.savefig('vis/spectrum/{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
 
     # %% Compare to truth
     # plt.figure()
@@ -189,9 +182,8 @@ def plotsave_weights(df: Dict, subtitle: str = '', filetitle: str = ''):
             # marker="x",
             # style= '--',
             grid=True,
-            xlim=(0,4000),
-            ylim=(-0.5,1.0),
+            ylim=(-1,1.5),
             # logx=True,
-            title="{} weighting - DX12 - {}".format(spec, subtitle))
-        plt.savefig('vis/weighting/DX12_{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
+            title="{} weighting - {}".format(spec, subtitle))
+        plt.savefig('vis/weighting/{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
 # %%
