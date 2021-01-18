@@ -25,7 +25,7 @@ author = 'Sebastian Belkner'
 release = '0.0.1'
 master_doc = 'index'
 pygments_style = 'sphinx'
-autodoc_mock_imports = ["plancklens"]
+autodoc_mock_imports = ["plancklens", "MSC", "plancklens.MSC.MSC"]
 
 # -- General configuration ---------------------------------------------------
 

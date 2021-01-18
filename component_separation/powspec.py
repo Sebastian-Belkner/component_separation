@@ -55,11 +55,10 @@ PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 PLANCKMAPAR = [p.value for p in list(Planckr)]
 PLANCKMAPNSIDE = [1024, 2048]
 
-path='data/'
-
 """ Doctest:
 The following constants be needed because functions are called with globals()
 """
+path='test/data'
 freqfilter = [Planckf.LFI_1.value, Planckf.LFI_2.value, Planckf.HFI_1.value, Planckf.HFI_5.value, Planckf.HFI_6.value]
 specfilter = [Plancks.TE, Plancks.TB, Plancks.ET, Plancks.BT]
 lmax = 20
@@ -67,6 +66,59 @@ lmax_mask = 80
 
 def set_logger(loglevel=logging.INFO):
     logging.basicConfig(format='   %(levelname)s:      %(message)s', level=loglevel)
+
+
+@log_on_start(INFO, "Starting to replace UNSEEN pixels for 100Ghz map")
+@log_on_end(DEBUG, "UNSEEN pixels replaced successfully: '{result}' ")
+def hphack(tqumap: List[Dict]) -> List[Dict]:
+    """Replaces UNSEEN pixels in the polarisation maps (Q, U) with 0.0. This is a quickfix for healpy `_sphtools.pyx`,
+    as it throws errors when processing maps with UNSEEN pixels. reason being, one statement is ambigious: `if np.array([True, True])`.
+
+    Args:
+        tqumap (Dict): Data as coming from `pw.get_data()`
+
+    Returns:
+        Dict: The corrected data
+    """
+    UNSEEN = -1.6375e30
+    UNSEEN_tol = 1.e-7 * 1.6375e30
+    def count_bad(m):
+        i = 0
+        nbad = 0
+        size = m.size
+        for i in range(m.size):
+            if np.abs(m[i] - UNSEEN) < UNSEEN_tol:
+                nbad += 1
+        return nbad
+
+    def mkmask(m):
+        nbad = 0
+        size = m.size
+        i = 0
+        # first, count number of bad pixels, to see if allocating a mask is needed
+        nbad = count_bad(m)
+        mask = np.ndarray(shape=(1,), dtype=np.int8)
+        #cdef np.ndarray[double, ndim=1] m_
+        if nbad == 0:
+            return False
+        else:
+            mask = np.zeros(size, dtype = np.int8)
+            #m_ = m
+            for i in range(size):
+                if np.abs(m[i] - UNSEEN) < UNSEEN_tol:
+                    mask[i] = 1
+        mask.dtype = bool
+        return mask
+
+    if '100' in tqumap[1].keys():
+        maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
+        maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]
+        masks = [False if count_bad(m) == 0 else mkmask(m) for m in maps_c]
+        for idx, (m, mask) in enumerate(zip(maps_c, masks)):
+            if mask.any():
+                m[mask] = 0.0
+            tqumap[idx+1]["100"]['map'] = m
+    return tqumap
 
 #%% Calculate spectrum
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
@@ -83,8 +135,8 @@ def powerspectrum(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freq
 
     Returns:
         Dict[str, Dict]: Powerspectra as provided from MSC.pospace
-    """   
-    
+    """
+
     spectrum = {
         FREQ+'-'+FREQ2: 
             {spec: ps.map2cls(
@@ -96,7 +148,7 @@ def powerspectrum(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freq
                     lmax_mask=lmax_mask)[idx]
                 for idx, spec in enumerate(PLANCKSPECTRUM) if spec not in specfilter}
             for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
-            for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and FREQ2>=FREQ}
+            for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and int(FREQ2)>=int(FREQ)}
     return spectrum
 
 #%% Create df for no apparent reason
@@ -127,16 +179,18 @@ def create_df(spectrum: Dict[str, Dict[str, List]], freqfilter: List[str], specf
         if spec not in specfilter:
             for fkey, _ in df[spec].items():
                 df[spec][fkey].index.name = 'multipole'
+    
     return df
 
 #%% Apply 1e12*l(l+1)/2pi
 @log_on_start(INFO, "Starting to apply scaling onto data {df}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
-def apply_scale(df: Dict, specfilter: List[str]) -> Dict:
+def apply_scale(df: Dict, specfilter: List[str], llp1: bool = True) -> Dict:
     """Multiplies powerspectra by :math:`l(l+1)/(2\pi)1e12`
 
     Args:
         df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+        df (llp1, Optional): Set to False, if :math:`l(l+1)/(2\pi)` should not be applied. Default: True
 
     Returns:
         Dict: A "2D"-DataFrame of scaled powerspectra with spectrum and frequency-combinations in the columns
@@ -145,9 +199,11 @@ def apply_scale(df: Dict, specfilter: List[str]) -> Dict:
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             for fkey, fval in df_scaled[spec].items():
-                lnorm = pd.Series(fval.index.to_numpy()*(fval.index.to_numpy()+1))
-                df_scaled[spec][fkey] = df[spec][fkey].multiply(lnorm*1e12/(2*np.pi), axis='index')
-                # df_scaled[spec][fkey] = df[spec][fkey]*1e12
+                if llp1:
+                    lnorm = pd.Series(fval.index.to_numpy()*(fval.index.to_numpy()+1)/(2*np.pi))
+                    df_scaled[spec][fkey] = df[spec][fkey].multiply(lnorm*1e12, axis='index')
+                else:
+                    df_scaled[spec][fkey] = df[spec][fkey]*1e12
     return df_scaled
 
 #%% Apply Beamfunction
@@ -182,39 +238,6 @@ def apply_beamfunction(df: Dict,  beamf: Dict, lmax: int, specfilter: List[str])
                     .divide(hdul[1].data.field(TEB_dict[spec[1]])[:lmax+1], axis='index')
     return df_bf
 
-#%% Plot
-def plot_powspec(df: Dict, specfilter: List[str], subtitle: str= '') -> None:
-    """Plotting
-
-    Args:
-        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
-
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-        subtitle (String, optional): Add some characters to the title. Defaults to ''.
-    """
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            df[spec].plot(
-                # y=[
-                # # "143-143",
-                # "217-217"
-                # ],
-                loglog=True,
-                ylabel="power spectrum",
-                title="{} spectrum - {}".format(spec, subtitle))
-
-    #%% Compare to truth
-    spectrum_truth = pd.read_csv(
-        'data/powspecplanck.txt',
-        header=0,
-        sep='    ',
-        index_col=0
-        )
-    spectrum_truth.plot(
-        loglog=True,
-        title="CMB powerspectrum from PLANCK".format(spec))
-    plt.show()
-
 #%% Build covariance matrices
 @log_on_start(INFO, "Starting to build convariance matrices with {df}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
@@ -241,14 +264,16 @@ def build_covmatrices(df: Dict, lmax: int, freqfilter: List[str], specfilter: Li
             ifreq+=1
             for FREQ2 in PLANCKMAPFREQ:
                 if FREQ2 not in freqfilter:
+                    ifreq2+=1
                     if int(FREQ2) >= int(FREQ):
-                        ifreq2+=1
                         ispec=-1
                         for spec in PLANCKSPECTRUM:
                             if spec not in specfilter:
                                 ispec+=1
                                 cov[spec][ifreq][ifreq2] = df[spec][FREQ+'-'+FREQ2]
                                 cov[spec][ifreq2][ifreq] = df[spec][FREQ+'-'+FREQ2]
+    print('\n\nCovariance matrix EE:', cov['EE'].shape)
+    # print(cov['EE'])
     return cov
 
 #%% slice along l (3rd axis) and invert
@@ -263,16 +288,19 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         freqfilter (List[str]): Frequency channels which are to be ignored
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
     """
-    def is_invertible(a):
-        return a.shape[0] == a.shape[1] and np.linalg.matrix_rank(a) == a.shape[0]
+    def is_invertible(a, l):
+        truth = a.shape[0] == a.shape[1] and np.linalg.matrix_rank(a) == a.shape[0]
+        if not truth:
+            print('{} not invertible: {}'.format(l, a) )
+        return truth
     cov_inv_l = {
         spec: {
-            l: np.linalg.inv(cov[spec][:,:,l])
+            l: np.linalg.inv(cov[spec][:,:,l]) if is_invertible(cov[spec][:,:,l], l) else None
                 for l in range(lmax)
-                    if is_invertible(cov[spec][:,:,l])
             }for spec in PLANCKSPECTRUM 
                 if spec not in specfilter
         }
+    # print(cov_inv_l)
     return cov_inv_l
 
 # %% Calculate weightings and store in df
@@ -290,10 +318,15 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     Returns:
         Dict[str, DataFrame]: The weightings of the respective Frequency channels
     """
+
+    # TODO add dummy value for spec: np.array(..) when cov is not invertible
     elaw = np.ones(len([dum for dum in PLANCKMAPFREQ if dum not in freqfilter]))
     weighting = {spec: np.array([(cov[spec][l] @ elaw) / (elaw.T @ cov[spec][l] @ elaw)
+                     if cov[spec][l] is not None else np.array([0.0 for n in range(len(elaw))])
                         for l in range(lmax) if l in cov[spec].keys()])
                     for spec in PLANCKSPECTRUM if spec not in specfilter}
+    
+    # print(cov)
     weights = {spec:
                 pd.DataFrame(
                     data=weighting[spec],
@@ -305,48 +338,16 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             weights[spec].index.name = 'multipole'
+
+    # print(weights)
     return weights
-
-# %% Plot weightings
-def plotsave_weights(df: Dict):
-    """Plotting
-    Args:
-        df (Dict): Data to be plotted
-    """
-    for spec in df.keys():
-        df[spec].plot(
-            ylabel='weigthing',
-            marker="x",
-            style= '--',
-            grid=True,
-            ylim=(-0.5,1.5),
-            title=spec+' spectrum')
-        plt.savefig('vis/{}_weighting.jpg'.format(spec))
-
 
 if __name__ == '__main__':
     import doctest
-    doctest.run_docstring_examples(get_data, globals(), verbose=True)
+    # doctest.run_docstring_examples(get_data, globals(), verbose=True)
 
 
 def general_pipeline():
-    freqfilter = ['030', '070', '100', '545', '217', '353', '857']
-    specfilter = ["TE", "TB", "ET", "BT", "EB", "BE"]
-    lmax = 2000
-    lmax_mask = 8000
-
-    set_logger()
-    
-    tqumap = get_data(path='data/', freqfilter=freqfilter)
-    spectrum = powerspectrum(tqumap, lmax, lmax_mask, freqfilter, specfilter)
-    df = create_df(spectrum, freqfilter, specfilter)
-    df_sc = apply_scale(df, specfilter)
-    df_scbf = apply_beamfunction(df_sc, lmax, specfilter)
-    plot_powspec(df, specfilter, subtitle='unscaled, w/ beamfunction')
-    plot_powspec(df_scbf, specfilter, subtitle='scaled, w beamfunction')
-    cov = build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
-    cov_inv_l = invert_covmatrices(cov, lmax, freqfilter, specfilter)
-    weights = calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
-    plotsave_weights(weights)
+    pass
 
 # %%
