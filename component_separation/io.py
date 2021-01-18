@@ -127,4 +127,63 @@ def get_beamf(path: str, freqcomb: List) -> Dict:
         freqs = fkey.split('-')
         beamf.update({fkey: fits.open("{}beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(path, *freqs))})
     return beamf
+
+
+# %% Plot
+def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', filetitle: str = '') -> None:
+    """Plotting
+
+    Args:
+        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+
+        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
+        subtitle (String, optional): Add some characters to the title. Defaults to ''.
+    """
+
+    spectrum_truth = pd.read_csv(
+        'data/powspecplanck.txt',
+        header=0,
+        sep='    ',
+        index_col=0)
+
+    # plt.figure()
+    
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            plt.figure()
+            df[spec].plot(
+                loglog=True,
+                ylabel="power spectrum",
+                grid=True,
+                title="{} spectrum - {}".format(spec, subtitle))
+            if "Planck-"+spec in spectrum_truth.columns:
+                spectrum_truth["Planck-"+spec].plot(
+                    loglog=True,
+                    grid=True,
+                    ylabel="power spectrum",
+                    legend=True
+                    )
+            plt.savefig('vis/spectrum/{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
+
+    # %% Compare to truth
+    # plt.figure()
+
+
+# %% Plot weightings
+def plotsave_weights(df: Dict, subtitle: str = '', filetitle: str = ''):
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+    """
+    plt.figure()
+    for spec in df.keys():
+        df[spec].plot(
+            ylabel='weigthing',
+            # marker="x",
+            # style= '--',
+            grid=True,
+            ylim=(-1,1.5),
+            # logx=True,
+            title="{} weighting - {}".format(spec, subtitle))
+        plt.savefig('vis/weighting/{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
 # %%

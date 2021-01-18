@@ -111,7 +111,7 @@ def general_pipeline():
         tmask = tmask_filename[::5],
         pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]))
     subtitle = 'scaled, {} l(l+1), {} beamfunction'.format('w' if llp1 else 'wout', 'w' if bf else 'wout')
-    pw.plotsave_powspec(
+    io.plotsave_powspec(
         df_scbf,
         specfilter,
         subtitle=subtitle,
@@ -130,7 +130,7 @@ def general_pipeline():
         pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter])
         )
-    pw.plotsave_weights(
+    io.plotsave_weights(
         weights,
         subtitle=subtitle,
         filetitle=filetitle)
