@@ -155,7 +155,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
                 loglog=True,
                 ylabel="power spectrum",
                 grid=True,
-                title="{} spectrum - {}".format(spec, subtitle))
+                title="{} spectrum - DX12 - {}".format(spec, subtitle))
             if "Planck-"+spec in spectrum_truth.columns:
                 spectrum_truth["Planck-"+spec].plot(
                     loglog=True,
@@ -163,7 +163,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
                     ylabel="power spectrum",
                     legend=True
                     )
-            plt.savefig('vis/spectrum/{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
+            plt.savefig('vis/spectrum/DX12_{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
 
     # %% Compare to truth
     # plt.figure()
@@ -184,6 +184,6 @@ def plotsave_weights(df: Dict, subtitle: str = '', filetitle: str = ''):
             grid=True,
             ylim=(-1,1.5),
             # logx=True,
-            title="{} weighting - {}".format(spec, subtitle))
-        plt.savefig('vis/weighting/{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
+            title="{} weighting - DX12 - {}".format(spec, subtitle))
+        plt.savefig('vis/weighting/DX12_{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
 # %%

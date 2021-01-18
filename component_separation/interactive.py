@@ -9,6 +9,7 @@ __author__ = "S. Belkner"
 import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks
 import logging
+import numpy as np
 import logging.handlers
 from logging import DEBUG, ERROR, INFO, CRITICAL
 import os, sys
