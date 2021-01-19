@@ -59,7 +59,7 @@ def get_data(path: str, freqfilter: List[str], tmask_filename: str, pmask_filena
 
     def multi(a,b):
         return a*b
-    pmasks = [hp.read_map('{}'.format(a), dtype=np.bool) for a in pmask_filename]
+    pmasks = [hp.read_map('{}{}'.format(path,a), dtype=np.bool) for a in pmask_filename]
     pmask = functools.reduce(multi, pmasks)
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
