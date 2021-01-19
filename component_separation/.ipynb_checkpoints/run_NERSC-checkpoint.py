@@ -61,7 +61,7 @@ def general_pipeline():
     set_logger(DEBUG)
     
     path = ''
-    spec_path = '/global/homes/s/sebibel/tmp/'
+    spec_path = '/global/homes/s/sebibel/git/component_separation/data/tmp/'
     
     tmask_filename = "/project/projectdirs/cmb/data/planck2018/pr3/Planck_L08_inputs/PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
 #     'HFI_Mask_GalPlane-apo0_2048_R2.00.fits'
