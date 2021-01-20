@@ -1,0 +1,118 @@
+{
+"pa":{
+    "mskset": "lens",
+    "freqdset": "DX12",
+    "llp1": true,
+    "bf": true,
+    "lmax": 4000,
+    "lmax_mask": 8000,
+    "freqdatsplit": "",
+    "freqfilter": [
+        "030",
+        "044",
+        "070",
+        "545",
+        "857"
+        ],
+    "specfilter": [
+        "TT",
+        "TE",
+        "TB",
+        "EB",
+        "ET",
+        "BT",
+        "BE"
+        ],
+    "nside": [
+        1024,
+        2048
+    ]
+},
+"NERSC":{
+    "beamf":{
+        "path": "data/beamf/",
+        "filename": "Bl_TEB_R3.01_fullsky_{freq}x{freq}.fits"
+        },
+    "NPIPE":{
+        "path": "/global/cfs/cdirs/cmb/data/planck2020/npipe/",
+        "filename": "npipe6v20{split}/npipe6v20{split}_{freq}_map.fits",
+        "split": [
+            "A",
+            "B",
+            ""
+            ]
+        },
+    "DX12":{
+        "path": null,
+        "filename": null
+        },
+    "lens":{
+        "tmask":{
+            "path": null,
+            "filename": null
+            },
+        "pmask":{
+            "path": "/project/projectdirs/cmb/data/planck2018/pr3/Planck_L08_inputs/",
+            "filename": [
+                "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
+            ]
+            }
+        },
+    "smica":{
+        "tmask":{
+            "path": null,
+            "filename": null
+            },
+        "pmask":{
+            "path": "/global/homes/s/sebibel/git/component_separation/data/mask/",
+            "filename": [
+                "psmaskP_2048.fits.gz",
+                "gmaskP_apodized_0_2048.fits.gz"
+                ]
+            }
+        },
+    "outdir": "/global/homes/s/sebibel/tmp/",
+    "indir": ""
+    },
+"XPS":{
+    "beamf":{
+        "path": "beamf/",
+        "filename": "Bl_TEB_R3.01_fullsky_{freq}x{freq}.fits"
+        },
+    "NPIPE":{
+            "path": null,
+            "filename": null
+        },
+    "DX12":{
+            "path": "map/frequency/",
+            "filename": "{LorH}_SkyMap_{freq}-field_{nside}_R3.00_full.fits"
+        },
+    "lens":{
+        "tmask":{
+            "path": null,
+            "filename": null
+            },
+        "pmask":{
+            "path": "mask/",
+            "filename": [
+                "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
+            ]
+            }
+        },
+    "smica":{
+        "tmask":{
+            "path": null,
+            "filename": null
+            },
+        "pmask":{
+            "path": "mask/",
+            "filename": [
+                "psmaskP_2048.fits.gz",
+                "gmaskP_apodized_0_2048.fits.gz"
+                ]
+            }
+        },
+    "outdir": "data/tmp/",
+    "indir": "data/"
+    }
+}

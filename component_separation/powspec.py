@@ -107,23 +107,30 @@ def hphack(tqumap: List[Dict]) -> List[Dict]:
                     mask[i] = 1
         mask.dtype = bool
         return mask
-
-    if '100' in tqumap[1].keys():
-        maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
+    
+    if '100' in tqumap[0].keys():
+        # only fixing q and u maps
+        if len(tqumap)==2:
+            maps = [tqumap[0]["100"]['map'], tqumap[1]["100"]['map']]
+        else:
+            maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
         maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]
 
         masks = [np.array([False]) if count_bad(m) == 0 else mkmask(m) for m in maps_c]
         for idx, (m, mask) in enumerate(zip(maps_c, masks)):
             if mask.any():
                 m[mask] = 0.0
-            tqumap[idx+1]["100"]['map'] = m
+            if len(tqumap)==2:
+                tqumap[idx]["100"]['map'] = m
+            else:
+                tqumap[idx+1]["100"]['map'] = m
     return tqumap
 
 #%% Calculate spectrum
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
-def powerspectrum(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqfilter: List[str], specfilter: List[str]) -> Dict[str, Dict]:
-    """Calculate powerspectrum using MSC.pospace
+def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqfilter: List[str], specfilter: List[str]) -> Dict[str, Dict]:
+    """Calculate powerspectrum using MSC.pospace and TQUmaps
 
     Args:
         tqumap List[Dict[str, Dict]]: Planck maps (data and masks) and some header information
@@ -148,6 +155,46 @@ def powerspectrum(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freq
                 for idx, spec in enumerate(PLANCKSPECTRUM) if spec not in specfilter}
             for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
             for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and int(FREQ2)>=int(FREQ)}
+    return spectrum
+
+#%% Calculate spectrum
+@log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
+@log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
+def qupowerspec(qumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqfilter: List[str], specfilter: List[str]) -> Dict[str, Dict]:
+    """Calculate powerspectrum using MSC.pospace and TQUmaps
+
+    Args:
+        qumap List[Dict[str, Dict]]: Planck maps (data and masks) and some header information
+        lmax (int): Maximum multipol of data to be considered
+        lmax_mask (int): Maximum multipol of mask to be considered. Hint: take >3*lmax
+        freqfilter (List[str]): Frequency channels which are to be ignored
+        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["EB"]
+
+    Returns:
+        Dict[str, Dict]: Powerspectra as provided from MSC.pospace
+    """
+    buff = {
+        FREQ+'-'+FREQ2: 
+            ps.map2cl_spin(
+                qumap = [qumap[0][FREQ]['map'], qumap[1][FREQ]['map']],
+                spin = 2,
+                spin2 = 2,
+                ret_eb_be = True,
+                qumap2 = [qumap[0][FREQ2]['map'], qumap[1][FREQ2]['map']],
+                mask = qumap[1][FREQ]['mask'],
+                lmax = lmax,
+                lmax_mask = lmax_mask)
+            for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
+            for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and int(FREQ2)>=int(FREQ)}
+
+    spectrum = dict()
+    for freqs, res in buff.items():
+        spectrum.update({
+            freqs: {
+                spec: buff[freqs][idx]
+                    for idx, spec in enumerate([p for p in PLANCKSPECTRUM if p not in specfilter])
+                    }
+           })
     return spectrum
 
 #%% Create df for no apparent reason

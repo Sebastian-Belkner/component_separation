@@ -24,13 +24,14 @@ PLANCKMAPNSIDE = [1024, 2048]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
 #%% Collect maps
-@log_on_start(INFO, "Starting to grab data without {freqfilter}")
-@log_on_end(DEBUG, "Data without '{freqfilter}' loaded successfully: '{result}' ")
-def get_data(path: str, freqfilter: List[str], tmask_filename: str, pmask_filename: List[str], nside: List[int] = PLANCKMAPNSIDE) -> List[Dict]:
+@log_on_start(INFO, "Starting to grab data with config {cf}")
+@log_on_end(DEBUG, "Data loaded successfully: '{result}' ")
+def get_data(cf: Dict, mch: str) -> List[Dict]:
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
-        path (str): Relative path to root dir of the data. Must end with '/'
+        indir_path (str): path to root dir of the data. Must end with '/'
+        freq_path (str): path to frequency maps
         freqfilter (List[str]): Frequency channels which are to be ignored
         tmask_filename (str): name of the mask for intensity maps
         pmask_filename (List[str]): list of names of the masks for polarisation maps. They will be reduced to one mask
@@ -41,39 +42,86 @@ def get_data(path: str, freqfilter: List[str], tmask_filename: str, pmask_filena
     Doctest:
     >>> get_data(freqfilter=freqfilter) 
     NotSureWhatToExpect
-    """    
+    """
+    indir_path = cf[mch]['indir']
+    mskset = cf['pa']['mskset'] # smica or lens
+    freqdset = cf['pa']['freqdset'] # NPIPE or DX12
+    freqfilter = cf['pa']["freqfilter"]
+    specfilter = cf['pa']["specfilter"]
+
+    tmask_path = cf[mch][mskset]['tmask']["path"]
+    pmask_path = cf[mch][mskset]['pmask']["path"]
+    freq_path = cf[mch][freqdset]['path']
+
+    tmask_filename = cf[mch][mskset]['tmask']['filename']
+    pmask_filename = cf[mch][mskset]['pmask']['filename']
+    freq_filename = cf[mch][freqdset]['filename']
+
+    nside = cf['pa']["nside"]
+    ### build complete paths
     mappath = {
-        FREQ:'{path}map/frequency/{LorH}_SkyMap_{freq}-field_{nside}_R3.00_full.fits'
+        FREQ:'{path}{freq_path}{freq_filename}'
             .format(
-                path = path,
-                LorH = Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value,
-                freq = FREQ,
-                nside = nside[0] if int(FREQ)<100 else nside[1])
+                path = indir_path,
+                freq_path = freq_path,
+                freq_filename = freq_filename
+                    .replace("{freq}", FREQ)
+                    .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
+                    .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
+                    .replace("{split}", cf['pa'][freqdatsplit] if "split" in cf[mch][freqdset] else "")
+                )
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
 
-    tmask = hp.read_map('{}mask/{}'.format(path, tmask_filename), field=2, dtype=np.float64)
-    tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
+    if tmask_filename is None:
+        tmask = None
+        tmask_d = None
+    else:
+        tmask = hp.read_map(
+            '{path}{tmask_path}{tmask_filename}'
+            .format(
+                path = indir_path,
+                tmask_path = tmask_path,
+                tmask_filename = tmask_filename), field=2, dtype=np.float64)
+        tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
+
 
     def multi(a,b):
         return a*b
-    pmasks = [hp.read_map('{}mask/{}'.format(path, a), dtype=np.bool) for a in pmask_filename]
+    pmasks = [hp.read_map(
+        '{path}{pmask_path}{pmask_filename}'
+        .format(
+            path = indir_path,
+            pmask_path = pmask_path,
+            pmask_filename = a), dtype=np.bool) for a in pmask_filename]
     pmask = functools.reduce(multi, pmasks)
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
-    print(mappath)
-    tmap = {
-        FREQ: {
-            "header": {
-                "nside" : nside[0] if int(FREQ)<100 else nside[1],
-                "freq" : FREQ,
-                "LorH" : Planckr.LFI if int(FREQ)<100 else Planckr.HFI
-            },
-            "map": hp.read_map(mappath[FREQ], field=0),
-            "mask": tmask_d if int(FREQ)<100 else tmask
-            }for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter
-    }
+    ret = []
+    flag = False
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            if "T" in spec:
+                flag = True
+                break
+    if flag and (tmask is not None):
+        tmap = {
+            FREQ: {
+                "header": {
+                    "nside" : nside[0] if int(FREQ)<100 else nside[1],
+                    "freq" : FREQ,
+                    "LorH" : Planckr.LFI if int(FREQ)<100 else Planckr.HFI
+                },
+                "map": hp.read_map(mappath[FREQ], field=0),
+                "mask": tmask_d if int(FREQ)<100 else tmask
+                }for FREQ in PLANCKMAPFREQ
+                    if FREQ not in freqfilter
+        }
+    elif flag and (tmask is None):
+        print("Temperature spectra requested, but no Temperature masking provided. Spectra including temperature are skipped")
+        tmap = None
+    elif flag == False:
+        tmap = None
 
     qmap = {
         FREQ: {
@@ -87,7 +135,6 @@ def get_data(path: str, freqfilter: List[str], tmask_filename: str, pmask_filena
             }for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter
     }
-
     umap = {
         FREQ: {
             "header": {
@@ -115,7 +162,7 @@ def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
 
 @log_on_start(INFO, "Starting to grab data from frequency channels {freqcomb}")
 @log_on_end(DEBUG, "Beamfunction(s) loaded successfully: '{result}' ")
-def get_beamf(path: str, freqcomb: List) -> Dict:
+def get_beamf(indir_path: str, freqcomb: List) -> Dict:
     """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
     Args:
@@ -128,7 +175,15 @@ def get_beamf(path: str, freqcomb: List) -> Dict:
     beamf = dict()
     for fkey in freqcomb:
         freqs = fkey.split('-')
-        beamf.update({fkey: fits.open("{}beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{}x{}.fits".format(path, *freqs))})
+        beamf.update({
+            fkey: fits.open(
+                "{path}beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
+                .format(
+                    path = indir_path,
+                    freq1 = freqs[0],
+                    freq2 = freqs[1])
+                    )
+            })
     return beamf
 
 

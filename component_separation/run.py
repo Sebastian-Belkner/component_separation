@@ -15,9 +15,17 @@ import os, sys
 import component_separation.powspec as pw
 import component_separation.io as io
 from typing import Dict, List, Optional, Tuple
+import json
+import platform
 
+uname = platform.uname()
+if uname.node == "DESKTOP-KMIGUPV":
+    mch = "XPS"
+else:
+    mch = "NERSC"
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 LOGFILE = 'messages.log'
 logger = logging.getLogger("")
 handler = logging.handlers.RotatingFileHandler(
@@ -27,69 +35,56 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+with open('config.json', "r") as f:
+    cf = json.load(f)
+
+
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
     
 
 def general_pipeline():
-
-    freqfilter = [
-        Planckf.LFI_1.value,
-        Planckf.LFI_2.value,
-        Planckf.LFI_3.value,
-        # Planckf.HFI_1.value,
-        # Planckf.HFI_2.value,
-        # Planckf.HFI_3.value,
-        # Planckf.HFI_4.value,
-        Planckf.HFI_5.value,
-        Planckf.HFI_6.value
-        ]
-    specfilter = [
-        Plancks.TE.value,
-        Plancks.TB.value,
-        Plancks.ET.value,
-        Plancks.BT.value,
-        Plancks.TT.value,
-        Plancks.BE.value,
-        Plancks.EB.value
-        ]
-    lmax = 4000
-    lmax_mask = 8000
-    llp1=True
-    bf=True
-
+    mskset = cf['pa']['mskset'] # smica or lens
+    freqdset = cf['pa']['freqdset'] # DX12 or NERSC
     set_logger(DEBUG)
-    
-    path = 'data/'
-    spec_path = 'data/tmp/spectrum/'
-    
-    tmask_filename = 'HFI_Mask_GalPlane-apo0_2048_R2.00.fits'
-    # HFI_Mask_GalPlane-apo0_128_R2.00.fits
 
-    pmask_filename = ['psmaskP_2048.fits.gz', 'gmaskP_apodized_0_2048.fits.gz']
-    # ['HFI_Mask_GalPlane-apo0_2048_R2.00.fits']
-    # ['psmaskP_2048.fits.gz', 'gmaskP_apodized_0_2048.fits.gz']
+    lmax = cf['pa']["lmax"]
+    lmax_mask = cf['pa']["lmax_mask"]
+    llp1 = cf['pa']["llp1"]
+    bf = cf['pa']["bf"]
 
-    spec_filename = 'DX12_lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_.npy'.format(
+
+    spec_path = cf[mch]['outdir']
+    indir_path = cf[mch]['indir']
+    freqfilter = cf['pa']["freqfilter"]
+    specfilter = cf['pa']["specfilter"]
+    spec_filename = '{freqdset}_lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_specs-{spec}.npy'.format(
+        freqdset = freqdset,
         lmax = lmax,
         lmax_mask = lmax_mask,
-        tmask = tmask_filename[::5],
-        pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter])
-    )
-
+        tmask = mskset,
+        pmask = mskset,
+        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]))
     spectrum = io.load_spectrum(spec_path, spec_filename)
     if spectrum is None:
-        tqumap = io.get_data(
-            path=path,
-            freqfilter=freqfilter,
-            tmask_filename=tmask_filename,
-            pmask_filename=pmask_filename,
-            nside=[1024,2048])
-        logger.log(DEBUG, tqumap)
+        tqumap = io.get_data(cf, mch = mch)
+
+        if tqumap[0] == None:
+            tqumap = tqumap[1:]
+        elif tqumap[1] == None:
+            tqumap = [tqumap[0]]
         tqumap_hpcorrected = pw.hphack(tqumap)
-        spectrum = pw.powerspectrum(tqumap_hpcorrected, lmax, lmax_mask, freqfilter, specfilter)
+        # tqumap_hpcorrected = tqumap
+        if len(tqumap) == 3:
+            spectrum = pw.tqupowerspec(tqumap_hpcorrected, lmax, lmax_mask, freqfilter, specfilter)
+        elif len(tqumap) == 2:
+            spectrum = pw.qupowerspec(tqumap_hpcorrected, lmax, lmax_mask, freqfilter, specfilter)
+        elif len(tqumap) == 1:
+            print("Only TT spectrum caluclation requested. This is currently not supported.")
         io.save_spectrum(spectrum, spec_path, spec_filename)
+
+
     df = pw.create_df(spectrum, freqfilter, specfilter)
 
     df_sc = pw.apply_scale(df, specfilter, llp1=llp1)
@@ -100,17 +95,19 @@ def general_pipeline():
     print(freqcomb)
     
     if bf:
-        beamf = io.get_beamf(path=path, freqcomb=freqcomb)
+        beamf = io.get_beamf(indir_path=indir_path, freqcomb=freqcomb)
         df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter) #df_sc #
     else:
         df_scbf = df_sc
 
-    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}'.format(
+    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}_{spec}'.format(
         lmax = lmax,
         lmax_mask = lmax_mask,
-        tmask = tmask_filename[::5],
-        pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]))
-    subtitle = 'scaled, {} l(l+1), {} beamfunction'.format('w' if llp1 else 'wout', 'w' if bf else 'wout')
+        tmask = mskset,
+        pmask = mskset,
+        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]))
+    subtitle = '{} masks'.format(mskset)
     io.plotsave_powspec(
         df_scbf,
         specfilter,
@@ -123,11 +120,12 @@ def general_pipeline():
     # print(cov_inv_l)
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
 
-    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}'.format(
+    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}_{spec}'.format(
         lmax = lmax,
         lmax_mask = lmax_mask,
-        tmask = tmask_filename[::5],
-        pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]),
+        tmask = mskset,
+        pmask = mskset,
+        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter])
         )
     io.plotsave_weights(
