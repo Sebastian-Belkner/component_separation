@@ -31,7 +31,7 @@
 "NERSC":{
     "beamf":{
         "path": "data/beamf/",
-        "filename": "Bl_TEB_R3.01_fullsky_{freq}x{freq}.fits"
+        "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
     "NPIPE":{
         "path": "/global/cfs/cdirs/cmb/data/planck2020/npipe/",
@@ -77,7 +77,7 @@
 "XPS":{
     "beamf":{
         "path": "beamf/",
-        "filename": "Bl_TEB_R3.01_fullsky_{freq}x{freq}.fits"
+        "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
     "NPIPE":{
             "path": null,

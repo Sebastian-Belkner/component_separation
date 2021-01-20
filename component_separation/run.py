@@ -58,13 +58,11 @@ def general_pipeline():
     indir_path = cf[mch]['indir']
     freqfilter = cf['pa']["freqfilter"]
     specfilter = cf['pa']["specfilter"]
-    spec_filename = '{freqdset}_lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_specs-{spec}_split-{split}.npy'
+    spec_filename = '{freqdset}_lmax_{lmax}-lmax_mask_{lmax_mask}-freqs_{freqs}_specs-{spec}_split-{split}.npy'
     .format(
         freqdset = freqdset,
         lmax = lmax,
         lmax_mask = lmax_mask,
-        tmask = mskset,
-        pmask = mskset,
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "None" if cf['pa'][freqdatsplit] == "" else cf['pa'][freqdatsplit])
@@ -102,19 +100,20 @@ def general_pipeline():
     else:
         df_scbf = df_sc
 
-    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}_{spec}'.format(
+    plotfilename = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}_{spec}'.format(
         lmax = lmax,
         lmax_mask = lmax_mask,
         tmask = mskset,
         pmask = mskset,
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]))
-    subtitle = '{} masks - split: {}'.format(mskset, "None" if cf['pa'][freqdatsplit] == "" else cf['pa'][freqdatsplit])
+
+    plotsubtitle = '{} masks - split: {}'.format(mskset, "None" if cf['pa'][freqdatsplit] == "" else cf['pa'][freqdatsplit])
     io.plotsave_powspec(
         df_scbf,
         specfilter,
-        subtitle=subtitle,
-        filetitle=filetitle)
+        plotsubtitle=plotsubtitle,
+        plotfilename=plotfilename)
     # print(df_scbf)
     cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
     # print(cov)
@@ -132,7 +131,7 @@ def general_pipeline():
         )
     io.plotsave_weights(
         weights,
-        subtitle=subtitle,
+        plotsubtitle=plotsubtitle,
         filetitle=filetitle)
 
 if __name__ == '__main__':

@@ -162,7 +162,7 @@ def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
 
 @log_on_start(INFO, "Starting to grab data from frequency channels {freqcomb}")
 @log_on_end(DEBUG, "Beamfunction(s) loaded successfully: '{result}' ")
-def get_beamf(indir_path: str, freqcomb: List) -> Dict:
+def get_beamf(cf: dict, mch: str, freqcomb: List) -> Dict:
     """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
     Args:
@@ -171,24 +171,30 @@ def get_beamf(indir_path: str, freqcomb: List) -> Dict:
 
     Returns:
         Dict: Planck beamfunctions
-    """    
+    """
+    indir_path = cf[mch]['indir']
+    bf_path = cf[mch]["beamf"]['path']
+    bf_filename = cf[mch]["beamf"]['filename']
+                    .replace("{freq1}", FREQ)
     beamf = dict()
     for fkey in freqcomb:
         freqs = fkey.split('-')
         beamf.update({
             fkey: fits.open(
-                "{path}beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
+                "{indir_path}{bf_path}{bf_filename}"
                 .format(
-                    path = indir_path,
-                    freq1 = freqs[0],
-                    freq2 = freqs[1])
+                    indir_path = indir_path,
+                    bf_path = bf_path,
+                    bf_filename = bf_filename
+                        .replace("{freq1}", freqs[0])
+                        .replace("{freq2}", freqs[1])
                     )
             })
     return beamf
 
 
 # %% Plot
-def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', filetitle: str = '') -> None:
+def plotsave_powspec(df: Dict, specfilter: List[str], plotsubtitle: str = '', filetitle: str = '') -> None:
     """Plotting
 
     Args:
