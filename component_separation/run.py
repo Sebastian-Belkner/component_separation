@@ -58,14 +58,16 @@ def general_pipeline():
     indir_path = cf[mch]['indir']
     freqfilter = cf['pa']["freqfilter"]
     specfilter = cf['pa']["specfilter"]
-    spec_filename = '{freqdset}_lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_specs-{spec}.npy'.format(
+    spec_filename = '{freqdset}_lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_specs-{spec}_split-{split}.npy'
+    .format(
         freqdset = freqdset,
         lmax = lmax,
         lmax_mask = lmax_mask,
         tmask = mskset,
         pmask = mskset,
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]))
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+        split = "None" if cf['pa'][freqdatsplit] == "" else cf['pa'][freqdatsplit])
     spectrum = io.load_spectrum(spec_path, spec_filename)
     if spectrum is None:
         tqumap = io.get_data(cf, mch = mch)
@@ -107,7 +109,7 @@ def general_pipeline():
         pmask = mskset,
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]))
-    subtitle = '{} masks'.format(mskset)
+    subtitle = '{} masks - split: {}'.format(mskset, "None" if cf['pa'][freqdatsplit] == "" else cf['pa'][freqdatsplit])
     io.plotsave_powspec(
         df_scbf,
         specfilter,
