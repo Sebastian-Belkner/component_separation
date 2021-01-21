@@ -5,7 +5,9 @@ run.py: runner script for calling component_separation
 
 __author__ = "S. Belkner"
 
-
+# TODO Include LFI into calculation
+# get NPIPE results from NERSC
+# remove pandas usage
 import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks
 import logging
@@ -38,7 +40,6 @@ logger.addHandler(handler)
 with open('config.json', "r") as f:
     cf = json.load(f)
 
-
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
     
@@ -58,17 +59,17 @@ def general_pipeline():
     indir_path = cf[mch]['indir']
     freqfilter = cf['pa']["freqfilter"]
     specfilter = cf['pa']["specfilter"]
-    spec_filename = '{freqdset}_lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_specs-{spec}.npy'.format(
+    spec_filename = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
         freqdset = freqdset,
         lmax = lmax,
         lmax_mask = lmax_mask,
-        tmask = mskset,
-        pmask = mskset,
+        mskset = mskset,
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]))
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     spectrum = io.load_spectrum(spec_path, spec_filename)
     if spectrum is None:
-        tqumap = io.get_data(cf, mch = mch)
+        tqumap = io.get_data(cf, mch=mch)
 
         if tqumap[0] == None:
             tqumap = tqumap[1:]
@@ -86,7 +87,6 @@ def general_pipeline():
 
 
     df = pw.create_df(spectrum, freqfilter, specfilter)
-
     df_sc = pw.apply_scale(df, specfilter, llp1=llp1)
     
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
@@ -95,43 +95,38 @@ def general_pipeline():
     print(freqcomb)
     
     if bf:
-        beamf = io.get_beamf(indir_path=indir_path, freqcomb=freqcomb)
+        beamf = io.get_beamf(cf=cf, mch=mch, freqcomb=freqcomb)
         df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter) #df_sc #
     else:
         df_scbf = df_sc
 
-    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}_{spec}'.format(
+    cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
+    cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
+    weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
+
+    plotfilename = '{freqdset}_lmax-{lmax}_lmaxmsk-{lmax_mask}_msk-{mskset}_{freqs}_{spec}_{split}'.format(
+        freqdset = freqdset,
         lmax = lmax,
         lmax_mask = lmax_mask,
-        tmask = mskset,
-        pmask = mskset,
+        mskset = mskset,
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]))
-    subtitle = '{} masks'.format(mskset)
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    
     io.plotsave_powspec(
         df_scbf,
         specfilter,
-        subtitle=subtitle,
-        filetitle=filetitle)
-    # print(df_scbf)
-    cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
-    # print(cov)
-    cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
-    # print(cov_inv_l)
-    weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
+        plotsubtitle=plotsubtitle,
+        plotfilename=plotfilename)
 
-    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}_{spec}'.format(
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        tmask = mskset,
-        pmask = mskset,
-        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter])
-        )
     io.plotsave_weights(
         weights,
-        subtitle=subtitle,
-        filetitle=filetitle)
+        plotsubtitle=plotsubtitle,
+        plotfilename=plotfilename)
 
 if __name__ == '__main__':
     general_pipeline()

@@ -30,19 +30,18 @@ def get_data(cf: Dict, mch: str) -> List[Dict]:
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
-        indir_path (str): path to root dir of the data. Must end with '/'
-        freq_path (str): path to frequency maps
-        freqfilter (List[str]): Frequency channels which are to be ignored
-        tmask_filename (str): name of the mask for intensity maps
-        pmask_filename (List[str]): list of names of the masks for polarisation maps. They will be reduced to one mask
-
+        cf (Dict): Configuration as coming from conf.json
+        mch (str): ID of the machine the code is executed. Depending on the ID, a different set of configurations is used.
+        
     Returns:
         List[Dict]: Planck maps (data and masks) and some header information
 
     Doctest:
-    >>> get_data(freqfilter=freqfilter) 
+    >>> get_data(cf: Dict, mch: str) 
     NotSureWhatToExpect
     """
+
+    ### Grab all necessary parameters from config
     indir_path = cf[mch]['indir']
     mskset = cf['pa']['mskset'] # smica or lens
     freqdset = cf['pa']['freqdset'] # NPIPE or DX12
@@ -58,7 +57,9 @@ def get_data(cf: Dict, mch: str) -> List[Dict]:
     freq_filename = cf[mch][freqdset]['filename']
 
     nside = cf['pa']["nside"]
-    ### build complete paths
+
+
+    ### Build paths and filenames from config information
     mappath = {
         FREQ:'{path}{freq_path}{freq_filename}'
             .format(
@@ -97,6 +98,8 @@ def get_data(cf: Dict, mch: str) -> List[Dict]:
     pmask = functools.reduce(multi, pmasks)
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
+
+    ## Decide on the spectra requests which maps to load 
     ret = []
     flag = False
     for spec in PLANCKSPECTRUM:
@@ -149,9 +152,15 @@ def get_data(cf: Dict, mch: str) -> List[Dict]:
     }
     return [tmap, qmap, umap]
 
+
+@log_on_start(INFO, "Saving spectrum to {path}+{filename}")
+@log_on_end(DEBUG, "Spectrum saved successfully to {path}+{filename}")
 def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
     np.save(path+filename, data)
 
+
+@log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
+@log_on_end(DEBUG, "{result} loaded")
 def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
     if os.path.isfile(path+filename):
         data = np.load(path+filename, allow_pickle=True)
@@ -159,43 +168,52 @@ def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
     else:
         print("no existing spectrum at {}".format(path+filename))
         return None
+        
 
 @log_on_start(INFO, "Starting to grab data from frequency channels {freqcomb}")
 @log_on_end(DEBUG, "Beamfunction(s) loaded successfully: '{result}' ")
-def get_beamf(indir_path: str, freqcomb: List) -> Dict:
+def get_beamf(cf: dict, mch: str, freqcomb: List) -> Dict:
     """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
     Args:
-        path (str): Relative path to root dir of the data. Must end with '/'
+        cf (Dict): Configuration as coming from conf.json
+        mch (str): ID of the machine the code is executed. Depending on the ID, a different set of configurations is used.
         freqcomb (List): Frequency channels which are to be ignored
 
     Returns:
         Dict: Planck beamfunctions
-    """    
+    """
+
+    indir_path = cf[mch]['indir']
+    bf_path = cf[mch]["beamf"]['path']
+    bf_filename = cf[mch]["beamf"]['filename']
     beamf = dict()
     for fkey in freqcomb:
         freqs = fkey.split('-')
         beamf.update({
             fkey: fits.open(
-                "{path}beamf/BeamWf_HFI_R3.01/Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
+                "{indir_path}{bf_path}{bf_filename}"
                 .format(
-                    path = indir_path,
-                    freq1 = freqs[0],
-                    freq2 = freqs[1])
-                    )
+                    indir_path = indir_path,
+                    bf_path = bf_path,
+                    bf_filename = bf_filename
+                        .replace("{freq1}", freqs[0])
+                        .replace("{freq2}", freqs[1])
+                ))
             })
+
     return beamf
 
 
 # %% Plot
-def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', filetitle: str = '') -> None:
+def plotsave_powspec(df: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
     """Plotting
 
     Args:
         df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
-
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-        subtitle (String, optional): Add some characters to the title. Defaults to ''.
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
 
     spectrum_truth = pd.read_csv(
@@ -217,7 +235,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
                 ylim=(1e-3,1e5),
                 ylabel="power spectrum",
                 grid=True,
-                title="{} spectrum - DX12 - {}".format(spec, subtitle))
+                title="{} spectrum - {}".format(spec, plotsubtitle))
             if "Planck-"+spec in spectrum_truth.columns:
                 spectrum_truth["Planck-"+spec].plot(
                     loglog=True,
@@ -225,17 +243,19 @@ def plotsave_powspec(df: Dict, specfilter: List[str], subtitle: str = '', fileti
                     ylabel="power spectrum",
                     legend=True
                     )
-            plt.savefig('vis/spectrum/DX12_{}_spectrum--{}--{}.jpg'.format(spec, subtitle, filetitle))
+            plt.savefig('vis/spectrum/{}_spectrum--{}.jpg'.format(spec, plotfilename))
 
     # %% Compare to truth
     # plt.figure()
 
 
 # %% Plot weightings
-def plotsave_weights(df: Dict, subtitle: str = '', filetitle: str = ''):
+def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = ''):
     """Plotting
     Args:
         df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
     plt.figure()
     for spec in df.keys():
@@ -247,6 +267,6 @@ def plotsave_weights(df: Dict, subtitle: str = '', filetitle: str = ''):
             xlim=(0,4000),
             ylim=(-0.5,1.0),
             # logx=True,
-            title="{} weighting - DX12 - {}".format(spec, subtitle))
-        plt.savefig('vis/weighting/DX12_{}_weighting--{}--{}.jpg'.format(spec, subtitle, filetitle))
+            title="{} weighting - {}".format(spec, plotsubtitle))
+        plt.savefig('vis/weighting/{}_weighting--{}.jpg'.format(spec, plotfilename))
 # %%
