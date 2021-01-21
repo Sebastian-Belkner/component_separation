@@ -1,16 +1,14 @@
 {
 "pa":{
-    "mskset": "lens",
+    "mskset": "smica",
     "freqdset": "DX12",
     "llp1": true,
     "bf": true,
-    "lmax": 4000,
-    "lmax_mask": 8000,
+    "lmax": 400,
+    "lmax_mask": 800,
     "freqdatsplit": "",
     "freqfilter": [
-        "030",
-        "044",
-        "070",
+        "100",
         "545",
         "857"
         ],
@@ -30,7 +28,7 @@
 },
 "NERSC":{
     "beamf":{
-        "path": "data/beamf/",
+        "path": "data/beamf/BeamWf_HFI_R3.01/",
         "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
     "NPIPE":{
@@ -76,7 +74,7 @@
     },
 "XPS":{
     "beamf":{
-        "path": "beamf/",
+        "path": "beamf/BeamWf_HFI_R3.01/",
         "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
     "NPIPE":{

@@ -30,7 +30,6 @@ in your command line.
         >>> cov_inv_l = invert_covmatrices(cov, lmax, freqfilter, specfilter)
         >>> weights = calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
 
-
 """
 
 import logging
@@ -177,13 +176,15 @@ def qupowerspec(qumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqfil
         FREQ+'-'+FREQ2: 
             ps.map2cl_spin(
                 qumap = [qumap[0][FREQ]['map'], qumap[1][FREQ]['map']],
-                spin = 2,
-                spin2 = 2,
-                ret_eb_be = True,
-                qumap2 = [qumap[0][FREQ2]['map'], qumap[1][FREQ2]['map']],
-                mask = qumap[1][FREQ]['mask'],
                 lmax = lmax,
-                lmax_mask = lmax_mask)
+                lmax_mask = lmax_mask,
+                spin = 2,
+                mask = qumap[0][FREQ]['mask'],
+                qumap2 = [qumap[0][FREQ2]['map'], qumap[1][FREQ2]['map']],
+                spin2 = 2,
+                mask2 = qumap[0][FREQ2]['mask'],
+                ret_eb_be = True
+                )
             for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
             for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and int(FREQ2)>=int(FREQ)}
 
