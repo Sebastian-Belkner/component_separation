@@ -68,7 +68,7 @@ def get_data(cf: Dict, mch: str) -> List[Dict]:
                     .replace("{freq}", FREQ)
                     .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
                     .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
-                    .replace("{split}", cf['pa'][freqdatsplit] if "split" in cf[mch][freqdset] else "")
+                    .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
                 )
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
