@@ -1,6 +1,9 @@
 __pycache__/
-data/
 ext/
+data/beamf/
+data/mask/
+data/map/
+data/tmp/
 .pytest_cache/
 *.pyc
 *.log
