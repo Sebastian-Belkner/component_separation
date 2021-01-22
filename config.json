@@ -1,7 +1,7 @@
 {
 "pa":{
     "mskset": "lens",
-    "freqdset": "NPIPE",
+    "freqdset": "DX12",
     "llp1": true,
     "bf": true,
     "lmax": 4000,
