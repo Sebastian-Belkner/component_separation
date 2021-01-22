@@ -1,13 +1,18 @@
 """
-run.py: runner script for calling component_separation
+run.py: script for executing main functionality of component_separation
 
 """
 
 __author__ = "S. Belkner"
 
 # TODO Include LFI into calculation
-# get NPIPE results from NERSC
 # remove pandas usage
+# add binning to plotting
+# compare to planck cmb simulations data
+# use, in addition to the current datasets, cross and diff datasets
+# serialise cov_matrix results and weighting results (to allow for combined plots)
+# analytic expression for weight estimates
+
 import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks
 import logging
@@ -123,8 +128,22 @@ def general_pipeline():
         plotsubtitle=plotsubtitle,
         plotfilename=plotfilename)
 
+    io.plotsave_powspec_binned(
+        df_scbf,
+        cf,
+        specfilter,
+        plotsubtitle=plotsubtitle,
+        plotfilename=plotfilename)
+
     io.plotsave_weights(
         weights,
+        plotsubtitle=plotsubtitle,
+        plotfilename=plotfilename)
+
+    io.plotsave_weights_binned(
+        weights,
+        cf,
+        specfilter,
         plotsubtitle=plotsubtitle,
         plotfilename=plotfilename)
 

@@ -19,6 +19,7 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 from component_separation.cs_util import Planckf, Plancks, Planckr
 import healpy as hp
+from scipy import stats
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
@@ -249,6 +250,68 @@ def plotsave_powspec(df: Dict, specfilter: List[str], plotsubtitle: str = 'defau
     # plt.figure()
 
 
+# %% Plot
+def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
+    """Plotting
+
+    Args:
+        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+
+    from scipy.signal import savgol_filter
+    lmax = cf['pa']['lmax']
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    bl = bins[:-1]
+    br = bins[1:]
+
+    spectrum_truth = pd.read_csv(
+        'data/powspecplanck.txt',
+        header=0,
+        sep='    ',
+        index_col=0)
+
+    def std_dev_binned(d):
+        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        return mean, err
+
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            idx=0
+            idx_max = len(df[spec].columns)
+            plt.figure()
+            plt.xscale("log", nonpositive='clip')
+            plt.yscale("log", nonpositive='clip')
+            plt.xlabel("Multipole l")
+            plt.ylabel("Powerspectrum")
+            for name, data in df[spec].items():
+                idx+=1
+                # plt.loglog(data, label=name)
+                binmean, binerr = std_dev_binned(data)
+                plt.errorbar(
+                    0.5 * bl + 0.5 * br,
+                    binmean,
+                    # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
+                    yerr=binerr,
+                    label=name,
+                    capsize=3,
+                    elinewidth=2,
+                    fmt='none',
+                    alpha=(2*idx_max-idx)/(2*idx_max))
+                plt.title("{} spectrum - {}".format(spec, plotsubtitle))
+                plt.xlim((1,4000))
+                plt.ylim((1e-3,1e5))
+            if "Planck-"+spec in spectrum_truth.columns:
+                plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
+            plt.grid(which='both', axis='x')
+            plt.grid(which='major', axis='y')
+            plt.legend()
+            plt.savefig('vis/spectrum/{}_spectrum_binned--{}.jpg'.format(spec, plotfilename))
+
+
 # %% Plot weightings
 def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = ''):
     """Plotting
@@ -269,4 +332,49 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = ''):
             # logx=True,
             title="{} weighting - {}".format(spec, plotsubtitle))
         plt.savefig('vis/weighting/{}_weighting--{}.jpg'.format(spec, plotfilename))
+
+
+def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default'):
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+
+    from scipy.signal import savgol_filter
+    lmax = cf['pa']['lmax']
+    bins = np.arange(0, lmax+1, 100)
+    bl = bins[:-1]
+    br = bins[1:]
+
+    def std_dev_binned(d):
+        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        return mean, err
+
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            plt.figure()
+            plt.xlabel("Multipole l")
+            plt.ylabel("Weighting")
+            for name, data in df[spec].items():
+                # plt.loglog(data, label=name)
+                binmean, binerr = std_dev_binned(data)
+                plt.errorbar(
+                    0.5 * bl + 0.5 * br,
+                    binmean,
+                    # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
+                    yerr=binerr,
+                    label=name,
+                    capsize=3,
+                    elinewidth=2
+                    )
+                plt.title("{} weighting - {}".format(spec, plotsubtitle))
+                plt.xlim((0,4000))
+                plt.ylim((-0.5,1.0))
+            plt.grid(which='both', axis='x')
+            plt.grid(which='major', axis='y')
+            plt.legend()
+            plt.savefig('vis/weighting/{}_weighting_binned--{}.jpg'.format(spec, plotfilename))
 # %%
