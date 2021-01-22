@@ -1,14 +1,16 @@
 {
 "pa":{
-    "mskset": "lens",
+    "mskset": "smica",
     "freqdset": "NPIPE",
     "llp1": true,
     "bf": true,
-    "lmax": 400,
-    "lmax_mask": 800,
+    "lmax": 4000,
+    "lmax_mask": 8000,
     "freqdatsplit": "",
     "freqfilter": [
-        "100",
+        "030",
+        "044",
+        "070",
         "545",
         "857"
         ],
@@ -28,7 +30,7 @@
 },
 "NERSC":{
     "beamf":{
-        "path": "data/beamf/BeamWf_HFI_R3.01/",
+        "path": "/global/homes/s/sebibel/data/beamf/",
         "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
     "NPIPE":{
@@ -62,7 +64,7 @@
             "filename": null
             },
         "pmask":{
-            "path": "/global/homes/s/sebibel/git/component_separation/data/mask/",
+            "path": "/global/homes/s/sebibel/data/mask/",
             "filename": [
                 "psmaskP_2048.fits.gz",
                 "gmaskP_apodized_0_2048.fits.gz"
