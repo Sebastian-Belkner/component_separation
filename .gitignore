@@ -4,6 +4,7 @@ data/beamf/
 data/mask/
 data/map/
 data/tmp/
+data/simulations/
 test/data/
 .pytest_cache/
 *.pyc
