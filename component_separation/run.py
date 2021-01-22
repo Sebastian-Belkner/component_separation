@@ -54,6 +54,7 @@ def general_pipeline():
     freqdset = cf['pa']['freqdset'] # DX12 or NERSC
     set_logger(DEBUG)
 
+    print('bf')
     lmax = cf['pa']["lmax"]
     lmax_mask = cf['pa']["lmax_mask"]
     llp1 = cf['pa']["llp1"]
@@ -125,12 +126,14 @@ def general_pipeline():
     io.plotsave_powspec(
         df_scbf,
         specfilter,
+        truthfile=ch[mch]['powspec_truthfile'],
         plotsubtitle=plotsubtitle,
         plotfilename=plotfilename)
 
     io.plotsave_powspec_binned(
         df_scbf,
         cf,
+        truthfile=ch[mch]['powspec_truthfile'],
         specfilter,
         plotsubtitle=plotsubtitle,
         plotfilename=plotfilename)

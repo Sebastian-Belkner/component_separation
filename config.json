@@ -29,6 +29,7 @@
     ]
 },
 "NERSC":{
+    "powspec_truthfile": "/global/homes/s/sebibel/git/component_separation/data/powspecplanck.txt",
     "beamf":{
         "path": "/global/homes/s/sebibel/data/beamf/",
         "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
@@ -75,6 +76,7 @@
     "indir": ""
     },
 "XPS":{
+    "powspec_truthfile": "data/powspecplanck.txt",
     "beamf":{
         "path": "beamf/BeamWf_HFI_R3.01/",
         "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"

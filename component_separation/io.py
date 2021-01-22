@@ -207,7 +207,7 @@ def get_beamf(cf: dict, mch: str, freqcomb: List) -> Dict:
 
 
 # %% Plot
-def plotsave_powspec(df: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
+def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '') -> None:
     """Plotting
 
     Args:
@@ -218,7 +218,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], plotsubtitle: str = 'defau
     """
 
     spectrum_truth = pd.read_csv(
-        'data/powspecplanck.txt',
+        truthfile,
         header=0,
         sep='    ',
         index_col=0)
@@ -244,14 +244,14 @@ def plotsave_powspec(df: Dict, specfilter: List[str], plotsubtitle: str = 'defau
                     ylabel="power spectrum",
                     legend=True
                     )
-            plt.savefig('vis/spectrum/{}_spectrum--{}.jpg'.format(spec, plotfilename))
+            plt.savefig('{}vis/spectrum/{}_spectrum--{}.jpg'.format(outdir_root, spec, plotfilename))
 
     # %% Compare to truth
     # plt.figure(figsize=(8,6))
 
 
 # %% Plot
-def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
+def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '') -> None:
     """Plotting
 
     Args:
@@ -268,7 +268,7 @@ def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
     br = bins[1:]
 
     spectrum_truth = pd.read_csv(
-        'data/powspecplanck.txt',
+        truthfile,
         header=0,
         sep='    ',
         index_col=0)
@@ -309,11 +309,11 @@ def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
             plt.grid(which='both', axis='x')
             plt.grid(which='major', axis='y')
             plt.legend()
-            plt.savefig('vis/spectrum/{}_spectrum_binned--{}.jpg'.format(spec, plotfilename))
+            plt.savefig('{}vis/spectrum/{}_spectrum_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
 
 
 # %% Plot weightings
-def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = ''):
+def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', outdir_root: str = ''):
     """Plotting
     Args:
         df (Dict): Data to be plotted
@@ -331,10 +331,10 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = ''):
             ylim=(-0.5,1.0),
             # logx=True,
             title="{} weighting - {}".format(spec, plotsubtitle))
-        plt.savefig('vis/weighting/{}_weighting--{}.jpg'.format(spec, plotfilename))
+        plt.savefig('{}vis/weighting/{}_weighting--{}.jpg'.format(outdir_root, spec, plotfilename))
 
 
-def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default'):
+def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = ''):
     """Plotting
     Args:
         df (Dict): Data to be plotted
@@ -376,5 +376,5 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
             plt.grid(which='both', axis='x')
             plt.grid(which='major', axis='y')
             plt.legend()
-            plt.savefig('vis/weighting/{}_weighting_binned--{}.jpg'.format(spec, plotfilename))
+            plt.savefig('{}vis/weighting/{}_weighting_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
 # %%
