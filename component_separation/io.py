@@ -228,8 +228,9 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
     idx_max = len(PLANCKSPECTRUM) - len(specfilter)
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
-            plt.figure(figsize=(8,6))
+            plt.figure()
             df[spec].plot(
+                figsize=(8,6),
                 loglog=True,
                 alpha=(idx_max-idx)/idx_max,
                 xlim=(0,4000),
@@ -320,9 +321,10 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', o
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    plt.figure(figsize=(8,6))
+    plt.figure()
     for spec in df.keys():
         df[spec].plot(
+            figsize=(3,3),
             ylabel='weigthing',
             # marker="x",
             # style= '--',

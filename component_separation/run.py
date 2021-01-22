@@ -126,15 +126,15 @@ def general_pipeline():
     io.plotsave_powspec(
         df_scbf,
         specfilter,
-        truthfile=ch[mch]['powspec_truthfile'],
+        truthfile=cf[mch]['powspec_truthfile'],
         plotsubtitle=plotsubtitle,
         plotfilename=plotfilename)
 
     io.plotsave_powspec_binned(
         df_scbf,
         cf,
-        truthfile=ch[mch]['powspec_truthfile'],
         specfilter,
+        truthfile=cf[mch]['powspec_truthfile'],
         plotsubtitle=plotsubtitle,
         plotfilename=plotfilename)
 
