@@ -54,6 +54,7 @@ def general_pipeline():
     freqdset = cf['pa']['freqdset'] # DX12 or NERSC
     set_logger(DEBUG)
 
+    print('bf')
     lmax = cf['pa']["lmax"]
     lmax_mask = cf['pa']["lmax_mask"]
     llp1 = cf['pa']["llp1"]
