@@ -122,10 +122,21 @@ def general_pipeline():
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
+    io.plotsave_powspec(
+        df_scbf,
+        specfilter,
+        plotsubtitle=plotsubtitle,
+        plotfilename=plotfilename)
+
     io.plotsave_powspec_binned(
         df_scbf,
         cf,
         specfilter,
+        plotsubtitle=plotsubtitle,
+        plotfilename=plotfilename)
+
+    io.plotsave_weights(
+        weights,
         plotsubtitle=plotsubtitle,
         plotfilename=plotfilename)
 
