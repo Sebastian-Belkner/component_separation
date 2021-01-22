@@ -223,12 +223,12 @@ def plotsave_powspec(df: Dict, specfilter: List[str], plotsubtitle: str = 'defau
         sep='    ',
         index_col=0)
 
-    # plt.figure()
+    # plt.figure(figsize=(8,6))
     idx=1
     idx_max = len(PLANCKSPECTRUM) - len(specfilter)
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
-            plt.figure()
+            plt.figure(figsize=(8,6))
             df[spec].plot(
                 loglog=True,
                 alpha=(idx_max-idx)/idx_max,
@@ -247,7 +247,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], plotsubtitle: str = 'defau
             plt.savefig('vis/spectrum/{}_spectrum--{}.jpg'.format(spec, plotfilename))
 
     # %% Compare to truth
-    # plt.figure()
+    # plt.figure(figsize=(8,6))
 
 
 # %% Plot
@@ -282,7 +282,7 @@ def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
         if spec not in specfilter:
             idx=0
             idx_max = len(df[spec].columns)
-            plt.figure()
+            plt.figure(figsize=(8,6))
             plt.xscale("log", nonpositive='clip')
             plt.yscale("log", nonpositive='clip')
             plt.xlabel("Multipole l")
@@ -320,7 +320,7 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = ''):
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    plt.figure()
+    plt.figure(figsize=(8,6))
     for spec in df.keys():
         df[spec].plot(
             ylabel='weigthing',
@@ -355,7 +355,7 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
 
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
-            plt.figure()
+            plt.figure(figsize=(8,6))
             plt.xlabel("Multipole l")
             plt.ylabel("Weighting")
             for name, data in df[spec].items():
