@@ -30,7 +30,7 @@
 },
 "NERSC":{
     "beamf":{
-        "path": "data/beamf/BeamWf_HFI_R3.01/",
+        "path": "/global/homes/s/sebibel/data/beamf/",
         "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
     "NPIPE":{
@@ -64,7 +64,7 @@
             "filename": null
             },
         "pmask":{
-            "path": "/global/homes/s/sebibel/git/component_separation/data/mask/",
+            "path": "/global/homes/s/sebibel/data/mask/",
             "filename": [
                 "psmaskP_2048.fits.gz",
                 "gmaskP_apodized_0_2048.fits.gz"

@@ -182,7 +182,7 @@ def qupowerspec(qumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqfil
                 mask = qumap[0][FREQ]['mask'],
                 qumap2 = [qumap[0][FREQ2]['map'], qumap[1][FREQ2]['map']],
                 spin2 = 2,
-                mask2 = qumap[0][FREQ2]['mask'],
+#                 mask2 = qumap[0][FREQ2]['mask'],
                 ret_eb_be = True
                 )
             for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
