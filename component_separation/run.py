@@ -5,10 +5,10 @@ run.py: script for executing main functionality of component_separation
 
 __author__ = "S. Belkner"
 
-# TODO Include LFI into calculation
+# TODO add LFI beam window functions to calculation
 # remove pandas usage
-# add binning to plotting
 # compare to planck cmb simulations data
+# is the powerspectrum calculator working as intented? unbiased? etc.
 # use, in addition to the current datasets, cross and diff datasets
 # serialise cov_matrix results and weighting results (to allow for combined plots)
 # analytic expression for weight estimates
@@ -24,6 +24,9 @@ import component_separation.io as io
 from typing import Dict, List, Optional, Tuple
 import json
 import platform
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
 
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
@@ -33,7 +36,7 @@ else:
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-LOGFILE = 'messages.log'
+LOGFILE = 'data/tmp/messages.log'
 logger = logging.getLogger("")
 handler = logging.handlers.RotatingFileHandler(
         LOGFILE, maxBytes=(1048576*5), backupCount=7
@@ -54,7 +57,6 @@ def general_pipeline():
     freqdset = cf['pa']['freqdset'] # DX12 or NERSC
     set_logger(DEBUG)
 
-    print('bf')
     lmax = cf['pa']["lmax"]
     lmax_mask = cf['pa']["lmax_mask"]
     llp1 = cf['pa']["llp1"]
@@ -91,7 +93,6 @@ def general_pipeline():
             print("Only TT spectrum caluclation requested. This is currently not supported.")
         io.save_spectrum(spectrum, spec_path, spec_filename)
 
-
     df = pw.create_df(spectrum, freqfilter, specfilter)
     df_sc = pw.apply_scale(df, specfilter, llp1=llp1)
     
@@ -106,8 +107,18 @@ def general_pipeline():
     else:
         df_scbf = df_sc
 
+    print(df_scbf["EE"])
+
+    sns.clustermap(df_scbf["EE"].corr())
+    plt.savefig("test.jpg")
     cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
+    
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
+    print(cov["EE"])
+
+    plt.plot(cov["EE"])
+    plt.savefig("test2.jpg")
+    print("det", np.linalg.det(cov_inv_l["EE"][10]))
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
 
     plotfilename = '{freqdset}_lmax-{lmax}_lmaxmsk-{lmax_mask}_msk-{mskset}_{freqs}_{spec}_{split}'.format(

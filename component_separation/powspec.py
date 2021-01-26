@@ -182,7 +182,7 @@ def qupowerspec(qumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqfil
                 mask = qumap[0][FREQ]['mask'],
                 qumap2 = [qumap[0][FREQ2]['map'], qumap[1][FREQ2]['map']],
                 spin2 = 2,
-#                 mask2 = qumap[0][FREQ2]['mask'],
+                mask2 = qumap[0][FREQ2]['mask'],
                 ret_eb_be = True
                 )
             for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
@@ -319,7 +319,9 @@ def build_covmatrices(df: Dict, lmax: int, freqfilter: List[str], specfilter: Li
                                 ispec+=1
                                 cov[spec][ifreq][ifreq2] = df[spec][FREQ+'-'+FREQ2]
                                 cov[spec][ifreq2][ifreq] = df[spec][FREQ+'-'+FREQ2]
-    print('\n\nCovariance matrix EE:', cov['EE'].shape)
+    # for l in [1,10,100,200,1000]:
+        # print(cov["EE"][:,:,l])
+        # print(30*"v")
     # print(cov['EE'])
     return cov
 
@@ -357,7 +359,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     """Calculates weightings of the respective Frequency channels
 
     Args:
-        cov (Dict): The inverted covariance matrices of Dimension [Nspec,Nspec,lmax]
+        cov (Dict): The inverted covariance matrices of Dimension [lmax,Nspec,Nspec]
         lmax (int): Maximum multipol of data to be considered
         freqfilter (List[str]): Frequency channels which are to be ignored
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
@@ -365,8 +367,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     Returns:
         Dict[str, DataFrame]: The weightings of the respective Frequency channels
     """
-
-    # TODO add dummy value for spec: np.array(..) when cov is not invertible
+    print(cov["EE"][100])
     elaw = np.ones(len([dum for dum in PLANCKMAPFREQ if dum not in freqfilter]))
     weighting = {spec: np.array([(cov[spec][l] @ elaw) / (elaw.T @ cov[spec][l] @ elaw)
                      if cov[spec][l] is not None else np.array([0.0 for n in range(len(elaw))])
@@ -374,6 +375,8 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
                     for spec in PLANCKSPECTRUM if spec not in specfilter}
     
     # print(cov)
+    print(sum(weighting["EE"][10]))
+    sys.exit()
     weights = {spec:
                 pd.DataFrame(
                     data=weighting[spec],
