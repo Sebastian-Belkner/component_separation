@@ -20,11 +20,13 @@ Powerspectrum
 ==================
 
 Example powerspectra, which may still include foregrounds and noise,
+
 .. image:: _static/EE_spectrum_binned--NPIPE_lmax-4000_lmaxmsk-8000_msk-lens_100,143,217,353_EE,BB_Full.jpg
    :target: _static/EE_spectrum_binned--NPIPE_lmax-4000_lmaxmsk-8000_msk-lens_100,143,217,353_EE,BB_Full.jpg
    :alt: Powerspectra
 
 Example weights for the individual channels,
+
 .. image:: _static/EE_weighting_binned--NPIPE_lmax-4000_lmaxmsk-8000_msk-lens_100,143,217,353_EE,BB_Full.jpg
    :target: _static/EE_weighting_binned--NPIPE_lmax-4000_lmaxmsk-8000_msk-lens_100,143,217,353_EE,BB_Full.jpg
    :alt: Channel weightings
