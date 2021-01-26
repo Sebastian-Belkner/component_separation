@@ -107,18 +107,13 @@ def general_pipeline():
     else:
         df_scbf = df_sc
 
-    print(df_scbf["EE"])
-
-    sns.clustermap(df_scbf["EE"].corr())
-    plt.savefig("test.jpg")
     cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
     
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
-    print(cov["EE"])
 
-    plt.plot(cov["EE"])
-    plt.savefig("test2.jpg")
-    print("det", np.linalg.det(cov_inv_l["EE"][10]))
+    print("cov:\n",  cov["EE"][:,:,3000] @ np.array([1,1,1,1]))
+    print("cov_inv:\n",  cov_inv_l["EE"][3000] @ np.array([1,1,1,1]))
+
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
 
     plotfilename = '{freqdset}_lmax-{lmax}_lmaxmsk-{lmax_mask}_msk-{mskset}_{freqs}_{spec}_{split}'.format(
@@ -134,12 +129,12 @@ def general_pipeline():
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
-    io.plotsave_powspec(
-        df_scbf,
-        specfilter,
-        truthfile=cf[mch]['powspec_truthfile'],
-        plotsubtitle=plotsubtitle,
-        plotfilename=plotfilename)
+    # io.plotsave_powspec(
+    #     df_scbf,
+    #     specfilter,
+    #     truthfile=cf[mch]['powspec_truthfile'],
+    #     plotsubtitle=plotsubtitle,
+    #     plotfilename=plotfilename)
 
     io.plotsave_powspec_binned(
         df_scbf,
@@ -149,10 +144,10 @@ def general_pipeline():
         plotsubtitle=plotsubtitle,
         plotfilename=plotfilename)
 
-    io.plotsave_weights(
-        weights,
-        plotsubtitle=plotsubtitle,
-        plotfilename=plotfilename)
+    # io.plotsave_weights(
+    #     weights,
+    #     plotsubtitle=plotsubtitle,
+    #     plotfilename=plotfilename)
 
     io.plotsave_weights_binned(
         weights,

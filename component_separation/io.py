@@ -373,7 +373,7 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
                     elinewidth=2
                     )
                 plt.title("{} weighting - {}".format(spec, plotsubtitle))
-                plt.xlim((0,4000))
+                plt.xlim((1,4000))
                 plt.ylim((-0.5,1.0))
             plt.grid(which='both', axis='x')
             plt.grid(which='major', axis='y')
