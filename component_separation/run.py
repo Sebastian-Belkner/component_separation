@@ -5,28 +5,30 @@ run.py: script for executing main functionality of component_separation
 
 __author__ = "S. Belkner"
 
+# analytic expression for weight estimates
 # TODO add LFI beam window functions to calculation
-# remove pandas usage
 # compare to planck cmb simulations data
-# is the powerspectrum calculator working as intented? unbiased? etc.
 # use, in addition to the current datasets, cross and diff datasets
 # serialise cov_matrix results and weighting results (to allow for combined plots)
-# analytic expression for weight estimates
+# remove pandas usage
 
-import component_separation.MSC.MSC.pospace as ps
-from component_separation.cs_util import Planckf, Plancks
+import json
 import logging
 import logging.handlers
-from logging import DEBUG, ERROR, INFO, CRITICAL
-import os, sys
-import component_separation.powspec as pw
-import component_separation.io as io
-from typing import Dict, List, Optional, Tuple
-import json
+import os
 import platform
+import sys
+from logging import CRITICAL, DEBUG, ERROR, INFO
+from typing import Dict, List, Optional, Tuple
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+
+import component_separation.io as io
+import component_separation.MSC.MSC.pospace as ps
+import component_separation.powspec as pw
+from component_separation.cs_util import Planckf, Plancks
 
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
@@ -48,11 +50,51 @@ logger.addHandler(handler)
 with open('config.json', "r") as f:
     cf = json.load(f)
 
+
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
-    
 
-def general_pipeline():
+
+def spec2synmap(spectrum):
+    return pw.create_synmap(spectrum, cf, mch, lmax, lmax_mask, freqfilter, specfilter) 
+
+
+def map2spec(tqumap):
+    if tqumap[0] == None:
+        tqumap = tqumap[1:]
+    elif tqumap[1] == None:
+        tqumap = [tqumap[0]]
+    tqumap_hpcorrected = pw.hphack(tqumap)
+    # tqumap_hpcorrected = tqumap
+    if len(tqumap) == 3:
+        spectrum = pw.tqupowerspec(tqumap_hpcorrected, cf, lmax, lmax_mask, freqfilter, specfilter)
+    elif len(tqumap) == 2:
+        spectrum = pw.qupowerspec(tqumap_hpcorrected, cf, lmax, lmax_mask, freqfilter, specfilter)
+    elif len(tqumap) == 1:
+        print("Only TT spectrum caluclation requested. This is currently not supported.")
+    return spectrum
+
+
+def spec2specsc(spectrum, bf, llp1):
+    # df = pw.create_df(spectrum, cf["pa"]["offdiag"], freqfilter, specfilter)
+    df_sc = pw.apply_scale(spectrum, specfilter, llp1=llp1)
+    if bf:
+        beamf = io.load_beamf(freqcomb=freqcomb)
+        df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter) #df_sc #
+    else:
+        df_scbf = df_sc
+
+    return df_scbf
+
+
+def specsc2weights(spec_sc):
+    cov = pw.build_covmatrices(spec_sc, cf["pa"]["offdiag"], lmax, freqfilter, specfilter)
+    cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
+    weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
+    return weights
+
+
+if __name__ == '__main__':
     mskset = cf['pa']['mskset'] # smica or lens
     freqdset = cf['pa']['freqdset'] # DX12 or NERSC
     set_logger(DEBUG)
@@ -62,11 +104,18 @@ def general_pipeline():
     llp1 = cf['pa']["llp1"]
     bf = cf['pa']["bf"]
 
-
     spec_path = cf[mch]['outdir']
     indir_path = cf[mch]['indir']
     freqfilter = cf['pa']["freqfilter"]
     specfilter = cf['pa']["specfilter"]
+    freqcomb =  [
+        "{}-{}".format(FREQ,FREQ2)
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+            for FREQ2 in PLANCKMAPFREQ
+            if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
+    speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+
     spec_filename = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
         freqdset = freqdset,
         lmax = lmax,
@@ -75,48 +124,23 @@ def general_pipeline():
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    spectrum = io.load_spectrum(spec_path, spec_filename)
-    if spectrum is None:
-        tqumap = io.get_data(cf, mch=mch)
 
-        if tqumap[0] == None:
-            tqumap = tqumap[1:]
-        elif tqumap[1] == None:
-            tqumap = [tqumap[0]]
-        tqumap_hpcorrected = pw.hphack(tqumap)
-        # tqumap_hpcorrected = tqumap
-        if len(tqumap) == 3:
-            spectrum = pw.tqupowerspec(tqumap_hpcorrected, lmax, lmax_mask, freqfilter, specfilter)
-        elif len(tqumap) == 2:
-            spectrum = pw.qupowerspec(tqumap_hpcorrected, lmax, lmax_mask, freqfilter, specfilter)
-        elif len(tqumap) == 1:
-            print("Only TT spectrum caluclation requested. This is currently not supported.")
-        io.save_spectrum(spectrum, spec_path, spec_filename)
-
-    df = pw.create_df(spectrum, freqfilter, specfilter)
-    df_sc = pw.apply_scale(df, specfilter, llp1=llp1)
-    
-    freqcomb =  ["{}-{}".format(FREQ,FREQ2)
-                        for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
-                        for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
-    print(freqcomb)
-    
-    if bf:
-        beamf = io.get_beamf(cf=cf, mch=mch, freqcomb=freqcomb)
-        df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter) #df_sc #
+    if cf['pa']['new_spectrum']:
+        spectrum = map2spec(io.load_tqumap())
+        io.save_spectrum(spectrum, spec_path, 'unscaled'+spec_filename)
     else:
-        df_scbf = df_sc
+        spectrum = io.load_spectrum(spec_path, 'unscaled'+spec_filename)
 
-    cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
+    spectrum_scaled = spec2specsc(spectrum, bf=bf, llp1=llp1)
+    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+spec_filename)
+
+    weights = specsc2weights(spectrum_scaled)
+    io.save_weights(weights)
     
-    cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
+    synmaps = spec2synmap(spectrum)
+    io.save_map(synmaps)
 
-    print("cov:\n",  cov["EE"][:,:,3000] @ np.array([1,1,1,1]))
-    print("cov_inv:\n",  cov_inv_l["EE"][3000] @ np.array([1,1,1,1]))
-
-    weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
-
-    plotfilename = '{freqdset}_lmax-{lmax}_lmaxmsk-{lmax_mask}_msk-{mskset}_{freqs}_{spec}_{split}'.format(
+    spec_filename = 'SYN-{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
         freqdset = freqdset,
         lmax = lmax,
         lmax_mask = lmax_mask,
@@ -124,37 +148,12 @@ def general_pipeline():
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = mskset,
-        freqdset = freqdset,
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    
-    # io.plotsave_powspec(
-    #     df_scbf,
-    #     specfilter,
-    #     truthfile=cf[mch]['powspec_truthfile'],
-    #     plotsubtitle=plotsubtitle,
-    #     plotfilename=plotfilename)
 
-    io.plotsave_powspec_binned(
-        df_scbf,
-        cf,
-        specfilter,
-        truthfile=cf[mch]['powspec_truthfile'],
-        plotsubtitle=plotsubtitle,
-        plotfilename=plotfilename)
+    syn_spectrum = map2spec(synmaps)
+    io.save_spectrum(syn_spectrum, spec_path, spec_filename)
 
-    # io.plotsave_weights(
-    #     weights,
-    #     plotsubtitle=plotsubtitle,
-    #     plotfilename=plotfilename)
+    syn_spectrum_scaled = spec2specsc(syn_spectrum, bf, llp1)
+    io.save_spectrum(syn_spectrum_scaled, spec_path, spec_filename)
 
-    io.plotsave_weights_binned(
-        weights,
-        cf,
-        specfilter,
-        plotsubtitle=plotsubtitle,
-        plotfilename=plotfilename)
-
-if __name__ == '__main__':
-    general_pipeline()
+    weights = specsc2weights(syn_spectrum_scaled)
+    io.save_weights(weights)

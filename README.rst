@@ -35,8 +35,6 @@ Example weights for the individual channels,
    :alt: Channel weightings
 
 
-
-
 Documentation
 ==================
 

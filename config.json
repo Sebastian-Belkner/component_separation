@@ -1,6 +1,8 @@
 {
 "pa":{
+    "new_spectrum": false,
     "mskset": "lens",
+    "offdiag": true,
     "freqdset": "DX12",
     "llp1": true,
     "bf": true,
@@ -11,12 +13,11 @@
         "030",
         "044",
         "070",
+        "100",
         "545",
         "857"
         ],
     "specfilter": [
-        "TT",
-        "TE",
         "TB",
         "EB",
         "ET",
@@ -91,8 +92,8 @@
         },
     "lens":{
         "tmask":{
-            "path": null,
-            "filename": null
+            "path": "mask/",
+            "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
             "path": "mask/",

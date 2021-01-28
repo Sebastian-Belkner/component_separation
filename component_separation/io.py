@@ -20,14 +20,27 @@ from typing import Dict, List, Optional, Tuple
 from component_separation.cs_util import Planckf, Plancks, Planckr
 import healpy as hp
 from scipy import stats
+import json
+import platform
+
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
+uname = platform.uname()
+if uname.node == "DESKTOP-KMIGUPV":
+    mch = "XPS"
+else:
+    mch = "NERSC"
+
+with open('config.json', "r") as f:
+    cf = json.load(f)
+
+
 #%% Collect maps
-@log_on_start(INFO, "Starting to grab data with config {cf}")
+@log_on_start(INFO, "Starting to load data")
 @log_on_end(DEBUG, "Data loaded successfully: '{result}' ")
-def get_data(cf: Dict, mch: str) -> List[Dict]:
+def load_tqumap() -> List[Dict]:
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
@@ -59,6 +72,15 @@ def get_data(cf: Dict, mch: str) -> List[Dict]:
 
     nside = cf['pa']["nside"]
 
+    def _read(mask_path, mask_filename):
+        return hp.read_map(
+            '{path}{mask_path}{mask_filename}'
+            .format(
+                path = indir_path,
+                mask_path = tmask_path,
+                mask_filename = tmask_filename), dtype=np.bool)
+    def _multi(a,b):
+        return a*b
 
     ### Build paths and filenames from config information
     mappath = {
@@ -79,61 +101,40 @@ def get_data(cf: Dict, mch: str) -> List[Dict]:
         tmask = None
         tmask_d = None
     else:
-        tmask = hp.read_map(
-            '{path}{tmask_path}{tmask_filename}'
-            .format(
-                path = indir_path,
-                tmask_path = tmask_path,
-                tmask_filename = tmask_filename), field=2, dtype=np.float64)
+        tmask = _read(tmask_path, tmask_filename)
         tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
 
-
-    def multi(a,b):
-        return a*b
-    pmasks = [hp.read_map(
-        '{path}{pmask_path}{pmask_filename}'
-        .format(
-            path = indir_path,
-            pmask_path = pmask_path,
-            pmask_filename = a), dtype=np.bool) for a in pmask_filename]
-    pmask = functools.reduce(multi, pmasks)
-    pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
+    if pmask_filename is None:
+        pmask = None
+        pmask_d = None
+    else:
+        pmasks = [_read(pmask_path, a) for a in pmask_filename]
+        pmask = functools.reduce(_multi, pmasks)
+        pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
 
-    ## Decide on the spectra requests which maps to load 
-    ret = []
+    ## Decide which maps to load 
     flag = False
     for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            if "T" in spec:
-                flag = True
-                break
+        if spec not in specfilter and ("T" in spec):
+            flag = True
+            break
     if flag and (tmask is not None):
         tmap = {
             FREQ: {
-                "header": {
-                    "nside" : nside[0] if int(FREQ)<100 else nside[1],
-                    "freq" : FREQ,
-                    "LorH" : Planckr.LFI if int(FREQ)<100 else Planckr.HFI
-                },
                 "map": hp.read_map(mappath[FREQ], field=0),
                 "mask": tmask_d if int(FREQ)<100 else tmask
                 }for FREQ in PLANCKMAPFREQ
                     if FREQ not in freqfilter
         }
     elif flag and (tmask is None):
-        print("Temperature spectra requested, but no Temperature masking provided. Spectra including temperature are skipped")
+        print("Temperature spectra requested, but no Temperature mask provided. Spectra including temperature are skipped")
         tmap = None
     elif flag == False:
         tmap = None
 
     qmap = {
         FREQ: {
-            "header": {
-                "nside" : nside[0] if int(FREQ)<100 else nside[1],
-                "freq" : FREQ,
-                "LorH" : Planckr.LFI if int(FREQ)<100 else Planckr.HFI
-            },
             "map": hp.read_map(mappath[FREQ], field=1),
             "mask": pmask_d if int(FREQ)<100 else pmask
             }for FREQ in PLANCKMAPFREQ
@@ -141,11 +142,6 @@ def get_data(cf: Dict, mch: str) -> List[Dict]:
     }
     umap = {
         FREQ: {
-            "header": {
-                "nside" : nside[0] if int(FREQ)<100 else nside[1],
-                "freq" : FREQ,
-                "LorH" : Planckr.LFI if int(FREQ)<100 else Planckr.HFI
-            },
             "map": hp.read_map(mappath[FREQ], field=2),
             "mask": pmask_d if int(FREQ)<100 else pmask
             }for FREQ in PLANCKMAPFREQ
@@ -173,7 +169,7 @@ def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
 
 @log_on_start(INFO, "Starting to grab data from frequency channels {freqcomb}")
 @log_on_end(DEBUG, "Beamfunction(s) loaded successfully: '{result}' ")
-def get_beamf(cf: dict, mch: str, freqcomb: List) -> Dict:
+def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
     """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
     Args:
@@ -184,20 +180,17 @@ def get_beamf(cf: dict, mch: str, freqcomb: List) -> Dict:
     Returns:
         Dict: Planck beamfunctions
     """
-
-    indir_path = cf[mch]['indir']
-    bf_path = cf[mch]["beamf"]['path']
-    bf_filename = cf[mch]["beamf"]['filename']
     beamf = dict()
     for fkey in freqcomb:
-        freqs = fkey.split('-')
+        freqs = freqc.split('-')
         beamf.update({
-            fkey: fits.open(
-                "{indir_path}{bf_path}{bf_filename}"
+            freqc: fits.open(
+                "{abs_path}{indir_path}{bf_path}{bf_filename}"
                 .format(
-                    indir_path = indir_path,
-                    bf_path = bf_path,
-                    bf_filename = bf_filename
+                    abs_path = abs_path,
+                    indir_path = cf[mch]['indir'],
+                    bf_path = cf[mch]["beamf"]['path'],
+                    bf_filename = cf[mch]["beamf"]['filename']
                         .replace("{freq1}", freqs[0])
                         .replace("{freq2}", freqs[1])
                 ))
@@ -233,7 +226,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
                 figsize=(8,6),
                 loglog=True,
                 alpha=(idx_max-idx)/idx_max,
-                xlim=(0,4000),
+                xlim=(10,4000),
                 ylim=(1e-3,1e5),
                 ylabel="power spectrum",
                 grid=True,
@@ -252,7 +245,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
 
 
 # %% Plot
-def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '') -> None:
+def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
     """Plotting
 
     Args:
@@ -264,15 +257,19 @@ def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], truthfile
 
     from scipy.signal import savgol_filter
     lmax = cf['pa']['lmax']
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    if loglog:
+        bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    else:
+        bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
     bl = bins[:-1]
     br = bins[1:]
 
-    spectrum_truth = pd.read_csv(
-        truthfile,
-        header=0,
-        sep='    ',
-        index_col=0)
+    if loglog:
+        spectrum_truth = pd.read_csv(
+            truthfile,
+            header=0,
+            sep='    ',
+            index_col=0)
 
     def std_dev_binned(d):
         mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
@@ -285,12 +282,12 @@ def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], truthfile
             idx_max = len(df[spec].columns)
             plt.figure(figsize=(8,6))
             plt.xscale("log", nonpositive='clip')
-            plt.yscale("log", nonpositive='clip')
+            if loglog:
+                plt.yscale("log", nonpositive='clip')
             plt.xlabel("Multipole l")
             plt.ylabel("Powerspectrum")
             for name, data in df[spec].items():
                 idx+=1
-                # plt.loglog(data, label=name)
                 binmean, binerr = std_dev_binned(data)
                 plt.errorbar(
                     0.5 * bl + 0.5 * br,
@@ -303,10 +300,14 @@ def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], truthfile
                     fmt='none',
                     alpha=(2*idx_max-idx)/(2*idx_max))
                 plt.title("{} spectrum - {}".format(spec, plotsubtitle))
-                plt.xlim((1,4000))
-                plt.ylim((1e-3,1e5))
-            if "Planck-"+spec in spectrum_truth.columns:
-                plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
+                plt.xlim((10,4000))
+                if loglog:
+                    plt.ylim((1e-3,1e5))
+                else:
+                    plt.ylim((-0.5,0.5))
+            if loglog:
+                if "Planck-"+spec in spectrum_truth.columns:
+                    plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
             plt.grid(which='both', axis='x')
             plt.grid(which='major', axis='y')
             plt.legend()
@@ -323,9 +324,11 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', o
     """
     plt.figure()
     for spec in df.keys():
+        df[spec].columns[0:3]
         df[spec].plot(
-            figsize=(3,3),
+            figsize=(8,6),
             ylabel='weigthing',
+            # y = df[spec].columns.to_list()[0:3],
             # marker="x",
             # style= '--',
             grid=True,
@@ -346,7 +349,7 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
 
     from scipy.signal import savgol_filter
     lmax = cf['pa']['lmax']
-    bins = np.arange(0, lmax+1, 100)
+    bins = np.arange(0, lmax+1, 500)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -379,4 +382,10 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
             plt.grid(which='major', axis='y')
             plt.legend()
             plt.savefig('{}vis/weighting/{}_weighting_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
+
 # %%
+def save_map(map):
+    pass
+
+def save_weights(weights):
+    pass
