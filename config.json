@@ -1,13 +1,13 @@
 {
 "pa":{
-    "new_spectrum": false,
+    "new_spectrum": true,
     "mskset": "lens",
     "offdiag": true,
     "freqdset": "DX12",
     "llp1": true,
     "bf": true,
-    "lmax": 1000,
-    "lmax_mask": 2000,
+    "lmax": 4000,
+    "lmax_mask": 8000,
     "freqdatsplit": "",
     "freqfilter": [
         "030",

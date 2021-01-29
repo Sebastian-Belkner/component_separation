@@ -147,26 +147,38 @@ def load_tqumap() -> List[Dict]:
             }for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter
     }
+    print("RRRRRRRRRRRRRRRR")
+    print(tmap)
     return [tmap, qmap, umap]
 
 
 @log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
 @log_on_end(DEBUG, "{result} loaded")
 def load_weights(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
-    if os.path.isfile(path+filename):
-        data = np.load(path+filename, allow_pickle=True)
+    if os.path.isfile(path+"weights/"+filename):
+        data = np.load(path+"weights/"+filename, allow_pickle=True)
         return data.item()
     else:
-        print("no existing spectrum at {}".format(path+filename))
+        print("no existing weights at {}".format(path+filename))
         return None
-        
+
+
+@log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
+@log_on_end(DEBUG, "{result} loaded")
+def load_map(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
+    if os.path.isfile(path+"map/"+filename):
+        data = np.load(path+"map/"+filename, allow_pickle=True)
+        return data.item()
+    else:
+        print("no existing map at {}".format(path+filename))
+        return None
 
 
 @log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
 @log_on_end(DEBUG, "{result} loaded")
 def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
-    if os.path.isfile(path+filename):
-        data = np.load(path+filename, allow_pickle=True)
+    if os.path.isfile(path+"spectrum/"+filename):
+        data = np.load(path+"spectrum/"+filename, allow_pickle=True)
         return data.item()
     else:
         print("no existing spectrum at {}".format(path+filename))
@@ -392,14 +404,20 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
 
 # %%
 def save_map(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
-    np.save(path+filename, data)
+    if os.path.exists(path+filename):
+        os.remove(path+filename)
+    np.save(path+"map/"+filename, data)
 
 def save_weights(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
-    np.save(path+filename, data)
+    if os.path.exists(path+filename):
+        os.remove(path+filename)
+    np.save(path+"weights/"+filename, data)
 
 
 @log_on_start(INFO, "Saving spectrum to {path}+{filename}")
 @log_on_end(DEBUG, "Spectrum saved successfully to {path}+{filename}")
 def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
-    np.save(path+filename, data)
+    if os.path.exists(path+filename):
+        os.remove(path+filename)
+    np.save(path+"spectrum/"+filename, data)
 

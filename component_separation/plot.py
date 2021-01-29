@@ -47,37 +47,60 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+mskset = cf['pa']['mskset'] # smica or lens
+freqdset = cf['pa']['freqdset'] # DX12 or NERSC
+set_logger(DEBUG)
+
+lmax = cf['pa']["lmax"]
+lmax_mask = cf['pa']["lmax_mask"]
+llp1 = cf['pa']["llp1"]
+bf = cf['pa']["bf"]
+
+spec_path = cf[mch]['outdir']
+indir_path = cf[mch]['indir']
+freqfilter = cf['pa']["freqfilter"]
+specfilter = cf['pa']["specfilter"]
+
+
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
 
-if __name__ == '__main__':
-    mskset = cf['pa']['mskset'] # smica or lens
-    freqdset = cf['pa']['freqdset'] # DX12 or NERSC
-    set_logger(DEBUG)
 
-    lmax = cf['pa']["lmax"]
-    lmax_mask = cf['pa']["lmax_mask"]
-    llp1 = cf['pa']["llp1"]
-    bf = cf['pa']["bf"]
+def plot_maps(fname):
+    maps = io.load_weights(spec_path, fname)
 
-    spec_path = cf[mch]['outdir']
-    indir_path = cf[mch]['indir']
-    freqfilter = cf['pa']["freqfilter"]
-    specfilter = cf['pa']["specfilter"]
-
-    fnamesuf = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
-        freqdset = freqdset,
-        lmax = lmax,
-        lmax_mask = lmax_mask,
+    plotsubtitle = 'maps-{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
-        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+        freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    name = 'scaled'+fnamesuf
-    spectrum = io.load_spectrum(spec_path, name)
 
-    print(spectrum)
+    io.plotsave_maps(
+        maps,
+        cf,
+        specfilter,
+        plotsubtitle=plotsubtitle,
+        plotfilename=fname)
 
+
+def plot_weights(fname):
+    weights = io.load_weights(spec_path, fname)
+
+    plotsubtitle = 'weights-{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+
+    io.plotsave_weights_binned(
+        weights,
+        cf,
+        specfilter,
+        plotsubtitle=plotsubtitle,
+        plotfilename=fname)
+
+
+def plot_spectrum(fname):
+    spectrum = io.load_spectrum(spec_path, fname)
+    
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
@@ -88,20 +111,41 @@ if __name__ == '__main__':
         cf,
         truthfile=cf[mch]['powspec_truthfile'],
         plotsubtitle=plotsubtitle,
-        plotfilename=name)
+        plotfilename=fname)
 
-    name = 'weights'+fnamesuf
-    weights = io.load_weights(spec_path, name)
-    io.plotsave_weights_binned(
-        weights,
-        cf,
-        specfilter,
-        plotsubtitle=plotsubtitle,
-        plotfilename=name)
 
-    # df = dict()
-    # for key, val in df_scbf.items():
-    #     df.update({key:(df_scbf[key]-syn_df_scbf[key]).div(syn_df_scbf[key])})
+if __name__ == '__main__':
+    fnamesuf = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+        freqdset = freqdset,
+        lmax = lmax,
+        lmax_mask = lmax_mask,
+        mskset = mskset,
+        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+
+    plot_spectrum(fname = "unscaled"+fnamesuf)
+    plot_weights(fname = 'SYNweights'+fnamesuf)
+    plot_maps(fname = 'map'+fnamesuf)
+
+    
+
+    # name = 'SYNscaled'+fnamesuf
+    # syn_spectrum = io.load_spectrum(spec_path, name)
+    # import copy
+    # diff_spectrum = copy.deepcopy(syn_spectrum)
+    # for freqc, val in diff_spectrum.items():
+    #     for spec, va in diff_spectrum[freqc].items():
+    #         print(diff_spectrum[freqc][spec])
+    #         print(30*"@")
+    #         print(spectrum[freqc][spec])
+    #         print(30*"@")
+    #         print(diff_spectrum[freqc][spec]-spectrum[freqc][spec])
+    #         print(30*"@")
+    #         print(30*"@")
+    #         print(30*"@")
+    #         diff_spectrum[freqc][spec] = (diff_spectrum[freqc][spec]-spectrum[freqc][spec])/diff_spectrum[freqc][spec]
+
     # plotfilename = 'DIFFERENCE-{freqdset}_lmax-{lmax}_lmaxmsk-{lmax_mask}_msk-{mskset}_{freqs}_{spec}_{split}'.format(
     #     freqdset = freqdset,
     #     lmax = lmax,
@@ -114,15 +158,6 @@ if __name__ == '__main__':
     #     mskset = mskset,
     #     freqdset = freqdset,
     #     split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-
-    # io.plotsave_powspec_binned(
-    #     df,
-    #     cf,
-    #     specfilter,
-    #     truthfile=cf[mch]['powspec_truthfile'],
-    #     plotsubtitle=plotsubtitle,
-    #     plotfilename=plotfilename,
-    #     loglog=False)
 
 
     # io.plotsave_weights(

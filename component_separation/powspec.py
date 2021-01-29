@@ -43,6 +43,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 import functools
+import matplotlib.pyplot as plt
 import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
 
@@ -213,10 +214,9 @@ def qupowerspec(qumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqcom
     return spectrum
 
 
-def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, lmax: int, lmax_mask: int, freqfilter: List[str], specfilter: List[str]) -> List[Dict[str, Dict]]:
+def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[str], specfilter: List[str]) -> List[Dict[str, Dict]]:
     indir_path = cf[mch]['indir']
     mskset = cf['pa']['mskset'] # smica or lens
-    freqdset = cf['pa']['freqdset'] # NPIPE or DX12
     freqfilter = cf['pa']["freqfilter"]
     specfilter = cf['pa']["specfilter"]
 
@@ -252,21 +252,18 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, lmax: int, lmax
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
     synmap = dict()
-    for FREQ in PLANCKMAPFREQ:
-        if FREQ not in freqfilter:
-            for FREQ2 in PLANCKMAPFREQ:
-                if (FREQ2 not in freqfilter):
-                    if _crosscomb(False, FREQ, FREQ2):
-                        freqs = "-".join([FREQ,FREQ2])
-                        synmap.update({
-                            freqs: hp.synfast(
-                            cls = [
-                                spectrum[freqs]["TT"],
-                                spectrum[freqs]["EE"],
-                                spectrum[freqs]["BB"],
-                                spectrum[freqs]["TE"]],
-                            nside = nside[0] if int(FREQ)<100 else nside[1],
-                            new=True)})
+    print("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+    print(spectrum["143-143"]["TT"])
+    for freqc in freqcomb:
+        synmap.update({
+            freqc: hp.synfast(
+                cls = [
+                    spectrum[freqc]["TT"],
+                    spectrum[freqc]["EE"],
+                    spectrum[freqc]["BB"],
+                    spectrum[freqc]["TE"]],
+                nside = nside[0] if int(freqc.split("-")[0])<100 else nside[1],
+                new=True)})
 
     flag = False
     for spec in PLANCKSPECTRUM:
@@ -277,11 +274,6 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, lmax: int, lmax
     if flag and (tmask is not None):
         tmap = {
             FREQ: {
-                "header": {
-                    "nside" : nside[0] if int(FREQ)<100 else nside[1],
-                    "freq" : FREQ,
-                    "LorH" : Planckr.LFI if int(FREQ)<100 else Planckr.HFI
-                },
                 "map": synmap["-".join([FREQ,FREQ])][0],
                 "mask": tmask_d if int(FREQ)<100 else tmask
                 }for FREQ in PLANCKMAPFREQ
@@ -295,11 +287,6 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, lmax: int, lmax
 
     qmap = {
         FREQ: {
-            "header": {
-                "nside" : nside[0] if int(FREQ)<100 else nside[1],
-                "freq" : FREQ,
-                "LorH" : Planckr.LFI if int(FREQ)<100 else Planckr.HFI
-            },
             "map": synmap["-".join([FREQ,FREQ])][1],
             "mask": pmask_d if int(FREQ)<100 else pmask
             }for FREQ in PLANCKMAPFREQ
@@ -307,16 +294,14 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, lmax: int, lmax
     }
     umap = {
         FREQ: {
-            "header": {
-                "nside" : nside[0] if int(FREQ)<100 else nside[1],
-                "freq" : FREQ,
-                "LorH" : Planckr.LFI if int(FREQ)<100 else Planckr.HFI
-            },
             "map": synmap["-".join([FREQ,FREQ])][2],
             "mask": pmask_d if int(FREQ)<100 else pmask
             }for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter
     }
+    hp.mollview(tmap["143"]["map"])
+    plt.savefig('tst.jpg')
+    print(tmap)
     return [tmap, qmap, umap]
 
 
