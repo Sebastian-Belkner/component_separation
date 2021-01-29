@@ -326,7 +326,6 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
                 plt.errorbar(
                     0.5 * bl + 0.5 * br,
                     binmean,
-                    # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
                     yerr=binerr,
                     label=freqc,
                     capsize=3,
@@ -337,7 +336,6 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
                 plt.errorbar(
                     0.5 * bl + 0.5 * br,
                     binmean,
-                    # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
                     yerr=binerr,
                     label=freqc,
                     capsize=3,
@@ -352,7 +350,6 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
         if alttext is None:
             plt.legend()
         plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
-        # return plt
 
 
 def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfile: str, spec: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
@@ -405,7 +402,6 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
         plt.errorbar(
             0.5 * bl + 0.5 * br,
             binmean1,
-            # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
             yerr=binerr1,
             label=freqc,
             capsize=3,
@@ -417,7 +413,6 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
         plt.errorbar(
             0.5 * bl + 0.5 * br,
             binmean2,
-            # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
             yerr=binerr2,
             label="syn "+ freqc,
             capsize=3,

@@ -5,12 +5,14 @@ run.py: script for executing main functionality of component_separation
 
 __author__ = "S. Belkner"
 
-# analytic expression for weight estimates
+
 # TODO add LFI beam window functions to calculation
+# cleanup plotting configuration etc. (maybe have a plot.config?)
+# use multiple synmaps for posspace bias estimate
+# why is there no lines @ unscaled DX12?
+# analytic expression for weight estimates
 # compare to planck cmb simulations data
 # use, in addition to the current datasets, cross and diff datasets
-# serialise cov_matrix results and weighting results (to allow for combined plots)
-# remove pandas usage
 
 import json
 import logging
