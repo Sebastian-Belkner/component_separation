@@ -18,6 +18,7 @@ import logging
 import logging.handlers
 from logging import DEBUG, ERROR, INFO, CRITICAL
 import os, sys
+import matplotlib.gridspec as gridspec
 import component_separation.powspec as pw
 import component_separation.io as io
 from typing import Dict, List, Optional, Tuple
@@ -100,25 +101,55 @@ def plot_weights(fname):
 def plot_spectrum_difference(fname):
     syn_spectrum = io.load_spectrum(spec_path, "SYNscaled"+fname)
     spectrum = io.load_spectrum(spec_path, "scaled"+fname)
-
     import copy
+    plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks'.format(
+            mskset = mskset,
+            freqdset = freqdset,
+            split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     diff_spectrum = copy.deepcopy(syn_spectrum)
     for freqc, val in diff_spectrum.items():
         for spec, va in diff_spectrum[freqc].items():
-           diff_spectrum[freqc][spec] = (diff_spectrum[freqc][spec]-spectrum[freqc][spec])/diff_spectrum[freqc][spec]
+            diff_spectrum[freqc][spec] = (diff_spectrum[freqc][spec]-spectrum[freqc][spec])/diff_spectrum[freqc][spec]
 
-    plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = mskset,
-        freqdset = freqdset,
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    koi = next(iter(syn_spectrum.keys()))
+    specs = list(syn_spectrum[koi].keys())
+    for spec in specs:
+        plt.figure(figsize=(8,6))
+        gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+        ax1 = plt.subplot(gs[0])
+        io.plot_compare_powspec_binned(
+            plt,
+            spectrum,
+            syn_spectrum,
+            cf,
+            truthfile=cf[mch]['powspec_truthfile'],
+            spec=spec,
+            plotsubtitle=plotsubtitle,
+            plotfilename="compare"+fname,
+            loglog=True)
+        
+        ax2 = plt.subplot(gs[1])
+        io.plotsave_powspec_binned(
+            plt,
+            diff_spectrum,
+            cf,
+            truthfile=cf[mch]['powspec_truthfile'],
+            spec=spec,
+            plotsubtitle=plotsubtitle,
+            plotfilename="DIFFERENCE"+fname,
+            loglog=False,
+            color = ['r', 'g', 'b', 'y'],
+            alttext='Rel. difference')
 
-    io.plotsave_powspec_binned(
-        diff_spectrum,
-        cf,
-        truthfile=cf[mch]['powspec_truthfile'],
-        plotsubtitle=plotsubtitle,
-        plotfilename="DIFFERENCE"+fname,
-        loglog=False)
+        # io.plotsave_powspec_combined_binned(
+        #     ax1,
+        #     ax2,
+        #     spec,
+        #     plotsubtitle=plotsubtitle,
+        #     plotfilename="combined"+fname)
+
+        plt.savefig('vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(spec, spec, "combined"+fname))
+
 
 def plot_spectrum(fname):
     spectrum = io.load_spectrum(spec_path, fname)
@@ -133,7 +164,8 @@ def plot_spectrum(fname):
         cf,
         truthfile=cf[mch]['powspec_truthfile'],
         plotsubtitle=plotsubtitle,
-        plotfilename=fname)
+        plotfilename=fname
+        )
 
 
 if __name__ == '__main__':

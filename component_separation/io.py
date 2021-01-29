@@ -262,7 +262,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
 
 
 # %% Plot
-def plotsave_powspec_binned(data: Dict, cf: Dict, truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
+def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True, color: List = None, alttext: str = None) -> None:
     """Plotting
 
     Args:
@@ -294,41 +294,144 @@ def plotsave_powspec_binned(data: Dict, cf: Dict, truthfile: str, plotsubtitle: 
         err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
         return mean, err
 
+    if spec is None:
+        pass
+    else:
+        specs = [spec]
     for spec in specs:
-        plt.figure(figsize=(8,6))
+        # fig = plt.figure(figsize=(8,6))
         plt.xscale("log", nonpositive='clip')
         if loglog:
             plt.yscale("log", nonpositive='clip')
         plt.xlabel("Multipole l")
-        plt.ylabel("Powerspectrum")
+        if alttext is None:
+
+            plt.ylabel("Powerspectrum")
+        else:
+            plt.ylabel(alttext)
         plt.grid(which='both', axis='x')
         plt.grid(which='major', axis='y')
         idx=0
         idx_max = len(next(iter(data.keys())))
-        plt.title("{} spectrum - {}".format(spec, plotsubtitle))
+        if alttext is None:
+            plt.title("{} spectrum - {}".format(spec, plotsubtitle))
         plt.xlim((10,4000))
         if loglog:
             plt.ylim((1e-3,1e5))
         else:
             plt.ylim((-0.5,0.5))
         for freqc, val in data.items():
-            idx+=1
             binmean, binerr = std_dev_binned(data[freqc][spec])
-            plt.errorbar(
-                0.5 * bl + 0.5 * br,
-                binmean,
-                # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
-                yerr=binerr,
-                label=freqc,
-                capsize=3,
-                elinewidth=2,
-                fmt='none',
-                alpha=(2*idx_max-idx)/(2*idx_max))
+            if color is None:
+                plt.errorbar(
+                    0.5 * bl + 0.5 * br,
+                    binmean,
+                    # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
+                    yerr=binerr,
+                    label=freqc,
+                    capsize=3,
+                    elinewidth=2,
+                    fmt='none',
+                    alpha=(2*idx_max-idx)/(2*idx_max))
+            else:
+                plt.errorbar(
+                    0.5 * bl + 0.5 * br,
+                    binmean,
+                    # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
+                    yerr=binerr,
+                    label=freqc,
+                    capsize=3,
+                    elinewidth=2,
+                    fmt='none',
+                    alpha=(2*idx_max-idx)/(2*idx_max),
+                    color=color[idx])
+            idx+=1
         if loglog:
             if "Planck-"+spec in spectrum_truth.columns:
                 plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
-        plt.legend()
+        if alttext is None:
+            plt.legend()
         plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
+        # return plt
+
+
+def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfile: str, spec: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
+    """Plotting
+
+    Args:
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    from scipy.signal import savgol_filter
+    lmax = cf['pa']['lmax']
+    if loglog:
+        bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    else:
+        bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    bl = bins[:-1]
+    br = bins[1:]
+
+    if loglog:
+        spectrum_truth = pd.read_csv(
+            truthfile,
+            header=0,
+            sep='    ',
+            index_col=0)
+
+    def std_dev_binned(d):
+        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        return mean, err
+
+    color = ['r', 'g', 'b', 'y']
+    plt.xscale("log", nonpositive='clip')
+    if loglog:
+        plt.yscale("log", nonpositive='clip')
+    # plt.xlabel("Multipole l")
+    plt.ylabel("Powerspectrum")
+    plt.grid(which='both', axis='x')
+    plt.grid(which='major', axis='y')
+    idx=0
+    idx_max = len(next(iter(data2.keys())))
+    plt.title("{} spectrum - {}".format(spec, plotsubtitle))
+    plt.xlim((10,4000))
+    if loglog:
+        plt.ylim((1e-3,1e5))
+    else:
+        plt.ylim((-0.5,0.5))
+    for freqc, val in data2.items():
+        binmean1, binerr1 = std_dev_binned(data1[freqc][spec])
+        plt.errorbar(
+            0.5 * bl + 0.5 * br,
+            binmean1,
+            # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
+            yerr=binerr1,
+            label=freqc,
+            capsize=3,
+            elinewidth=2,
+            fmt='none',
+            color=color[idx],
+            alpha=(idx_max-idx)/(2*idx_max))
+        binmean2, binerr2 = std_dev_binned(data2[freqc][spec])
+        plt.errorbar(
+            0.5 * bl + 0.5 * br,
+            binmean2,
+            # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
+            yerr=binerr2,
+            label="syn "+ freqc,
+            capsize=3,
+            elinewidth=2,
+            fmt='none',
+            color=color[idx],
+            alpha=(2*idx_max-idx)/(2*idx_max))
+        idx+=1
+    if loglog:
+        if "Planck-"+spec in spectrum_truth.columns:
+            plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
+    plt.legend()
+    plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
+    # return fig
 
 
 # %% Plot weightings
