@@ -43,7 +43,6 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 import functools
-import matplotlib.pyplot as plt
 import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
 
@@ -228,6 +227,19 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
 
     nside = cf['pa']["nside"]
 
+    synmap = dict()
+    for freqc in freqcomb:
+        synmap.update({
+            freqc: hp.synfast(
+                cls = [
+                    spectrum[freqc]["TT"],
+                    spectrum[freqc]["EE"],
+                    spectrum[freqc]["BB"],
+                    spectrum[freqc]["TE"]],
+                nside = nside[0] if int(freqc.split("-")[0])<100 else nside[1],
+                new=True)})
+
+
     if tmask_filename is None:
         tmask = None
         tmask_d = None
@@ -237,7 +249,8 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
             .format(
                 path = indir_path,
                 tmask_path = tmask_path,
-                tmask_filename = tmask_filename), field=0, dtype=np.float64)
+                tmask_filename = tmask_filename), field=0, dtype=np.bool)
+        # tmask = np.array([True for t in tmask])
         tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
 
     def multi(a,b):
@@ -249,21 +262,9 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
             pmask_path = pmask_path,
             pmask_filename = a), dtype=np.bool) for a in pmask_filename]
     pmask = functools.reduce(multi, pmasks)
+    # pmask = np.array([True for p in pmask])
     pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
 
-    synmap = dict()
-    print("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-    print(spectrum["143-143"]["TT"])
-    for freqc in freqcomb:
-        synmap.update({
-            freqc: hp.synfast(
-                cls = [
-                    spectrum[freqc]["TT"],
-                    spectrum[freqc]["EE"],
-                    spectrum[freqc]["BB"],
-                    spectrum[freqc]["TE"]],
-                nside = nside[0] if int(freqc.split("-")[0])<100 else nside[1],
-                new=True)})
 
     flag = False
     for spec in PLANCKSPECTRUM:
@@ -299,9 +300,6 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
             }for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter
     }
-    hp.mollview(tmap["143"]["map"])
-    plt.savefig('tst.jpg')
-    print(tmap)
     return [tmap, qmap, umap]
 
 

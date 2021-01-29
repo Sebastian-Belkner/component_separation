@@ -49,7 +49,6 @@ logger.addHandler(handler)
 
 mskset = cf['pa']['mskset'] # smica or lens
 freqdset = cf['pa']['freqdset'] # DX12 or NERSC
-set_logger(DEBUG)
 
 lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
@@ -67,17 +66,18 @@ def set_logger(loglevel=logging.INFO):
 
 
 def plot_maps(fname):
-    maps = io.load_weights(spec_path, fname)
+    if "syn" in fname:
+        maps = io.load_map(spec_path, fname)
+    else:
+        maps = io.load_tqumap()
 
-    plotsubtitle = 'maps-{freqdset}"{split}" dataset - {mskset} masks'.format(
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 
-    io.plotsave_maps(
-        maps,
-        cf,
-        specfilter,
+    io.plotsave_map(
+        data=maps,
         plotsubtitle=plotsubtitle,
         plotfilename=fname)
 
@@ -97,6 +97,28 @@ def plot_weights(fname):
         plotsubtitle=plotsubtitle,
         plotfilename=fname)
 
+def plot_spectrum_difference(fname):
+    syn_spectrum = io.load_spectrum(spec_path, "SYNscaled"+fname)
+    spectrum = io.load_spectrum(spec_path, "scaled"+fname)
+
+    import copy
+    diff_spectrum = copy.deepcopy(syn_spectrum)
+    for freqc, val in diff_spectrum.items():
+        for spec, va in diff_spectrum[freqc].items():
+           diff_spectrum[freqc][spec] = (diff_spectrum[freqc][spec]-spectrum[freqc][spec])/diff_spectrum[freqc][spec]
+
+    plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+
+    io.plotsave_powspec_binned(
+        diff_spectrum,
+        cf,
+        truthfile=cf[mch]['powspec_truthfile'],
+        plotsubtitle=plotsubtitle,
+        plotfilename="DIFFERENCE"+fname,
+        loglog=False)
 
 def plot_spectrum(fname):
     spectrum = io.load_spectrum(spec_path, fname)
@@ -115,6 +137,7 @@ def plot_spectrum(fname):
 
 
 if __name__ == '__main__':
+    set_logger(DEBUG)
     fnamesuf = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
         freqdset = freqdset,
         lmax = lmax,
@@ -123,12 +146,12 @@ if __name__ == '__main__':
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-
-    plot_spectrum(fname = "unscaled"+fnamesuf)
-    plot_weights(fname = 'SYNweights'+fnamesuf)
-    plot_maps(fname = 'map'+fnamesuf)
-
-    
+# "synmaps"+
+    # plot_maps(fname = fnamesuf)
+    # plot_spectrum(fname = "scaled"+fnamesuf)
+    # plot_spectrum(fname = "SYNscaled"+fnamesuf)
+    plot_spectrum_difference(fname = fnamesuf)
+    # plot_weights(fname = 'SYNweights'+fnamesuf)
 
     # name = 'SYNscaled'+fnamesuf
     # syn_spectrum = io.load_spectrum(spec_path, name)
@@ -146,18 +169,7 @@ if __name__ == '__main__':
     #         print(30*"@")
     #         diff_spectrum[freqc][spec] = (diff_spectrum[freqc][spec]-spectrum[freqc][spec])/diff_spectrum[freqc][spec]
 
-    # plotfilename = 'DIFFERENCE-{freqdset}_lmax-{lmax}_lmaxmsk-{lmax_mask}_msk-{mskset}_{freqs}_{spec}_{split}'.format(
-    #     freqdset = freqdset,
-    #     lmax = lmax,
-    #     lmax_mask = lmax_mask,
-    #     mskset = mskset,
-    #     spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-    #     freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
-    #     split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    # plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks'.format(
-    #     mskset = mskset,
-    #     freqdset = freqdset,
-    #     split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    
 
 
     # io.plotsave_weights(

@@ -137,11 +137,11 @@ if __name__ == '__main__':
         spectrum = map2spec(io.load_tqumap(), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
-    spectrum_scaled = spec2specsc(spectrum)
-    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
+    # spectrum_scaled = spec2specsc(spectrum)
+    # io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
-    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
-    io.save_weights(weights, spec_path, 'weights'+filename)
+    # weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
+    # io.save_weights(weights, spec_path, 'weights'+filename)
     
 
     freqcomb =  [

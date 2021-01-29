@@ -147,41 +147,40 @@ def load_tqumap() -> List[Dict]:
             }for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter
     }
-    print("RRRRRRRRRRRRRRRR")
-    print(tmap)
     return [tmap, qmap, umap]
 
 
-@log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
+@log_on_start(INFO, "Trying to load spectrum {filename}")
 @log_on_end(DEBUG, "{result} loaded")
 def load_weights(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
     if os.path.isfile(path+"weights/"+filename):
         data = np.load(path+"weights/"+filename, allow_pickle=True)
         return data.item()
     else:
-        print("no existing weights at {}".format(path+filename))
+        print("no existing weights at {}".format(path+"weights/"+filename))
         return None
 
 
-@log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
+@log_on_start(INFO, "Trying to load spectrum {filename}")
 @log_on_end(DEBUG, "{result} loaded")
 def load_map(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
     if os.path.isfile(path+"map/"+filename):
         data = np.load(path+"map/"+filename, allow_pickle=True)
-        return data.item()
+        print(data)
+        return data
     else:
-        print("no existing map at {}".format(path+filename))
+        print("no existing map at {}".format(path+"map/"+filename))
         return None
 
 
-@log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
+@log_on_start(INFO, "Trying to load spectrum {filename}")
 @log_on_end(DEBUG, "{result} loaded")
 def load_spectrum(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
     if os.path.isfile(path+"spectrum/"+filename):
         data = np.load(path+"spectrum/"+filename, allow_pickle=True)
         return data.item()
     else:
-        print("no existing spectrum at {}".format(path+filename))
+        print("no existing spectrum at {}".format(path+"spectrum/"+filename))
         return None
         
 
@@ -329,7 +328,7 @@ def plotsave_powspec_binned(data: Dict, cf: Dict, truthfile: str, plotsubtitle: 
             if "Planck-"+spec in spectrum_truth.columns:
                 plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
         plt.legend()
-        plt.savefig('{}vis/spectrum/{}_spectrum_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
+        plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
 
 
 # %% Plot weightings
@@ -355,6 +354,7 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', o
             # logx=True,
             title="{} weighting - {}".format(spec, plotsubtitle))
         plt.savefig('{}vis/weighting/{}_weighting--{}.jpg'.format(outdir_root, spec, plotfilename))
+
 
 
 def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = ''):
@@ -402,11 +402,27 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
             plt.savefig('{}vis/weighting/{}_weighting_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
 
 
+# %% Plot weightings
+def plotsave_map(data: Dict, plotsubtitle: str = '', plotfilename: str = '', outdir_root: str = ''):
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    titstr = ["T", "Q", "U"]
+    for idx, tqu in enumerate(data):
+        for freq, val in tqu.items():
+            plt.figure()
+            hp.mollview(val["map"]*val["mask"], title=titstr[idx]+" @ "+freq+"GHz", norm="hist")
+            plt.savefig('{}vis/map/{}_map--{}.jpg'.format(outdir_root, titstr[idx]+freq, plotfilename))
+
 # %%
 def save_map(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
     if os.path.exists(path+filename):
         os.remove(path+filename)
     np.save(path+"map/"+filename, data)
+
 
 def save_weights(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
     if os.path.exists(path+filename):
@@ -414,10 +430,9 @@ def save_weights(data: Dict[str, Dict], path: str, filename: str = 'default.npy'
     np.save(path+"weights/"+filename, data)
 
 
-@log_on_start(INFO, "Saving spectrum to {path}+{filename}")
-@log_on_end(DEBUG, "Spectrum saved successfully to {path}+{filename}")
+@log_on_start(INFO, "Saving spectrum to {filename}")
+@log_on_end(DEBUG, "Spectrum saved successfully to{filename}")
 def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
     if os.path.exists(path+filename):
         os.remove(path+filename)
     np.save(path+"spectrum/"+filename, data)
-
