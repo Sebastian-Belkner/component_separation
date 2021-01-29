@@ -150,10 +150,16 @@ def load_tqumap() -> List[Dict]:
     return [tmap, qmap, umap]
 
 
-@log_on_start(INFO, "Saving spectrum to {path}+{filename}")
-@log_on_end(DEBUG, "Spectrum saved successfully to {path}+{filename}")
-def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
-    np.save(path+filename, data)
+@log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
+@log_on_end(DEBUG, "{result} loaded")
+def load_weights(path: str, filename: str = 'default.npy') -> Dict[str, Dict]:
+    if os.path.isfile(path+filename):
+        data = np.load(path+filename, allow_pickle=True)
+        return data.item()
+    else:
+        print("no existing spectrum at {}".format(path+filename))
+        return None
+        
 
 
 @log_on_start(INFO, "Trying to load spectrum from {path}+{filename}")
@@ -181,7 +187,7 @@ def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
         Dict: Planck beamfunctions
     """
     beamf = dict()
-    for fkey in freqcomb:
+    for freqc in freqcomb:
         freqs = freqc.split('-')
         beamf.update({
             freqc: fits.open(
@@ -245,15 +251,16 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
 
 
 # %% Plot
-def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
+def plotsave_powspec_binned(data: Dict, cf: Dict, truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
     """Plotting
 
     Args:
-        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
+    koi = next(iter(data.keys()))
+    specs = list(data[koi].keys())
 
     from scipy.signal import savgol_filter
     lmax = cf['pa']['lmax']
@@ -276,42 +283,41 @@ def plotsave_powspec_binned(df: Dict, cf: Dict, specfilter: List[str], truthfile
         err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
         return mean, err
 
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            idx=0
-            idx_max = len(df[spec].columns)
-            plt.figure(figsize=(8,6))
-            plt.xscale("log", nonpositive='clip')
-            if loglog:
-                plt.yscale("log", nonpositive='clip')
-            plt.xlabel("Multipole l")
-            plt.ylabel("Powerspectrum")
-            for name, data in df[spec].items():
-                idx+=1
-                binmean, binerr = std_dev_binned(data)
-                plt.errorbar(
-                    0.5 * bl + 0.5 * br,
-                    binmean,
-                    # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
-                    yerr=binerr,
-                    label=name,
-                    capsize=3,
-                    elinewidth=2,
-                    fmt='none',
-                    alpha=(2*idx_max-idx)/(2*idx_max))
-                plt.title("{} spectrum - {}".format(spec, plotsubtitle))
-                plt.xlim((10,4000))
-                if loglog:
-                    plt.ylim((1e-3,1e5))
-                else:
-                    plt.ylim((-0.5,0.5))
-            if loglog:
-                if "Planck-"+spec in spectrum_truth.columns:
-                    plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
-            plt.grid(which='both', axis='x')
-            plt.grid(which='major', axis='y')
-            plt.legend()
-            plt.savefig('{}vis/spectrum/{}_spectrum_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
+    for spec in specs:
+        plt.figure(figsize=(8,6))
+        plt.xscale("log", nonpositive='clip')
+        if loglog:
+            plt.yscale("log", nonpositive='clip')
+        plt.xlabel("Multipole l")
+        plt.ylabel("Powerspectrum")
+        plt.grid(which='both', axis='x')
+        plt.grid(which='major', axis='y')
+        idx=0
+        idx_max = len(next(iter(data.keys())))
+        plt.title("{} spectrum - {}".format(spec, plotsubtitle))
+        plt.xlim((10,4000))
+        if loglog:
+            plt.ylim((1e-3,1e5))
+        else:
+            plt.ylim((-0.5,0.5))
+        for freqc, val in data.items():
+            idx+=1
+            binmean, binerr = std_dev_binned(data[freqc][spec])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean,
+                # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
+                yerr=binerr,
+                label=freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='none',
+                alpha=(2*idx_max-idx)/(2*idx_max))
+        if loglog:
+            if "Planck-"+spec in spectrum_truth.columns:
+                plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
+        plt.legend()
+        plt.savefig('{}vis/spectrum/{}_spectrum_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
 
 
 # %% Plot weightings
@@ -383,9 +389,17 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
             plt.legend()
             plt.savefig('{}vis/weighting/{}_weighting_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
 
-# %%
-def save_map(map):
-    pass
 
-def save_weights(weights):
-    pass
+# %%
+def save_map(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
+    np.save(path+filename, data)
+
+def save_weights(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
+    np.save(path+filename, data)
+
+
+@log_on_start(INFO, "Saving spectrum to {path}+{filename}")
+@log_on_end(DEBUG, "Spectrum saved successfully to {path}+{filename}")
+def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
+    np.save(path+filename, data)
+

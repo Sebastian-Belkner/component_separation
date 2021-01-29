@@ -59,7 +59,7 @@ def spec2synmap(spectrum):
     return pw.create_synmap(spectrum, cf, mch, lmax, lmax_mask, freqfilter, specfilter) 
 
 
-def map2spec(tqumap):
+def map2spec(tqumap, freqcomb):
     if tqumap[0] == None:
         tqumap = tqumap[1:]
     elif tqumap[1] == None:
@@ -67,9 +67,9 @@ def map2spec(tqumap):
     tqumap_hpcorrected = pw.hphack(tqumap)
     # tqumap_hpcorrected = tqumap
     if len(tqumap) == 3:
-        spectrum = pw.tqupowerspec(tqumap_hpcorrected, cf, lmax, lmax_mask, freqfilter, specfilter)
+        spectrum = pw.tqupowerspec(tqumap_hpcorrected,lmax, lmax_mask, freqcomb, specfilter)
     elif len(tqumap) == 2:
-        spectrum = pw.qupowerspec(tqumap_hpcorrected, cf, lmax, lmax_mask, freqfilter, specfilter)
+        spectrum = pw.qupowerspec(tqumap_hpcorrected, lmax, lmax_mask, freqcomb, specfilter)
     elif len(tqumap) == 1:
         print("Only TT spectrum caluclation requested. This is currently not supported.")
     return spectrum
@@ -77,14 +77,14 @@ def map2spec(tqumap):
 
 def spec2specsc(spectrum, bf, llp1):
     # df = pw.create_df(spectrum, cf["pa"]["offdiag"], freqfilter, specfilter)
-    df_sc = pw.apply_scale(spectrum, specfilter, llp1=llp1)
+    spec_sc = pw.apply_scale(spectrum, llp1=llp1)
     if bf:
         beamf = io.load_beamf(freqcomb=freqcomb)
-        df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter) #df_sc #
+        spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
     else:
-        df_scbf = df_sc
+        spec_scbf = spec_sc
 
-    return df_scbf
+    return spec_scbf
 
 
 def specsc2weights(spec_sc):
@@ -116,7 +116,7 @@ if __name__ == '__main__':
             if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
     speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
 
-    spec_filename = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+    filename = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
         freqdset = freqdset,
         lmax = lmax,
         lmax_mask = lmax_mask,
@@ -126,34 +126,25 @@ if __name__ == '__main__':
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 
     if cf['pa']['new_spectrum']:
-        spectrum = map2spec(io.load_tqumap())
-        io.save_spectrum(spectrum, spec_path, 'unscaled'+spec_filename)
+        spectrum = map2spec(io.load_tqumap(), freqcomb)
+        io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
     else:
-        spectrum = io.load_spectrum(spec_path, 'unscaled'+spec_filename)
+        spectrum = io.load_spectrum(spec_path, 'unscaled'+filename)
 
     spectrum_scaled = spec2specsc(spectrum, bf=bf, llp1=llp1)
-    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+spec_filename)
+    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
     weights = specsc2weights(spectrum_scaled)
-    io.save_weights(weights)
+    io.save_weights(weights, spec_path, 'weights'+filename)
     
     synmaps = spec2synmap(spectrum)
-    io.save_map(synmaps)
+    io.save_map(synmaps, spec_path, "synmaps"+filename)
 
-    spec_filename = 'SYN-{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
-        freqdset = freqdset,
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        mskset = mskset,
-        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-
-    syn_spectrum = map2spec(synmaps)
-    io.save_spectrum(syn_spectrum, spec_path, spec_filename)
+    syn_spectrum = map2spec(synmaps, freqcomb)
+    io.save_spectrum(syn_spectrum, spec_path, "SYNunscaled"+filename)
 
     syn_spectrum_scaled = spec2specsc(syn_spectrum, bf, llp1)
-    io.save_spectrum(syn_spectrum_scaled, spec_path, spec_filename)
+    io.save_spectrum(syn_spectrum_scaled, spec_path, "SYNscaled"+filename)
 
     weights = specsc2weights(syn_spectrum_scaled)
-    io.save_weights(weights)
+    io.save_weights(weights, spec_path, "SYNweights"+filename)
