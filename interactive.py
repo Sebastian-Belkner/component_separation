@@ -10,8 +10,10 @@ import matplotlib.pyplot as plt
 
 # %% run header
 import json
+from matplotlib import lines
 import logging
 import logging.handlers
+from matplotlib.patches import Patch
 import os
 import platform
 import sys
@@ -124,6 +126,24 @@ for p in itertools.product(freq, freq):
                             c=TEB[field2],
                             d="f_2"))
                     plt.plot(
+                        beamf[aa][1].data.field(field1)*beamf[aa][1].data.field(field2),
+                        label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+                                a=TEB[field1],
+                                b=p[0],
+                                c=TEB[field2],
+                                d=p[0]),
+                        linewidth=1,
+                        c='g')
+                    plt.plot(
+                        beamf[bb][1].data.field(field1)* beamf[bb][1].data.field(field2),
+                        label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+                                a=TEB[field1],
+                                b=p[1],
+                                c=TEB[field2],
+                                d=p[1]),
+                        linewidth=1,
+                        c='r')
+                    plt.plot(
                         ab2,
                         label = r"estimated $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
                                 a=TEB[field1],
@@ -131,7 +151,7 @@ for p in itertools.product(freq, freq):
                                 c=TEB[field2],
                                 d=p[1]),
                         linewidth=3,
-                        alpha=0.8)
+                        color = "#3169CD")
                     plt.plot(
                         beamf[ab][1].data.field(field1) *beamf[ab][1].data.field(field2),
                         label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
@@ -140,44 +160,53 @@ for p in itertools.product(freq, freq):
                                 c=TEB[field2],
                                 d=p[1]),
                         linewidth=3,
-                        alpha=0.8)
-                    plt.plot(
-                        beamf[aa][1].data.field(field1)*beamf[aa][1].data.field(field2),
-                        label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[0],
-                                c=TEB[field2],
-                                d=p[0]),
-                        linewidth=1)
-                    plt.plot(
-                        beamf[bb][1].data.field(field1)* beamf[bb][1].data.field(field2),
-                        label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[1],
-                                c=TEB[field2],
-                                d=p[1]),
-                        linewidth=1)
+                        color= "#cc7000")
                     plt.ylabel('Windowfunction')
+                    plt.yscale("log", nonpositive='clip')
+                    plt.ylim((1e-9,2))
                     plt.legend()
                     plt.grid()
 
                     ax2 = plt.subplot(gs[1])
-                    plt.plot(
+                    l1, = plt.plot(
                         (ab2-beamf[ab][1].data.field(field1)*beamf[ab][1].data.field(field2))/ab2,
                         color = "#cc7000",
-                        label = r"($W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}} - W(l)^{{\mathtt{{{{{a}}}{{{c}}}, truth}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}) / W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[0],
-                                c=TEB[field2],
-                                d=p[1]),
+                        linewidth=2,
+                        linestyle='-')
+                    l2, = plt.plot(
+                        (ab2-beamf[ab][1].data.field(field1)*beamf[ab][1].data.field(field2))/ab2,
+                        "--",
+                        color = "#3169CD",
+                        linestyle=(2, (2, 2)),
                         linewidth=2)
+                    plt.legend([(l1, l2)],
+                        [r"($W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}} - W(l)^{{\mathtt{{{{{a}}}{{{c}}}, truth}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}) / W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+                            a=TEB[field1],
+                            b=p[0],
+                            c=TEB[field2],
+                            d=p[1])
+                            ])
                     plt.ylim((0.0001,10))
                     plt.yscale("log", nonpositive='clip')
                     plt.grid()
-                    plt.legend()
                     plt.xlabel("Multipole")
                     plt.ylabel('Rel. difference')
                     plt.savefig("vis/beamf/beamf_{}{}_{}.jpg".format(TEB[field1], TEB[field2], ab))
 # %%
 
+# %%
+import healpy as hp
+from astropy.io import fits
+hdul = fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
+
+# %%
+hdul[28].header
+# %%
+hp.read_map("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits", field=0)
+# %%
+plt.plot(np.sqrt(hdul[28].data.field(0)))
+plt.plot(np.sqrt(hdul[29].data.field(0)))
+plt.plot(np.sqrt(hdul[30].data.field(0)))
+plt.plot(np.sqrt(np.sqrt(hdul[28].data.field(0))*np.sqrt(hdul[29].data.field(0))))
+plt.grid()
 # %%

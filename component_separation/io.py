@@ -200,19 +200,44 @@ def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
     beamf = dict()
     for freqc in freqcomb:
         freqs = freqc.split('-')
-        beamf.update({
-            freqc: fits.open(
-                "{abs_path}{indir_path}{bf_path}{bf_filename}"
-                .format(
-                    abs_path = abs_path,
-                    indir_path = cf[mch]['indir'],
-                    bf_path = cf[mch]["beamf"]['path'],
-                    bf_filename = cf[mch]["beamf"]['filename']
-                        .replace("{freq1}", freqs[0])
-                        .replace("{freq2}", freqs[1])
-                ))
+        if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+            beamf.update({
+                freqc: {
+                    "HFI": fits.open(
+                        "{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        .format(
+                            abs_path = abs_path,
+                            indir_path = cf[mch]['indir'],
+                            bf_path = cf[mch]["beamf"]['path'],
+                            bf_filename = cf[mch]["beamf"]['filename']
+                                .replace("{freq1}", freqs[0])
+                                .replace("{freq2}", freqs[1])
+                        ))
+                    }
+                })
+        elif int(freqs[0]) < 100 and int(freqs[1]) >= 100:
+            beamf.update({
+                freqc: {
+                    "HFI": fits.open(
+                        "{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        .format(
+                            abs_path = abs_path,
+                            indir_path = cf[mch]['indir'],
+                            bf_path = cf[mch]["beamf"]['path'],
+                            bf_filename = cf[mch]["beamf"]['filename']
+                                .replace("{freq1}", freqs[1])
+                                .replace("{freq2}", freqs[1])
+                    ))
+                }
             })
-
+            beamf[freqc].update({
+                "LFI": fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
+            })
+        if int(freqs[0]) < 100 and int(freqs[1]) < 100:
+             beamf.update({
+                freqc: {
+                    "LFI": fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
+                }})
     return beamf
 
 
@@ -294,18 +319,20 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
         err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
         return mean, err
 
+    flag = False
     if spec is None:
-        pass
+        flag = True
     else:
         specs = [spec]
     for spec in specs:
+        if flag:
+            plt.figure(figsize=(8,6))
         # fig = plt.figure(figsize=(8,6))
         plt.xscale("log", nonpositive='clip')
         if loglog:
             plt.yscale("log", nonpositive='clip')
         plt.xlabel("Multipole l")
         if alttext is None:
-
             plt.ylabel("Powerspectrum")
         else:
             plt.ylabel(alttext)

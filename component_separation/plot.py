@@ -5,13 +5,6 @@ run.py: script for executing main functionality of component_separation
 
 __author__ = "S. Belkner"
 
-# analytic expression for weight estimates
-# TODO add LFI beam window functions to calculation
-# compare to planck cmb simulations data
-# use, in addition to the current datasets, cross and diff datasets
-# serialise cov_matrix results and weighting results (to allow for combined plots)
-# remove pandas usage
-
 import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks
 import logging
@@ -153,16 +146,17 @@ def plot_spectrum_difference(fname):
 
 def plot_spectrum(fname):
     spectrum = io.load_spectrum(spec_path, fname)
-    
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
     io.plotsave_powspec_binned(
+        plt,
         spectrum,
         cf,
         truthfile=cf[mch]['powspec_truthfile'],
+        spec=None,
         plotsubtitle=plotsubtitle,
         plotfilename=fname
         )
@@ -179,39 +173,8 @@ if __name__ == '__main__':
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 # "synmaps"+
-    # plot_maps(fname = fnamesuf)
-    # plot_spectrum(fname = "scaled"+fnamesuf)
+    plot_maps(fname = fnamesuf)
+    plot_spectrum(fname = "scaled"+fnamesuf)
     # plot_spectrum(fname = "SYNscaled"+fnamesuf)
-    plot_spectrum_difference(fname = fnamesuf)
-    # plot_weights(fname = 'SYNweights'+fnamesuf)
-
-    # name = 'SYNscaled'+fnamesuf
-    # syn_spectrum = io.load_spectrum(spec_path, name)
-    # import copy
-    # diff_spectrum = copy.deepcopy(syn_spectrum)
-    # for freqc, val in diff_spectrum.items():
-    #     for spec, va in diff_spectrum[freqc].items():
-    #         print(diff_spectrum[freqc][spec])
-    #         print(30*"@")
-    #         print(spectrum[freqc][spec])
-    #         print(30*"@")
-    #         print(diff_spectrum[freqc][spec]-spectrum[freqc][spec])
-    #         print(30*"@")
-    #         print(30*"@")
-    #         print(30*"@")
-    #         diff_spectrum[freqc][spec] = (diff_spectrum[freqc][spec]-spectrum[freqc][spec])/diff_spectrum[freqc][spec]
-
-    
-
-
-    # io.plotsave_weights(
-    #     weights,
-    #     plotsubtitle=plotsubtitle,
-    #     plotfilename=plotfilename)
-
-    # io.plotsave_powspec(
-    #     df_scbf,
-    #     specfilter,
-    #     truthfile=cf[mch]['powspec_truthfile'],
-    #     plotsubtitle=plotsubtitle,
-    #     plotfilename=plotfilename)
+    # plot_spectrum_difference(fname = fnamesuf)
+    plot_weights(fname = 'weights'+fnamesuf)

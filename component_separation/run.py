@@ -168,11 +168,11 @@ if __name__ == '__main__':
         spectrum = map2spec(io.load_tqumap(), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
-    # spectrum_scaled = spec2specsc(spectrum)
-    # io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
+    spectrum_scaled = spec2specsc(spectrum)
+    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
-    # weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
-    # io.save_weights(weights, spec_path, 'weights'+filename)
+    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
+    io.save_weights(weights, spec_path, 'weights'+filename)
     
 
     freqcomb =  [
@@ -194,8 +194,8 @@ if __name__ == '__main__':
             syn_spectrum_scaled = spec2specsc(syn_spectrum)
             io.save_spectrum(syn_spectrum_scaled, spec_path, str(i)+"_SYNscaled"+filename)
     
-    syn_spectrum_scaled = syn_spectrum_average()
-    io.save_spectrum(syn_spectrum_scaled, spec_path, "SYNscaled_average"+filename)
+    # syn_spectrum_scaled = syn_spectrum_average()
+    # io.save_spectrum(syn_spectrum_scaled, spec_path, "SYNscaled_average"+filename)
 
     # weights = specsc2weights(syn_spectrum_scaled, False)
     # io.save_weights(weights, spec_path, "SYNweights"+filename)

@@ -154,11 +154,14 @@ def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqc
         FREQC:
             ps.map2cls(
                     tqumap=[tqumap[0][FREQC.split("-")[0]]['map'], tqumap[1][FREQC.split("-")[0]]['map'], tqumap[2][FREQC.split("-")[0]]['map']],
-                    tqumap2=[tqumap[0][FREQC.split("-")[1]]['map'], tqumap[1][FREQC.split("-")[1]]['map'], tqumap[2][FREQC.split("-")[1]]['map']],
                     tmask=tqumap[0][FREQC.split("-")[0]]['mask'],
-                    pmask=tqumap[1][FREQC.split("-")[0]]['mask'], #this needs to be fixed, once LFI x HFI is passed
+                    pmask=tqumap[1][FREQC.split("-")[0]]['mask'],
                     lmax=lmax,
-                    lmax_mask=lmax_mask)
+                    lmax_mask=lmax_mask,
+                    tqumap2=[tqumap[0][FREQC.split("-")[1]]['map'], tqumap[1][FREQC.split("-")[1]]['map'], tqumap[2][FREQC.split("-")[1]]['map']],
+                    tmask2=tqumap[0][FREQC.split("-")[1]]['mask'],
+                    pmask2=tqumap[1][FREQC.split("-")[1]]['mask'] #this needs to be fixed, once LFI x HFI is passed
+                    )
             for FREQC in freqcomb}
     spectrum = dict()
     for FREQC, _ in buff.items():
@@ -379,11 +382,25 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
         "E": 1,
         "B": 2
     }
+    LFI_dict = {
+        "030": 28,
+        "044": 29,
+        "070": 30
+    }
     for freqc, spec in data.items():
+        freqs = freqc.split('-')
+        hdul = beamf[freqc]
         for specID, val in spec.items():
-            hdul = beamf[freqc]
-            data[freqc][specID] /= hdul[1].data.field(TEB_dict[specID[0]])[:lmax+1]
-            data[freqc][specID] /= hdul[1].data.field(TEB_dict[specID[1]])[:lmax+1]
+            if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
+                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
+            elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
+                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)[:lmax+1])
+                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[1]]].data.field(0)[:lmax+1])
+            else:
+                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)[:lmax+1])
+ 
+                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
     return data
 
 #%% Build covariance matrices
