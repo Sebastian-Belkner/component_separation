@@ -1,19 +1,18 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "mskset": "lens",
     "offdiag": true,
     "freqdset": "DX12",
     "llp1": true,
     "bf": true,
-    "lmax": 400,
-    "lmax_mask": 800,
+    "lmax": 3000,
+    "lmax_mask": 6000,
     "freqdatsplit": "",
     "run_sim": false,
     "num_sim": 10,
     "freqfilter": [
         "100",
-        "353",
         "545",
         "857"
         ],

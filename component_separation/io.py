@@ -281,7 +281,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
                     legend=True
                     )
             plt.savefig('{}vis/spectrum/{}_spectrum--{}.jpg'.format(outdir_root, spec, plotfilename))
-
+            plt.close()
     # %% Compare to truth
     # plt.figure(figsize=(8,6))
 
@@ -377,7 +377,7 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
         if alttext is None:
             plt.legend()
         plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
-
+        plt.close()
 
 def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfile: str, spec: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
     """Plotting
@@ -453,7 +453,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
             plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
     plt.legend()
     plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
-    # return fig
+    plt.close()
 
 
 # %% Plot weightings
@@ -479,7 +479,7 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', o
             # logx=True,
             title="{} weighting - {}".format(spec, plotsubtitle))
         plt.savefig('{}vis/weighting/{}_weighting/{}_weighting--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
-
+        plt.close()
 
 
 def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = ''):
@@ -489,10 +489,8 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-
-    from scipy.signal import savgol_filter
     lmax = cf['pa']['lmax']
-    bins = np.arange(0, lmax+1, 500)
+    bins = np.arange(0, lmax+1, lmax/20)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -512,7 +510,6 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
                 plt.errorbar(
                     0.5 * bl + 0.5 * br,
                     binmean,
-                    # savgol_filter(binmean, int((len(binmean))/4-1.), 5),
                     yerr=binerr,
                     label=name,
                     capsize=3,
@@ -524,8 +521,8 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
             plt.grid(which='both', axis='x')
             plt.grid(which='major', axis='y')
             plt.legend()
-            plt.savefig('{}vis/weighting/{}_weighting_binned--{}.jpg'.format(outdir_root, spec, plotfilename))
-
+            plt.savefig('{}vis/weighting/{}_weighting/{}_weighting_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
+            plt.close()
 
 # %% Plot weightings
 def plotsave_map(data: Dict, plotsubtitle: str = '', plotfilename: str = '', outdir_root: str = ''):
@@ -541,7 +538,7 @@ def plotsave_map(data: Dict, plotsubtitle: str = '', plotfilename: str = '', out
             plt.figure()
             hp.mollview(val["map"]*val["mask"], title=titstr[idx]+" @ "+freq+"GHz", norm="hist")
             plt.savefig('{}vis/map/{}_map--{}.jpg'.format(outdir_root, titstr[idx]+freq, plotfilename))
-
+            plt.close()
 # %%
 def save_map(data: Dict[str, Dict], path: str, filename: str = 'default.npy'):
     if os.path.exists(path+filename):

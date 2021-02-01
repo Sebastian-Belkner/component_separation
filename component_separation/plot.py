@@ -142,6 +142,7 @@ def plot_spectrum_difference(fname):
         #     plotfilename="combined"+fname)
 
         plt.savefig('vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(spec, spec, "SYNscaled_combined"+fname))
+        plt.close()
 
 
 def plot_spectrum(fname):
@@ -173,8 +174,8 @@ if __name__ == '__main__':
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 # "synmaps"+
-    plot_maps(fname = fnamesuf)
-    plot_spectrum(fname = "scaled"+fnamesuf)
+    # plot_maps(fname = fnamesuf)
+    # plot_spectrum(fname = "scaled"+fnamesuf)
     # plot_spectrum(fname = "SYNscaled"+fnamesuf)
     # plot_spectrum_difference(fname = fnamesuf)
     plot_weights(fname = 'weights'+fnamesuf)

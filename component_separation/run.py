@@ -6,11 +6,15 @@ run.py: script for executing main functionality of component_separation
 __author__ = "S. Belkner"
 
 
-# TODO add LFI beam window functions to calculation
+# TODO
+# beam windowfunction for LFI is FAKED for multipole>2049 - how to estiamte it correctly?
+# pospace: is the second mask added correctly?
+# move all hardcoded configurations to config.json (e.g. filenames)
 # why is there no lines @ unscaled DX12?
 # use, in addition to the current datasets, cross and diff datasets
 # cleanup plotting configuration etc. (maybe have a plot.config?)
 # analytic expression for weight estimates
+
 
 import json
 import logging

@@ -395,10 +395,16 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
             elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
-                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)[:lmax+1])
-                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[1]]].data.field(0)[:lmax+1])
+                data[freqc][specID] /= np.concatenate(
+                    (np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)),
+                    np.array([0.12 for n in range(lmax+1-len(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)))])))
+                data[freqc][specID] /= np.concatenate((
+                    np.sqrt(hdul["LFI"][LFI_dict[freqs[1]]].data.field(0)[:lmax+1]),
+                    np.array([0.12 for n in range(lmax+1-len(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)))])))
             else:
-                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)[:lmax+1])
+                data[freqc][specID] /= np.concatenate((
+                    np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)[:lmax+1]),
+                    np.array([0.12 for n in range(lmax+1-len(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)))])))
  
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
     return data
@@ -498,12 +504,8 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
         if spec not in specfilter:
             weights[spec].index.name = 'multipole'
 
-    # print(weights)
     return weights
 
 if __name__ == '__main__':
     import doctest
     # doctest.run_docstring_examples(get_data, globals(), verbose=True)
-
-
-# %%
