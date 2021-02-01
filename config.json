@@ -9,6 +9,8 @@
     "lmax": 4000,
     "lmax_mask": 8000,
     "freqdatsplit": "",
+    "run_sim": false,
+    "num_sim": 10,
     "freqfilter": [
         "030",
         "044",

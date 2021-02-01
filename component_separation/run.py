@@ -7,12 +7,12 @@ __author__ = "S. Belkner"
 
 
 # TODO add LFI beam window functions to calculation
-# cleanup plotting configuration etc. (maybe have a plot.config?)
-# use multiple synmaps for posspace bias estimate
+# use multiple synmaps for pospace bias estimate
 # why is there no lines @ unscaled DX12?
+# use, in addition to the current datasets, cross and diff datasets
+# cleanup plotting configuration etc. (maybe have a plot.config?)
 # analytic expression for weight estimates
 # compare to planck cmb simulations data
-# use, in addition to the current datasets, cross and diff datasets
 
 import json
 import logging
@@ -24,6 +24,8 @@ from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
+
+from functools import reduce
 import numpy as np
 import seaborn as sns
 
@@ -62,6 +64,8 @@ lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
 llp1 = cf['pa']["llp1"]
 bf = cf['pa']["bf"]
+
+num_sim = cf['pa']["num_sim"]
 
 spec_path = cf[mch]['outdir']
 indir_path = cf[mch]['indir']
@@ -111,6 +115,34 @@ def specsc2weights(spectrum, diag):
     return weights
 
 
+def syn_spectrum_average():
+    # Load all syn spectra
+    spectrum = {
+        i: io.load_spectrum(spec_path, str(i)+'_SYNscaled'+filename)
+        for i in range(num_sim)}
+
+    # sum all syn spectra
+    spectrum_avg = dict()
+    for FREQC in freqcomb:
+        for spec in speccomb:
+            if FREQC in spectrum_avg.keys():
+                pass
+            else:
+                spectrum_avg.update({FREQC: {}})
+            if spec in spectrum_avg[FREQC].keys():
+                pass
+            else:
+                spectrum_avg[FREQC].update({spec: []})
+                    
+            spectrum_avg[FREQC][spec] = np.array(list(reduce(lambda x, y: x+y, [
+                spectrum[idx][FREQC][spec]
+                    for idx, _ in spectrum.items()
+                ])))
+            spectrum_avg[FREQC][spec] /= num_sim
+    return spectrum_avg
+                
+
+
 if __name__ == '__main__':
     set_logger(DEBUG)
     freqcomb =  [
@@ -153,14 +185,20 @@ if __name__ == '__main__':
             for FREQ2 in PLANCKMAPFREQ
             if (FREQ2 not in freqfilter) and (int(FREQ2)==int(FREQ))]
 
-    synmaps = spec2synmap(spectrum, freqcomb)
-    io.save_map(synmaps, spec_path, "synmaps"+filename)
+    if cf['pa']["run_sim"]:
+        for i in range(num_sim):
+            print("Starting simulation {} of {}.".format(i+1, num_sim))
+            synmaps = spec2synmap(spectrum, freqcomb)
+            io.save_map(synmaps, spec_path, str(i)+"_synmaps"+filename)
 
-    syn_spectrum = map2spec(synmaps, freqcomb)
-    io.save_spectrum(syn_spectrum, spec_path, "SYNunscaled"+filename)
+            syn_spectrum = map2spec(synmaps, freqcomb)
+            io.save_spectrum(syn_spectrum, spec_path, str(i)+"_SYNunscaled"+filename)
 
-    syn_spectrum_scaled = spec2specsc(syn_spectrum)
-    io.save_spectrum(syn_spectrum_scaled, spec_path, "SYNscaled"+filename)
+            syn_spectrum_scaled = spec2specsc(syn_spectrum)
+            io.save_spectrum(syn_spectrum_scaled, spec_path, str(i)+"_SYNscaled"+filename)
+    
+    syn_spectrum_scaled = syn_spectrum_average()
+    io.save_spectrum(syn_spectrum_scaled, spec_path, "SYNscaled_average"+filename)
 
-    weights = specsc2weights(syn_spectrum_scaled, False)
-    io.save_weights(weights, spec_path, "SYNweights"+filename)
+    # weights = specsc2weights(syn_spectrum_scaled, False)
+    # io.save_weights(weights, spec_path, "SYNweights"+filename)
