@@ -7,12 +7,10 @@ __author__ = "S. Belkner"
 
 
 # TODO add LFI beam window functions to calculation
-# use multiple synmaps for pospace bias estimate
 # why is there no lines @ unscaled DX12?
 # use, in addition to the current datasets, cross and diff datasets
 # cleanup plotting configuration etc. (maybe have a plot.config?)
 # analytic expression for weight estimates
-# compare to planck cmb simulations data
 
 import json
 import logging
@@ -141,7 +139,6 @@ def syn_spectrum_average():
             spectrum_avg[FREQC][spec] /= num_sim
     return spectrum_avg
                 
-
 
 if __name__ == '__main__':
     set_logger(DEBUG)

@@ -156,9 +156,17 @@ for p in itertools.product(freq, freq):
                     plt.grid()
 
                     ax2 = plt.subplot(gs[1])
-                    plt.plot((ab2-beamf[ab][1].data.field(field1)*beamf[ab][1].data.field(field2))/ab2, color='black')
+                    plt.plot(
+                        (ab2-beamf[ab][1].data.field(field1)*beamf[ab][1].data.field(field2))/ab2,
+                        color = 'black',
+                        label = r"($W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}} - W(l)^{{\mathtt{{{{{a}}}{{{c}}}, truth}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}) / W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+                                a=TEB[field1],
+                                b=p[0],
+                                c=TEB[field2],
+                                d=p[1]))
                     plt.ylim((0,0.4))
                     plt.grid()
+                    plt.legend()
                     plt.xlabel("Multipole")
                     plt.ylabel('Rel. difference')
                     plt.savefig("vis/beamf/beamf_{}{}_{}.jpg".format(TEB[field1], TEB[field2], ab))

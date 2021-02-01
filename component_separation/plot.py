@@ -99,7 +99,7 @@ def plot_weights(fname):
         plotfilename=fname)
 
 def plot_spectrum_difference(fname):
-    syn_spectrum = io.load_spectrum(spec_path, "SYNscaled_average"+fname)
+    syn_spectrum = io.load_spectrum(spec_path, "SYNscaled"+fname)
     spectrum = io.load_spectrum(spec_path, "scaled"+fname)
     import copy
     plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks - average over 10 simulations'.format(
@@ -148,7 +148,7 @@ def plot_spectrum_difference(fname):
         #     plotsubtitle=plotsubtitle,
         #     plotfilename="combined"+fname)
 
-        plt.savefig('vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(spec, spec, "SYNscaled_average_combined"+fname))
+        plt.savefig('vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(spec, spec, "SYNscaled_combined"+fname))
 
 
 def plot_spectrum(fname):
