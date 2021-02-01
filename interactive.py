@@ -124,33 +124,39 @@ for p in itertools.product(freq, freq):
                             c=TEB[field2],
                             d="f_2"))
                     plt.plot(
-                        beamf[aa][1].data.field(field1)*beamf[aa][1].data.field(field2),
-                        label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+                        ab2,
+                        label = r"estimated $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
                                 a=TEB[field1],
                                 b=p[0],
                                 c=TEB[field2],
-                                d=p[0]))
+                                d=p[1]),
+                        linewidth=3,
+                        alpha=0.8)
                     plt.plot(
                         beamf[ab][1].data.field(field1) *beamf[ab][1].data.field(field2),
                         label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
                                 a=TEB[field1],
                                 b=p[0],
                                 c=TEB[field2],
-                                d=p[1]))
+                                d=p[1]),
+                        linewidth=3,
+                        alpha=0.8)
+                    plt.plot(
+                        beamf[aa][1].data.field(field1)*beamf[aa][1].data.field(field2),
+                        label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+                                a=TEB[field1],
+                                b=p[0],
+                                c=TEB[field2],
+                                d=p[0]),
+                        linewidth=1)
                     plt.plot(
                         beamf[bb][1].data.field(field1)* beamf[bb][1].data.field(field2),
                         label = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
                                 a=TEB[field1],
                                 b=p[1],
                                 c=TEB[field2],
-                                d=p[1]))
-                    plt.plot(
-                        ab2,
-                        label = r"estimated $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[0],
-                                c=TEB[field2],
-                                d=p[1]))
+                                d=p[1]),
+                        linewidth=1)
                     plt.ylabel('Windowfunction')
                     plt.legend()
                     plt.grid()
@@ -158,18 +164,20 @@ for p in itertools.product(freq, freq):
                     ax2 = plt.subplot(gs[1])
                     plt.plot(
                         (ab2-beamf[ab][1].data.field(field1)*beamf[ab][1].data.field(field2))/ab2,
-                        color = 'black',
+                        color = "#cc7000",
                         label = r"($W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}} - W(l)^{{\mathtt{{{{{a}}}{{{c}}}, truth}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}) / W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
                                 a=TEB[field1],
                                 b=p[0],
                                 c=TEB[field2],
-                                d=p[1]))
-                    plt.ylim((0,0.4))
+                                d=p[1]),
+                        linewidth=2)
+                    plt.ylim((0.0001,10))
+                    plt.yscale("log", nonpositive='clip')
                     plt.grid()
                     plt.legend()
                     plt.xlabel("Multipole")
                     plt.ylabel('Rel. difference')
                     plt.savefig("vis/beamf/beamf_{}{}_{}.jpg".format(TEB[field1], TEB[field2], ab))
-1# %%
+# %%
 
 # %%
