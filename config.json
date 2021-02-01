@@ -1,6 +1,6 @@
 {
 "pa":{
-    "new_spectrum": false,
+    "new_spectrum": true,
     "mskset": "lens",
     "offdiag": true,
     "freqdset": "DX12",
@@ -12,7 +12,6 @@
     "run_sim": false,
     "num_sim": 10,
     "freqfilter": [
-        "100",
         "545",
         "857"
         ],
