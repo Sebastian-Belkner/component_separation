@@ -130,7 +130,7 @@ def plot_spectrum_difference(fname):
             spec=spec,
             plotsubtitle=plotsubtitle,
             plotfilename="DIFFERENCE"+fname,
-            loglog=False,
+            loglog=True,
             color = ['r', 'g', 'b', 'y'],
             alttext='Rel. difference')
 
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 # "synmaps"+
     # plot_maps(fname = fnamesuf)
-    plot_spectrum(fname = "scaled"+fnamesuf)
+    # plot_spectrum(fname = "scaled"+fnamesuf)
     # plot_spectrum(fname = "SYNscaled"+fnamesuf)
-    # plot_spectrum_difference(fname = fnamesuf)
+    plot_spectrum_difference(fname = fnamesuf)
     # plot_weights(fname = 'weights'+fnamesuf)

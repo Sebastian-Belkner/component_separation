@@ -7,7 +7,7 @@ __author__ = "S. Belkner"
 
 
 # TODO
-# beam windowfunction for LFI is FAKED for multipole>2049 - how to estimate it correctly?
+# beam windowfunction for LFI is FAKED for multipole>2049
 # pospace: is the second mask added correctly?
 # move all hardcoded configurations to config.json (e.g. filenames)
 # why is there no lines @ unscaled DX12?

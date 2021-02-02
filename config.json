@@ -6,12 +6,16 @@
     "freqdset": "DX12",
     "llp1": true,
     "bf": true,
-    "lmax": 3000,
-    "lmax_mask": 6000,
+    "lmax": 4000,
+    "lmax_mask": 8000,
     "freqdatsplit": "",
     "run_sim": false,
     "num_sim": 10,
     "freqfilter": [
+        "030",
+        "044",
+        "070",
+        "100",
         "545",
         "857"
         ],

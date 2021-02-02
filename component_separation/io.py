@@ -330,7 +330,7 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
         # fig = plt.figure(figsize=(8,6))
         plt.xscale("log", nonpositive='clip')
         if loglog:
-            plt.yscale("log", nonpositive='clip')
+            plt.yscale("symlog")
         plt.xlabel("Multipole l")
         if alttext is None:
             plt.ylabel("Powerspectrum")
@@ -344,12 +344,14 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
             plt.title("{} spectrum - {}".format(spec, plotsubtitle))
         plt.xlim((10,4000))
         if loglog:
-            plt.ylim((1e-3,1e5))
+            plt.ylim((-0.1,0.1))
+            plt.yticks(np.arange(-0.1, 0.11, step=0.05))
+            plt.grid(which='both', axis='y')
         else:
-            plt.ylim((-0.5,0.5))
+            pass
         for freqc, val in data.items():
             idx_max+=len(freqc)
-            if True:#"217" in freqc:
+            if True: #"070" in freqc:
                 binmean, binerr = std_dev_binned(data[freqc][spec])
                 binerr_low = np.array([0 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
                 
@@ -364,32 +366,29 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
                         fmt='x',
                         # ls='-',
                         ms=4,
-                        # errorevery=int(idx%2+1),
                         alpha=(2*idx_max-idx)/(2*idx_max)
                         )
-                # else:
-                #     plt.errorbar(
-                #         0.5 * bl + 0.5 * br,
-                #         binmean,
-                #         yerr=binerr,
-                #         label=freqc,
-                #         capsize=2,
-                #         elinewidth=1,
-                #         ls='-',
-                #         fmt='x',
-                #         ms=4,
-                #         barsabove=True,
-                #         # errorevery=int(idx%2+1),
-                #         alpha=(2*idx_max-idx)/(2*idx_max),
-                #         color=color[idx])
+                else:
+                    plt.errorbar(
+                        0.5 * bl + 0.5 * br,
+                        binmean,
+                        yerr=binerr,
+                        label=freqc,
+                        capsize=2,
+                        elinewidth=1,
+                        fmt='x',
+                        ms=4,
+                        alpha=(2*idx_max-idx)/(2*idx_max),
+                        color=color[idx])
+                    plt.grid(which='both', axis='y')
                 idx+=1
-        if loglog:
+        if color is None:
             if "Planck-"+spec in spectrum_truth.columns:
                 plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec, ls='-', marker='.', ms=0, lw=3)
         if alttext is None:
             plt.legend()
         plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
-        plt.close()
+        # plt.close()
 
 def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfile: str, spec: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
     """Plotting
@@ -465,7 +464,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
             plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
     plt.legend()
     plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
-    plt.close()
+    # plt.close()
 
 
 # %% Plot weightings
