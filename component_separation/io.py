@@ -301,9 +301,9 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
     from scipy.signal import savgol_filter
     lmax = cf['pa']['lmax']
     if loglog:
-        bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+        bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
     else:
-        bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+        bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -348,39 +348,44 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
         else:
             plt.ylim((-0.5,0.5))
         for freqc, val in data.items():
-            if "217" in freqc:
+            idx_max+=len(freqc)
+            if True:#"217" in freqc:
                 binmean, binerr = std_dev_binned(data[freqc][spec])
+                binerr_low = np.array([0 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+                
                 if color is None:
                     plt.errorbar(
-                        0.5 * bl + 0.5 * br,
-                        binmean,
-                        yerr=binerr,
+                        0.5 * bl[binmean>1e-2] + 0.5 * br[binmean>1e-2],
+                        binmean[binmean>1e-2],
+                        yerr=(binerr_low[binmean>1e-2], binerr[binmean>1e-2]),
                         label=freqc,
                         capsize=2,
                         elinewidth=1,
                         fmt='x',
+                        # ls='-',
                         ms=4,
                         # errorevery=int(idx%2+1),
-                        alpha=(4*idx_max-idx)/(2*idx_max)
+                        alpha=(2*idx_max-idx)/(2*idx_max)
                         )
-                else:
-                    plt.errorbar(
-                        0.5 * bl + 0.5 * br,
-                        binmean,
-                        yerr=binerr,
-                        label=freqc,
-                        capsize=2,
-                        elinewidth=1,
-                        fmt='x',
-                        ms=4,
-                        barsabove=True,
-                        # errorevery=int(idx%2+1),
-                        alpha=(4*idx_max-idx)/(2*idx_max),
-                        color=color[idx])
+                # else:
+                #     plt.errorbar(
+                #         0.5 * bl + 0.5 * br,
+                #         binmean,
+                #         yerr=binerr,
+                #         label=freqc,
+                #         capsize=2,
+                #         elinewidth=1,
+                #         ls='-',
+                #         fmt='x',
+                #         ms=4,
+                #         barsabove=True,
+                #         # errorevery=int(idx%2+1),
+                #         alpha=(2*idx_max-idx)/(2*idx_max),
+                #         color=color[idx])
                 idx+=1
         if loglog:
             if "Planck-"+spec in spectrum_truth.columns:
-                plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
+                plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec, ls='-', marker='.', ms=0, lw=3)
         if alttext is None:
             plt.legend()
         plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
@@ -482,7 +487,7 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', o
             # style= '--',
             grid=True,
             xlim=(0,4000),
-            ylim=(-0.5,1.0),
+            ylim=(-0.2,1.0),
             # logx=True,
             title="{} weighting - {}".format(spec, plotsubtitle))
         plt.savefig('{}vis/weighting/{}_weighting/{}_weighting--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
@@ -524,7 +529,7 @@ def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubti
                     )
                 plt.title("{} weighting - {}".format(spec, plotsubtitle))
                 plt.xlim((1,4000))
-                plt.ylim((-0.5,1.0))
+                plt.ylim((-0.2,1.0))
             plt.grid(which='both', axis='x')
             plt.grid(which='major', axis='y')
             plt.legend()
