@@ -315,8 +315,8 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
             index_col=0)
 
     def std_dev_binned(d):
-        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
-        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
+        err = np.array([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
         return mean, err
 
     flag = False
@@ -348,29 +348,36 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
         else:
             plt.ylim((-0.5,0.5))
         for freqc, val in data.items():
-            binmean, binerr = std_dev_binned(data[freqc][spec])
-            if color is None:
-                plt.errorbar(
-                    0.5 * bl + 0.5 * br,
-                    binmean,
-                    yerr=binerr,
-                    label=freqc,
-                    capsize=3,
-                    elinewidth=2,
-                    fmt='none',
-                    alpha=(2*idx_max-idx)/(2*idx_max))
-            else:
-                plt.errorbar(
-                    0.5 * bl + 0.5 * br,
-                    binmean,
-                    yerr=binerr,
-                    label=freqc,
-                    capsize=3,
-                    elinewidth=2,
-                    fmt='none',
-                    alpha=(2*idx_max-idx)/(2*idx_max),
-                    color=color[idx])
-            idx+=1
+            if "217" in freqc:
+                binmean, binerr = std_dev_binned(data[freqc][spec])
+                if color is None:
+                    plt.errorbar(
+                        0.5 * bl + 0.5 * br,
+                        binmean,
+                        yerr=binerr,
+                        label=freqc,
+                        capsize=2,
+                        elinewidth=1,
+                        fmt='x',
+                        ms=4,
+                        # errorevery=int(idx%2+1),
+                        alpha=(4*idx_max-idx)/(2*idx_max)
+                        )
+                else:
+                    plt.errorbar(
+                        0.5 * bl + 0.5 * br,
+                        binmean,
+                        yerr=binerr,
+                        label=freqc,
+                        capsize=2,
+                        elinewidth=1,
+                        fmt='x',
+                        ms=4,
+                        barsabove=True,
+                        # errorevery=int(idx%2+1),
+                        alpha=(4*idx_max-idx)/(2*idx_max),
+                        color=color[idx])
+                idx+=1
         if loglog:
             if "Planck-"+spec in spectrum_truth.columns:
                 plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
