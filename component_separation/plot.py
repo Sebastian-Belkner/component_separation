@@ -91,11 +91,18 @@ def plot_weights(fname):
         plotsubtitle=plotsubtitle,
         plotfilename=fname)
 
+
 def plot_spectrum_difference(fname):
-    syn_spectrum = io.load_spectrum(spec_path, "1_SYNunscaled"+fname)
+    desc = "0_SYNscaled"#+"_avg_"
+    syn_spectrum = io.load_spectrum(spec_path, "syn/"+desc+fname)
     spectrum = io.load_spectrum(spec_path, "scaled"+fname)
-    import copy
-    plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks - average over 10 simulations'.format(
+    if "avg" in desc:
+        plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks - average over 6-10 simulation(s)'.format(
+            mskset = mskset,
+            freqdset = freqdset,
+            split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    else:
+        plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks - average over 1 simulation(s)'.format(
             mskset = mskset,
             freqdset = freqdset,
             split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
@@ -103,7 +110,7 @@ def plot_spectrum_difference(fname):
     for freqc, val in syn_spectrum.items():
         diff_spectrum.update({freqc: {}})
         for spec, va in syn_spectrum[freqc].items():
-            diff_spectrum[freqc].update({spec: (syn_spectrum[freqc][spec]-spectrum[freqc][spec])/syn_spectrum[freqc][spec]})
+            diff_spectrum[freqc].update({spec: np.abs(syn_spectrum[freqc][spec]-spectrum[freqc][spec])/spectrum[freqc][spec]})
 
     koi = next(iter(syn_spectrum.keys()))
     specs = list(syn_spectrum[koi].keys())
@@ -123,7 +130,7 @@ def plot_spectrum_difference(fname):
             loglog=True)
         
         ax2 = plt.subplot(gs[1])
-        io.plotsave_powspec_binned(
+        io.plotsave_powspec_diff_binned(
             plt,
             diff_spectrum,
             cf,
@@ -142,7 +149,7 @@ def plot_spectrum_difference(fname):
         #     plotsubtitle=plotsubtitle,
         #     plotfilename="combined"+fname)
 
-        plt.savefig('vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(spec, spec, "1SYNunscaled_combined"+fname))
+        plt.savefig('vis/spectrum/{}_spectrum/{}_binned_combined--{}.jpg'.format(spec, spec, desc+fname))
         plt.close()
 
 
@@ -176,7 +183,7 @@ if __name__ == '__main__':
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 # "synmaps"+
     # plot_maps(fname = fnamesuf)
-    # plot_spectrum(fname = "scaled"+fnamesuf)
+    # plot_spectrum(fname = "syn/0_SYNunscaled"+fnamesuf)
     # plot_spectrum(fname = "SYNscaled"+fnamesuf)
     plot_spectrum_difference(fname = fnamesuf)
     # plot_weights(fname = 'weights'+fnamesuf)

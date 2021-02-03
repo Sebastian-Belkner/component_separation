@@ -117,10 +117,10 @@ def specsc2weights(spectrum, diag):
     return weights
 
 
-def syn_spectrum_average():
+def syn_spectrum_average(fname, desc):
     # Load all syn spectra
     spectrum = {
-        i: io.load_spectrum(spec_path, str(i)+'_SYNscaled'+filename)
+        i: io.load_spectrum(spec_path, "syn/"+str(i)+desc+filename)
         for i in range(num_sim)}
 
     # sum all syn spectra
@@ -172,11 +172,11 @@ if __name__ == '__main__':
         spectrum = map2spec(io.load_tqumap(), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
-    spectrum_scaled = spec2specsc(spectrum)
-    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
+    # spectrum_scaled = spec2specsc(spectrum)
+    # io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
-    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
-    io.save_weights(weights, spec_path, 'weights'+filename)
+    # weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
+    # io.save_weights(weights, spec_path, 'weights'+filename)
     
 
     freqcomb =  [
@@ -189,17 +189,21 @@ if __name__ == '__main__':
     if cf['pa']["run_sim"]:
         for i in range(num_sim):
             print("Starting simulation {} of {}.".format(i+1, num_sim))
+            spectrum = io.load_spectrum(spec_path, 'unscaled'+filename)
+
             synmaps = spec2synmap(spectrum, freqcomb)
-            io.save_map(synmaps, spec_path, str(i)+"_synmaps"+filename)
+            io.save_map(synmaps, spec_path, "syn/"+str(i)+"_synmaps"+filename)
 
             syn_spectrum = map2spec(synmaps, freqcomb)
-            io.save_spectrum(syn_spectrum, spec_path, str(i)+"_SYNunscaled"+filename)
+            # io.save_spectrum(syn_spectrum, spec_path, "syn/"+str(i)+"_SYNunscaled"+filename)
 
             syn_spectrum_scaled = spec2specsc(syn_spectrum)
-            io.save_spectrum(syn_spectrum_scaled, spec_path, str(i)+"_SYNscaled"+filename)
+            io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/"+str(i)+"_SYNscaled"+filename)
     
-    # syn_spectrum_scaled = syn_spectrum_average()
-    # io.save_spectrum(syn_spectrum_scaled, spec_path, "SYNscaled_average"+filename)
 
-    # weights = specsc2weights(syn_spectrum_scaled, False)
-    # io.save_weights(weights, spec_path, "SYNweights"+filename)
+    desc = "_SYNunscaled"
+    syn_spectrum_avg = syn_spectrum_average(filename, desc)
+    io.save_spectrum(syn_spectrum_avg, spec_path, "syn/"+desc+"_avg_"+filename)
+
+    # weights = specsc2weights(syn_spectrum_avg, False)
+    # io.save_weights(weights, spec_path, "syn/"+"SYNweights"+filename)

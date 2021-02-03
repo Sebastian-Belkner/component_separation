@@ -153,15 +153,15 @@ def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqc
     buff = {
         FREQC:
             ps.map2cls(
-                    tqumap=[tqumap[0][FREQC.split("-")[0]]['map'], tqumap[1][FREQC.split("-")[0]]['map'], tqumap[2][FREQC.split("-")[0]]['map']],
-                    tmask=tqumap[0][FREQC.split("-")[0]]['mask'],
-                    pmask=tqumap[1][FREQC.split("-")[0]]['mask'],
-                    lmax=lmax,
-                    lmax_mask=lmax_mask,
-                    tqumap2=[tqumap[0][FREQC.split("-")[1]]['map'], tqumap[1][FREQC.split("-")[1]]['map'], tqumap[2][FREQC.split("-")[1]]['map']],
-                    tmask2=tqumap[0][FREQC.split("-")[1]]['mask'],
-                    pmask2=tqumap[1][FREQC.split("-")[1]]['mask'] #this needs to be fixed, once LFI x HFI is passed
-                    )
+                tqumap=[tqumap[0][FREQC.split("-")[0]]['map'], tqumap[1][FREQC.split("-")[0]]['map'], tqumap[2][FREQC.split("-")[0]]['map']],
+                tmask=tqumap[0][FREQC.split("-")[0]]['mask'],
+                pmask=tqumap[1][FREQC.split("-")[0]]['mask'],
+                lmax=lmax,
+                lmax_mask=lmax_mask,
+                tqumap2=[tqumap[0][FREQC.split("-")[1]]['map'], tqumap[1][FREQC.split("-")[1]]['map'], tqumap[2][FREQC.split("-")[1]]['map']],
+                tmask2=tqumap[0][FREQC.split("-")[1]]['mask'],
+                pmask2=tqumap[1][FREQC.split("-")[1]]['mask'] #this needs to be fixed, once LFI x HFI is passed
+                )
             for FREQC in freqcomb}
     spectrum = dict()
     for FREQC, _ in buff.items():
