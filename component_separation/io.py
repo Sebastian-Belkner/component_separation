@@ -431,10 +431,8 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
     idx_max = len(next(iter(data2.keys())))
     plt.title("{} spectrum - {}".format(spec, plotsubtitle))
     plt.xlim((10,4000))
-    if loglog:
-        plt.ylim((1e-3,1e5))
-    else:
-        plt.ylim((-0.5,0.5))
+    # if loglog:
+    #     plt.ylim((1e-3,1e5))
     for freqc, val in data2.items():
         binmean1, binerr1 = std_dev_binned(data1[freqc][spec])
         plt.errorbar(

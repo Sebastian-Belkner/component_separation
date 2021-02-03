@@ -1,6 +1,6 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "mskset": "lens",
     "offdiag": true,
     "freqdset": "DX12",
@@ -9,7 +9,7 @@
     "lmax": 4000,
     "lmax_mask": 8000,
     "freqdatsplit": "",
-    "run_sim": false,
+    "run_sim": true,
     "num_sim": 10,
     "freqfilter": [
         "030",

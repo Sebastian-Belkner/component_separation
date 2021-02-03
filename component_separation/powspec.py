@@ -242,7 +242,6 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
                 nside = nside[0] if int(freqc.split("-")[0])<100 else nside[1],
                 new=True)})
 
-
     if tmask_filename is None:
         tmask = None
         tmask_d = None

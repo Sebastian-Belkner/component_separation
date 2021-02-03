@@ -92,17 +92,18 @@ def plot_weights(fname):
         plotfilename=fname)
 
 def plot_spectrum_difference(fname):
-    syn_spectrum = io.load_spectrum(spec_path, "SYNscaled"+fname)
+    syn_spectrum = io.load_spectrum(spec_path, "1_SYNunscaled"+fname)
     spectrum = io.load_spectrum(spec_path, "scaled"+fname)
     import copy
     plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks - average over 10 simulations'.format(
             mskset = mskset,
             freqdset = freqdset,
             split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    diff_spectrum = copy.deepcopy(syn_spectrum)
-    for freqc, val in diff_spectrum.items():
-        for spec, va in diff_spectrum[freqc].items():
-            diff_spectrum[freqc][spec] = (diff_spectrum[freqc][spec]-spectrum[freqc][spec])/diff_spectrum[freqc][spec]
+    diff_spectrum = dict()
+    for freqc, val in syn_spectrum.items():
+        diff_spectrum.update({freqc: {}})
+        for spec, va in syn_spectrum[freqc].items():
+            diff_spectrum[freqc].update({spec: (syn_spectrum[freqc][spec]-spectrum[freqc][spec])/syn_spectrum[freqc][spec]})
 
     koi = next(iter(syn_spectrum.keys()))
     specs = list(syn_spectrum[koi].keys())
@@ -141,7 +142,7 @@ def plot_spectrum_difference(fname):
         #     plotsubtitle=plotsubtitle,
         #     plotfilename="combined"+fname)
 
-        plt.savefig('vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(spec, spec, "SYNscaled_combined"+fname))
+        plt.savefig('vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(spec, spec, "1SYNunscaled_combined"+fname))
         plt.close()
 
 
