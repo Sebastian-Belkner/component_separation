@@ -7,14 +7,12 @@ __author__ = "S. Belkner"
 
 
 # TODO
-# beam windowfunction for LFI is FAKED for multipole>2049
-# pospace: is the second mask added correctly?
 # move all hardcoded configurations to config.json (e.g. filenames)
-# why is there no lines @ unscaled DX12?
-# use, in addition to the current datasets, cross and diff datasets
 # cleanup plotting configuration etc. (maybe have a plot.config?)
+# beam windowfunction for LFI is FAKED for multipole>2049  -remove weighting calculation for LFI above ell = 2050
+# pospace: is the second mask added correctly?
+# use, in addition to the current datasets, cross and diff datasets
 # analytic expression for weight estimates
-
 
 import json
 import logging

@@ -1,0 +1,63 @@
+{
+    "plot": {
+        "spectrum": {
+            "do_plot": true,
+            "dfiledesc": [
+                "syn/0_SYNunscaled",
+                "SYNscaled"],
+            "pfiledesc": "dfiledesc",
+            "freqcomb": "freqcomb",
+            "speccomb": "speccomb",
+
+            "style": {
+                "grid": {
+        
+                },
+                "subplot": {
+                    "xlim": null,
+                    "ylim": null
+                }
+            }
+        },
+        "spectrum_bias": {
+            "do_plot": true,
+            "dfiledesc": [
+                "syn/0_SYNunscaled",
+                "SYNscaled"],
+            "pfiledesc": "dfiledesc",
+            "freqcomb": "freqcomb",
+            "speccomb": "speccomb",
+
+            "style": {
+                "grid": {
+        
+                },
+                "subplot": {
+                    "xlim": null,
+                    "ylim": null
+                }
+            }
+        },
+        "weights": {
+            "do_plot": true,
+            "dfiledesc": [
+                "syn/0_SYNunscaled",
+                "SYNscaled"],
+            "pfiledesc": "dfiledesc"
+        },
+        "beamf": {
+            "do_plot": true,
+            "dfiledesc": [
+                "syn/0_SYNunscaled",
+                "SYNscaled"],
+            "pfiledesc": "dfiledesc"
+        },
+        "maps": {
+            "do_plot": true,
+            "dfiledesc": [
+                "syn/0_SYNunscaled",
+                "SYNscaled"],
+            "pfiledesc": "dfiledesc"
+        }
+    }
+}

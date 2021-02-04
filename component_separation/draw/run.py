@@ -1,28 +1,34 @@
 """
-run.py: script for executing main functionality of component_separation
+run.py: script for executing main functionality of component_separation.draw module
 
 """
 
 __author__ = "S. Belkner"
 
-import component_separation.MSC.MSC.pospace as ps
-from component_separation.cs_util import Planckf, Plancks
+import json
 import logging
 import logging.handlers
-from logging import DEBUG, ERROR, INFO, CRITICAL
-import os, sys
-import matplotlib.gridspec as gridspec
-import component_separation.powspec as pw
-import component_separation.io as io
-from typing import Dict, List, Optional, Tuple
-import json
+import os
 import platform
+import sys
+from logging import CRITICAL, DEBUG, ERROR, INFO
+from typing import Dict, List, Optional, Tuple
+
+import component_separation.io as io
+import component_separation.MSC.MSC.pospace as ps
+import component_separation.powspec as pw
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from component_separation.cs_util import Planckf, Plancks
+from component_separation.draw import plot as cplt
 
 with open('config.json', "r") as f:
     cf = json.load(f)
+
+with open('component_separation/draw/draw.json', "r") as f:
+    dcf = json.load(f)
 
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
@@ -70,7 +76,7 @@ def plot_maps(fname):
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 
-    io.plotsave_map(
+    cplt.plotsave_map(
         data=maps,
         plotsubtitle=plotsubtitle,
         plotfilename=fname)
@@ -84,12 +90,42 @@ def plot_weights(fname):
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 
-    io.plotsave_weights_binned(
+    cplt.plotsave_weights_binned(
         weights,
         cf,
         specfilter,
         plotsubtitle=plotsubtitle,
         plotfilename=fname)
+
+
+def plot_beamwindowfunctions():
+    freqfilter= [
+            "545",
+            "857"
+            ]
+    set_logger(DEBUG)
+    freqcomb =  [
+        "{}-{}".format(FREQ,FREQ2)
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+            for FREQ2 in PLANCKMAPFREQ
+            if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
+    speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+
+    filename = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+        freqdset = freqdset,
+        lmax = lmax,
+        lmax_mask = lmax_mask,
+        mskset = mskset,
+        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+
+    #%%
+    beamf = io.load_beamf(freqcomb=freqcomb)
+    freq = ['030', '044', '070', "100", "143", "217", "353"]
+
+    cplt.plot_beamwindowfunction()
 
 
 def plot_spectrum_difference(fname):
@@ -118,7 +154,7 @@ def plot_spectrum_difference(fname):
         plt.figure(figsize=(8,6))
         gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
         ax1 = plt.subplot(gs[0])
-        io.plot_compare_powspec_binned(
+        cplt.plot_compare_powspec_binned(
             plt,
             spectrum,
             syn_spectrum,
@@ -130,7 +166,7 @@ def plot_spectrum_difference(fname):
             loglog=True)
         
         ax2 = plt.subplot(gs[1])
-        io.plotsave_powspec_diff_binned(
+        cplt.plotsave_powspec_diff_binned(
             plt,
             diff_spectrum,
             cf,
@@ -142,7 +178,7 @@ def plot_spectrum_difference(fname):
             color = ['r', 'g', 'b', 'y'],
             alttext='Rel. difference')
 
-        # io.plotsave_powspec_combined_binned(
+        # cplt.plotsave_powspec_combined_binned(
         #     ax1,
         #     ax2,
         #     spec,
@@ -160,7 +196,7 @@ def plot_spectrum(fname):
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
-    io.plotsave_powspec_binned(
+    cplt.plotsave_powspec_binned(
         plt,
         spectrum,
         cf,
