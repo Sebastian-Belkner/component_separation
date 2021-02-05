@@ -3,22 +3,25 @@ plot.py: Plotting functions
 
 """
 
-from astropy.io import fits
-from logdecorator import log_on_end, log_on_error, log_on_start
-from logging import DEBUG, ERROR, INFO
-import os
-import sys
-import matplotlib.pyplot as plt
-import pandas as pd
 import functools
-import os.path
-import numpy as np
-from typing import Dict, List, Optional, Tuple
-from component_separation.cs_util import Planckf, Plancks, Planckr
-import healpy as hp
-from scipy import stats
+import itertools
 import json
+import os
+import os.path
 import platform
+import sys
+from logging import DEBUG, ERROR, INFO
+from typing import Dict, List, Optional, Tuple
+
+import healpy as hp
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from astropy.io import fits
+from component_separation.cs_util import Planckf, Planckr, Plancks
+from logdecorator import log_on_end, log_on_error, log_on_start
+from scipy import stats
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
@@ -35,8 +38,7 @@ with open('config.json', "r") as f:
 
 
 def plotsave_beamwindowfunctions():
-    import itertools
-    import matplotlib.gridspec as gridspec
+    fending = '.jpg'
     TEB = {
             0: "T",
             1: "E",
@@ -214,10 +216,11 @@ def plotsave_beamwindowfunctions():
                         plt.xlabel("Multipole")
                         plt.ylabel('Rel. difference')
                         plt.savefig(
-                            "vis/beamf/{a}{b}_beamf/{a}{b}_beamf_{c}.jpg".format(
+                            "vis/beamf/{a}{b}_beamf/{a}{b}_beamf_{c}{f}".format(
                                 a=TEB[field1],
                                 b=TEB[field2],
-                                c=ab),
+                                c=ab,
+                                f=fending),
                             dpi=144)
 
 # %% Plot
@@ -230,7 +233,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-
+    fending = '.jpg'
     spectrum_truth = pd.read_csv(
         truthfile,
         header=0,
@@ -259,7 +262,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
                     ylabel="power spectrum",
                     legend=True
                     )
-            plt.savefig('{}vis/spectrum/{}_spectrum--{}.jpg'.format(outdir_root, spec, plotfilename))
+            plt.savefig('{}vis/spectrum/{}_spectrum--{}.jpg'.format(outdir_root, spec, plotfilename, fending))
             plt.close()
     # %% Compare to truth
     # plt.figure(figsize=(8,6))
@@ -274,6 +277,7 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
+    fending = '.jpg'
     koi = next(iter(data.keys()))
     specs = list(data[koi].keys())
 
@@ -342,7 +346,7 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
             pf = plotfilename[4:]
         else:
             pf = plotfilename
-        plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, pf))
+        plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.{}'.format(outdir_root, spec, spec, pf, fending))
         # plt.close()
 
 
@@ -355,6 +359,7 @@ def plotsave_powspec_diff_binned(plt, data: Dict, cf: Dict, truthfile: str, spec
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
 
+    fending = '.jpg'
     lmax = cf['pa']['lmax']
     bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
     bl = bins[:-1]
@@ -402,7 +407,7 @@ def plotsave_powspec_diff_binned(plt, data: Dict, cf: Dict, truthfile: str, spec
                 )
             idx+=1
 
-        plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
+        plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}{}'.format(outdir_root, spec, spec, plotfilename, fending))
         # plt.close()
 
 
@@ -414,6 +419,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
+    fending = '.jpg'
     from scipy.signal import savgol_filter
     lmax = cf['pa']['lmax']
     if loglog:
@@ -476,6 +482,101 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
         if "Planck-"+spec in spectrum_truth.columns:
             plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
     plt.legend()
-    plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.jpg'.format(outdir_root, spec, spec, plotfilename))
+    plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}{}'.format(
+        outdir_root,
+        spec,
+        spec,
+        plotfilename,
+        fending))
     # plt.close()
+
+
+# %% Plot weightings
+def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', outdir_root: str = ''):
+    fending = ".jpg"
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    plt.figure()
+    for spec in df.keys():
+        df[spec].columns[0:3]
+        df[spec].plot(
+            figsize=(8,6),
+            ylabel='weigthing',
+            # y = df[spec].columns.to_list()[0:3],
+            # marker="x",
+            # style= '--',
+            grid=True,
+            xlim=(0,4000),
+            ylim=(-0.2,1.0),
+            # logx=True,
+            title="{} weighting - {}".format(spec, plotsubtitle))
+        plt.savefig('{}vis/weighting/{}_weighting/{}_weighting--{}{}'.format(
+            outdir_root,
+            spec,
+            spec,
+            plotfilename,
+            fending))
+        plt.close()
+
+
+def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = ''):
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    lmax = cf['pa']['lmax']
+    bins = np.arange(0, lmax+1, lmax/20)
+    bl = bins[:-1]
+    br = bins[1:]
+    fending = ".jpg"
+
+    def std_dev_binned(d):
+        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        return mean, err
+
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            plt.figure(figsize=(8,6))
+            plt.xlabel("Multipole l")
+            plt.ylabel("Weighting")
+            for name, data in df[spec].items():
+                # plt.loglog(data, label=name)
+                binmean, binerr = std_dev_binned(data)
+                plt.errorbar(
+                    0.5 * bl + 0.5 * br,
+                    binmean,
+                    yerr=binerr,
+                    label=name,
+                    capsize=3,
+                    elinewidth=2
+                    )
+                plt.title("{} weighting - {}".format(spec, plotsubtitle))
+                plt.xlim((1,4000))
+                plt.ylim((-0.2,1.0))
+            plt.grid(which='both', axis='x')
+            plt.grid(which='major', axis='y')
+            plt.legend()
+            plt.savefig('{}vis/weighting/{}_weighting/{}_weighting_binned--{}{}'.format(outdir_root, spec, spec, plotfilename, fending))
+            plt.close()
+
+
+# %% Plot weightings
+def plot_map(data: Dict, title_string: str = ''):
+
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    plt.figure()
+    hp.mollview(data["map"]*data["mask"], title=title_string, norm="hist")
+    return plt
 

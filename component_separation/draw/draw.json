@@ -1,7 +1,30 @@
 {
+    "pa": {
+        "mskset": "lens",
+        "offdiag": true,
+        "freqdset": "DX12",
+        "lmax": 4000,
+        "lmax_mask": 8000,
+        "freqdatsplit": "",
+        "freqfilter": [
+            "030",
+            "044",
+            "070",
+            "100",
+            "545",
+            "857"
+        ],
+        "specfilter": [
+            "TB",
+            "EB",
+            "ET",
+            "BT",
+            "BE"
+        ]
+    },
     "plot": {
         "spectrum": {
-            "do_plot": true,
+            "do_plot": false,
             "dfiledesc": [
                 "syn/0_SYNunscaled",
                 "SYNscaled"],
@@ -20,7 +43,7 @@
             }
         },
         "spectrum_bias": {
-            "do_plot": true,
+            "do_plot": false,
             "dfiledesc": [
                 "syn/0_SYNunscaled",
                 "SYNscaled"],
@@ -39,14 +62,14 @@
             }
         },
         "weights": {
-            "do_plot": true,
+            "do_plot": false,
             "dfiledesc": [
                 "syn/0_SYNunscaled",
                 "SYNscaled"],
             "pfiledesc": "dfiledesc"
         },
         "beamf": {
-            "do_plot": true,
+            "do_plot": false,
             "dfiledesc": [
                 "syn/0_SYNunscaled",
                 "SYNscaled"],
@@ -54,10 +77,11 @@
         },
         "maps": {
             "do_plot": true,
-            "dfiledesc": [
-                "syn/0_SYNunscaled",
-                "SYNscaled"],
-            "pfiledesc": "dfiledesc"
+            "type": "syn",
+            "ddesc": "0_synmaps",
+            "dpath": "syn/",
+            "outdir_root": "",
+            "rel_dir": "syn/"
         }
     }
 }

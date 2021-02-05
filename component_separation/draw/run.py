@@ -47,18 +47,15 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-mskset = cf['pa']['mskset'] # smica or lens
-freqdset = cf['pa']['freqdset'] # DX12 or NERSC
+mskset = dcf['pa']['mskset'] # smica or lens
+freqdset = dcf['pa']['freqdset'] # DX12 or NERSC
 
-lmax = cf['pa']["lmax"]
-lmax_mask = cf['pa']["lmax_mask"]
-llp1 = cf['pa']["llp1"]
-bf = cf['pa']["bf"]
+lmax = dcf['pa']["lmax"]
+lmax_mask = dcf['pa']["lmax_mask"]
 
-spec_path = cf[mch]['outdir']
-indir_path = cf[mch]['indir']
-freqfilter = cf['pa']["freqfilter"]
-specfilter = cf['pa']["specfilter"]
+freqfilter = dcf['pa']["freqfilter"]
+specfilter = dcf['pa']["specfilter"]
+split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"]
 
 
 def set_logger(loglevel=logging.INFO):
@@ -66,20 +63,32 @@ def set_logger(loglevel=logging.INFO):
 
 
 def plot_maps(fname):
-    if "syn" in fname:
-        maps = io.load_map(spec_path, fname)
+    if dcf["plot"]["maps"]["type"] == "syn":
+        maps = io.load_synmap(
+            path = "data/tmp/",
+            dpath = dcf["plot"]["maps"]["dpath"],
+            ddesc = dcf["plot"]["maps"]["ddesc"],
+            fname = fname
+            )
     else:
-        maps = io.load_tqumap()
+        maps = io.load_plamap(dcf["pa"])
 
-    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = mskset,
-        freqdset = freqdset,
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    tqu = ["T", "Q", "U"]
+    for data in maps:
+        idx=0
+        for freq, val in data.items():
 
-    cplt.plotsave_map(
-        data=maps,
-        plotsubtitle=plotsubtitle,
-        plotfilename=fname)
+            mp = cplt.plot_map(
+                data = val,
+                title_string = tqu[idx] +" @ "+freq+"GHz")
+
+            io.save_mapfigure(
+                mp = mp,
+                outdir_root = dcf["plot"]["maps"]["outdir_root"],
+                rel_dir = dcf["plot"]["maps"]["rel_dir"],
+                pfiledesc = tqu[idx]+freq+"-"+dcf["plot"]["maps"]["ddesc"],
+                fname = fname)
+            idx+=1
 
 
 def plot_weights(fname):
@@ -88,13 +97,13 @@ def plot_weights(fname):
     plotsubtitle = 'weights-{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+        split = split)
 
     cplt.plotsave_weights_binned(
         weights,
         cf,
         specfilter,
-        plotsubtitle=plotsubtitle,
+        plotsubtitle = plotsubtitle,
         plotfilename=fname)
 
 
@@ -119,7 +128,7 @@ def plot_beamwindowfunctions():
         mskset = mskset,
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+        split = split)
 
     #%%
     beamf = io.load_beamf(freqcomb=freqcomb)
@@ -209,7 +218,7 @@ def plot_spectrum(fname):
 
 if __name__ == '__main__':
     set_logger(DEBUG)
-    fnamesuf = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+    fname = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}'.format(
         freqdset = freqdset,
         lmax = lmax,
         lmax_mask = lmax_mask,
@@ -217,9 +226,21 @@ if __name__ == '__main__':
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-# "synmaps"+
-    # plot_maps(fname = fnamesuf)
-    # plot_spectrum(fname = "syn/0_SYNunscaled"+fnamesuf)
-    # plot_spectrum(fname = "SYNscaled"+fnamesuf)
-    plot_spectrum_difference(fname = fnamesuf)
-    # plot_weights(fname = 'weights'+fnamesuf)
+
+    if dcf["plot"]["maps"]["do_plot"]:
+        plot_maps(
+            fname = fname
+            )
+
+    if dcf["plot"]["spectrum"]["do_plot"]:
+        plot_spectrum(fname = "syn/0_SYNunscaled"+fnamesuf)
+        # plot_spectrum(fname = "SYNscaled"+fnamesuf)
+
+    if dcf["plot"]["spectrum_bias"]["do_plot"]:
+        plot_spectrum_difference(fname = fnamesuf)
+
+    if dcf["plot"]["beamf"]["do_plot"]:
+        plot_beamwindowfunctions()
+
+    if dcf["plot"]["weights"]["do_plot"]:
+        plot_weights(fname = 'weights'+fnamesuf)
