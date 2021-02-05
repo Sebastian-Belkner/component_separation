@@ -164,16 +164,17 @@ def load_weights(path: str, filename: str = 'default') -> Dict[str, Dict]:
         return None
 
 
-@log_on_start(INFO, "Trying to load spectrum {fname}")
+@log_on_start(INFO, "Trying to load spectrum {path_name}")
 @log_on_end(DEBUG, "{result} loaded")
-def load_synmap(path: str, ddesc: str, dpath: str, fname: str = 'default') -> Dict[str, Dict]:
-    fending = ".npy"
-    tot_path = path+"map/"+dpath+ddesc+fname+fending
-    if os.path.isfile(tot_path):
-        data = np.load(tot_path, allow_pickle=True)
+def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
+    if path_name == None:
+        fending = ".npy"
+        path_name = indir_root+indir_rel+in_desc+fname+fending
+    if os.path.isfile(path_name):
+        data = np.load(path_name, allow_pickle=True)
         return data
     else:
-        print("no existing map at {}".format(tot_path))
+        print("no existing map at {}".format(path_name))
         return None
 
 
@@ -244,23 +245,14 @@ def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
                     "LFI": fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
                 }})
     return beamf
+
+
 # %%
 def save_map(data: Dict[str, Dict], path: str, filename: str = 'default'):
-    
     if os.path.exists(path+filename):
         os.remove(path+filename)
     np.save(path+"map/"+filename, data)
 
-
-def save_mapfigure(mp, outdir_root, rel_dir, pfiledesc, fname):
-    fending = ".jpg"
-    mp.savefig('{outdir_root}vis/map/{rel_dir}{pfiledesc}-{fname}{fending}'.format(
-        outdir_root = outdir_root,
-        rel_dir = rel_dir,
-        fname = fname,
-        pfiledesc = pfiledesc,
-        fending = fending))
-    plt.close()
 
 def save_weights(data: Dict[str, Dict], path: str, filename: str = 'default'):
     if os.path.exists(path+filename):
@@ -274,3 +266,11 @@ def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default'):
     if os.path.exists(path+filename):
         os.remove(path+filename)
     np.save(path+"spectrum/"+filename, data)
+
+
+def save_figure(mp, path_name: str, outdir_root: str = None, outdir_rel: str = None, out_desc: str = None, fname: str = None):
+    if path_name == None:
+        fending = ".jpg"
+        path_name = outdir_root+outdir_rel+out_desc+fname+fending
+    mp.savefig(path_name, dpi=144)
+    plt.close()

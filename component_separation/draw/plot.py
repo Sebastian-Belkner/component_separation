@@ -37,8 +37,7 @@ with open('config.json', "r") as f:
     cf = json.load(f)
 
 
-def plotsave_beamwindowfunctions():
-    fending = '.jpg'
+def plot_beamwindowfunction(beamf, aa, bb, ab, field1, field2, p):
     TEB = {
             0: "T",
             1: "E",
@@ -49,179 +48,167 @@ def plotsave_beamwindowfunctions():
             "044": 29,
             "070": 30
         }
-    for p in itertools.product(freq, freq):
-        if int(p[0])<int(p[1]):
-            aa = "{}-{}".format(p[0], p[0])
-            bb = "{}-{}".format(p[1], p[1])
-            ab = "{}-{}".format(p[0], p[1])
-            for field1 in [0,1,2]:
-                for field2 in [0,1,2]:
-                    if field2 >= field1:
-                        plt.figure(figsize=(6.4,4.8))
-                        gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])                    
-                        ax1 = plt.subplot(gs[0])
-                        plt.ylabel('Windowfunction')
-                        plt.yscale("log", nonpositive='clip')
-                        plt.grid()
-                        plt.xlim((0,4000))
-                        plt.title(r"$W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{{{{b}}},{{{d}}}}} = B^{{\mathtt{{{a}}}}}_{{\mathtt{{{b}}}}}(l) B^{{\mathtt{{{c}}}}}_{{\mathtt{{{d}}}}}(l)$".format(
-                            a=TEB[field1],
-                            b="f_1",
-                            c=TEB[field2],
-                            d="f_2"))
-                        l_00 = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[0],
-                                c=TEB[field2],
-                                d=p[0])
-                        l_11 = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[1],
-                                c=TEB[field2],
-                                d=p[1])
-                        l_01 = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[0],
-                                c=TEB[field2],
-                                d=p[1])
-                        l_01e = r"estimated $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[0],
-                                c=TEB[field2],
-                                d=p[1])
+    
+    plt.figure(figsize=(6.4,4.8))
+    gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])                    
+    ax1 = plt.subplot(gs[0])
+    plt.ylabel('Windowfunction')
+    plt.yscale("log", nonpositive='clip')
+    plt.grid()
+    plt.xlim((0,4000))
+    plt.title(r"$W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{{{{b}}},{{{d}}}}} = B^{{\mathtt{{{a}}}}}_{{\mathtt{{{b}}}}}(l) B^{{\mathtt{{{c}}}}}_{{\mathtt{{{d}}}}}(l)$".format(
+        a=TEB[field1],
+        b="f_1",
+        c=TEB[field2],
+        d="f_2"))
+    l_00 = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+            a=TEB[field1],
+            b=p[0],
+            c=TEB[field2],
+            d=p[0])
+    l_11 = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+            a=TEB[field1],
+            b=p[1],
+            c=TEB[field2],
+            d=p[1])
+    l_01 = r"true $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+            a=TEB[field1],
+            b=p[0],
+            c=TEB[field2],
+            d=p[1])
+    l_01e = r"estimated $W(l)^{{\mathtt{{{{{a}}}{{{c}}}}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+            a=TEB[field1],
+            b=p[0],
+            c=TEB[field2],
+            d=p[1])
 
-                        l_01d = r"($W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}} - W(l)^{{\mathtt{{{{{a}}}{{{c}}}, truth}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}) / W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
-                                a=TEB[field1],
-                                b=p[0],
-                                c=TEB[field2],
-                                d=p[1])
-                                    
-                        if int(p[0])>=100 and int(p[1])>=100:
-                            plt.ylim((1e-8,2))
-                            ab2 = beamf[aa]["HFI"][1].data.field(field1) * beamf[bb]["HFI"][1].data.field(field2)                        
-                            plt.plot(
-                                beamf[aa]["HFI"][1].data.field(field1)*beamf[aa]["HFI"][1].data.field(field2),
-                                label = l_00,
-                                linewidth=1,
-                                c='g')
-                            plt.plot(
-                                beamf[bb]["HFI"][1].data.field(field1)* beamf[bb]["HFI"][1].data.field(field2),
-                                label = l_11,
-                                linewidth=1,
-                                c='r')
-                            plt.plot(
-                                beamf[ab]["HFI"][1].data.field(field1) * beamf[ab]["HFI"][1].data.field(field2),
-                                label = l_01,
-                                linewidth=3,
-                                color= "#cc7000")
-                            plt.plot(
-                                ab2,
-                                label = l_01e,
-                                linewidth=3,
-                                color = "#3169CD")
-                            plt.legend()
+    l_01d = r"($W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}} - W(l)^{{\mathtt{{{{{a}}}{{{c}}}, truth}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}) / W(l)^{{\mathtt{{{{{a}}}{{{c}}}, estimate}}}}_{{\mathtt{{{{{b}}},{{{d}}}}}}}$".format(
+            a=TEB[field1],
+            b=p[0],
+            c=TEB[field2],
+            d=p[1])
+                
+    if int(p[0])>=100 and int(p[1])>=100:
+        plt.ylim((1e-8,2))
+        ab2 = beamf[aa]["HFI"][1].data.field(field1) * beamf[bb]["HFI"][1].data.field(field2)                        
+        plt.plot(
+            beamf[aa]["HFI"][1].data.field(field1)*beamf[aa]["HFI"][1].data.field(field2),
+            label = l_00,
+            linewidth=1,
+            c='g')
+        plt.plot(
+            beamf[bb]["HFI"][1].data.field(field1)* beamf[bb]["HFI"][1].data.field(field2),
+            label = l_11,
+            linewidth=1,
+            c='r')
+        plt.plot(
+            beamf[ab]["HFI"][1].data.field(field1) * beamf[ab]["HFI"][1].data.field(field2),
+            label = l_01,
+            linewidth=3,
+            color= "#cc7000")
+        plt.plot(
+            ab2,
+            label = l_01e,
+            linewidth=3,
+            color = "#3169CD")
+        plt.legend()
 
-                            ax2 = plt.subplot(gs[1])
+        ax2 = plt.subplot(gs[1])
 
-                            l1, = plt.plot(
-                                (ab2-beamf[ab]["HFI"][1].data.field(field1)*beamf[ab]["HFI"][1].data.field(field2))/ab2,
-                                color = "#cc7000",
-                                linewidth=2,
-                                linestyle='-')
-                            l2, = plt.plot(
-                                (ab2-beamf[ab]["HFI"][1].data.field(field1)*beamf[ab]["HFI"][1].data.field(field2))/ab2,
-                                "--",
-                                color = "#3169CD",
-                                linestyle=(2, (2, 2)),
-                                linewidth=2)
-                            plt.legend([(l1, l2)], [l_01d])
-                            plt.ylim((1e-5,2e1))
-                            plt.xlim((0,4000))
+        l1, = plt.plot(
+            (ab2-beamf[ab]["HFI"][1].data.field(field1)*beamf[ab]["HFI"][1].data.field(field2))/ab2,
+            color = "#cc7000",
+            linewidth=2,
+            linestyle='-')
+        l2, = plt.plot(
+            (ab2-beamf[ab]["HFI"][1].data.field(field1)*beamf[ab]["HFI"][1].data.field(field2))/ab2,
+            "--",
+            color = "#3169CD",
+            linestyle=(2, (2, 2)),
+            linewidth=2)
+        plt.legend([(l1, l2)], [l_01d])
+        plt.ylim((1e-5,2e1))
+        plt.xlim((0,4000))
 
-                        elif int(p[0]) < 100 and int(p[1]) < 100:
-                            plt.ylim((1e-3,2))
-                            ab2 = np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)) * np.sqrt(beamf[bb]["LFI"][LFI_dict[p[1]]].data.field(0))
+    elif int(p[0]) < 100 and int(p[1]) < 100:
+        plt.ylim((1e-3,2))
+        ab2 = np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)) * np.sqrt(beamf[bb]["LFI"][LFI_dict[p[1]]].data.field(0))
 
-                            plt.plot(
-                                np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)) * np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)),
-                                label = l_00,
-                                linewidth=1,
-                                c='g')
-                            plt.plot(
-                                np.sqrt(beamf[bb]["LFI"][LFI_dict[p[1]]].data.field(0)) * np.sqrt(beamf[bb]["LFI"][LFI_dict[p[1]]].data.field(0)),
-                                label = l_11,
-                                linewidth=1,
-                                c='r')
-                            plt.plot([0],[1], linewidth=0)
-                            plt.plot(
-                                ab2,
-                                label = l_01e,
-                                linewidth=3,
-                                color = "#3169CD")
-                            plt.legend()
+        plt.plot(
+            np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)) * np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)),
+            label = l_00,
+            linewidth=1,
+            c='g')
+        plt.plot(
+            np.sqrt(beamf[bb]["LFI"][LFI_dict[p[1]]].data.field(0)) * np.sqrt(beamf[bb]["LFI"][LFI_dict[p[1]]].data.field(0)),
+            label = l_11,
+            linewidth=1,
+            c='r')
+        plt.plot([0],[1], linewidth=0)
+        plt.plot(
+            ab2,
+            label = l_01e,
+            linewidth=3,
+            color = "#3169CD")
+        plt.legend()
 
-                            ax2 = plt.subplot(gs[1])
+        ax2 = plt.subplot(gs[1])
 
-                            l1, = plt.plot([0],[1], linewidth=0,
-                                color = "#cc7000",
-                                linestyle='-'
-                            )
-                            l2, = plt.plot([0],[1], "--", linewidth=0,
-                                color = "#3169CD",
-                                linestyle=(2, (2, 2)),
-                            )
-                            plt.legend(title= "No Data")
-                            plt.ylim((1e-1,1e1))
-                            plt.xlim((0,4000))
+        l1, = plt.plot([0],[1], linewidth=0,
+            color = "#cc7000",
+            linestyle='-'
+        )
+        l2, = plt.plot([0],[1], "--", linewidth=0,
+            color = "#3169CD",
+            linestyle=(2, (2, 2)),
+        )
+        plt.legend(title= "No Data")
+        plt.ylim((1e-1,1e1))
+        plt.xlim((0,4000))
 
-                        elif int(p[0]) < 100 and int(p[1]) >= 100:
-                            plt.ylim((1e-8,2))
-                            ab2 = np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)) * beamf[bb]["HFI"][1].data.field(field2)[:2049]
+    elif int(p[0]) < 100 and int(p[1]) >= 100:
+        plt.ylim((1e-8,2))
+        ab2 = np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)) * beamf[bb]["HFI"][1].data.field(field2)[:2049]
 
-                            plt.plot(
-                                np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)) * np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)),
-                                label = l_00,
-                                linewidth=1,
-                                c='g')
-                            plt.plot(
-                                beamf[bb]["HFI"][1].data.field(field1) * beamf[bb]["HFI"][1].data.field(field2),
-                                label = l_11,
-                                linewidth=1,
-                                c='r')
-                            plt.plot([0],[1], linewidth=0)
-                            plt.plot(
-                                ab2,
-                                label = l_01e,
-                                linewidth=3,
-                                color = "#3169CD")
-                            plt.legend()
+        plt.plot(
+            np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)) * np.sqrt(beamf[aa]["LFI"][LFI_dict[p[0]]].data.field(0)),
+            label = l_00,
+            linewidth=1,
+            c='g')
+        plt.plot(
+            beamf[bb]["HFI"][1].data.field(field1) * beamf[bb]["HFI"][1].data.field(field2),
+            label = l_11,
+            linewidth=1,
+            c='r')
+        plt.plot([0],[1], linewidth=0)
+        plt.plot(
+            ab2,
+            label = l_01e,
+            linewidth=3,
+            color = "#3169CD")
+        plt.legend()
 
-                            ax2 = plt.subplot(gs[1])
+        ax2 = plt.subplot(gs[1])
 
-                            l1, = plt.plot([0],[1], linewidth=0,
-                                color = "#cc7000",
-                                linestyle='-'
-                            )
-                            l2, = plt.plot([0],[1], "--", linewidth=0,
-                                color = "#3169CD",
-                                linestyle=(2, (2, 2)),
-                            )
-                            plt.legend(title= "No Data")
-                            plt.ylim((1e-1,2e1))
-                            plt.xlim((0,4000))
+        l1, = plt.plot([0],[1], linewidth=0,
+            color = "#cc7000",
+            linestyle='-'
+        )
+        l2, = plt.plot([0],[1], "--", linewidth=0,
+            color = "#3169CD",
+            linestyle=(2, (2, 2)),
+        )
+        plt.legend(title= "No Data")
+        plt.ylim((1e-1,2e1))
+        plt.xlim((0,4000))
 
-                        
-                        plt.yscale("log", nonpositive='clip')
-                        plt.grid()
-                        plt.xlabel("Multipole")
-                        plt.ylabel('Rel. difference')
-                        plt.savefig(
-                            "vis/beamf/{a}{b}_beamf/{a}{b}_beamf_{c}{f}".format(
-                                a=TEB[field1],
-                                b=TEB[field2],
-                                c=ab,
-                                f=fending),
-                            dpi=144)
+    
+    plt.yscale("log", nonpositive='clip')
+    plt.grid()
+    plt.xlabel("Multipole")
+    plt.ylabel('Rel. difference')
+    return plt
+
 
 # %% Plot
 def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '') -> None:
@@ -491,6 +478,60 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
     # plt.close()
 
 
+def plotsave_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    bins = np.arange(0, lmax+1, lmax/20)
+    bl = bins[:-1]
+    br = bins[1:]
+    fending = ".jpg"
+
+    def std_dev_binned(d):
+        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        return mean, err
+
+    plt.figure(figsize=(8,6))
+    plt.xlabel("Multipole l")
+    plt.ylabel("Weighting")
+
+    for name, data in weights.items():
+        binmean, binerr = std_dev_binned(data)
+        plt.errorbar(
+            0.5 * bl + 0.5 * br,
+            binmean,
+            yerr=binerr,
+            label=name,
+            capsize=3,
+            elinewidth=2
+            )
+        plt.title(titlestring)
+        plt.xlim((1,4000))
+        plt.ylim((-0.2,1.0))
+    plt.grid(which='both', axis='x')
+    plt.grid(which='major', axis='y')
+    plt.legend()
+    plt.savefig('{}vis/weighting/{}_weighting/{}_weighting_binned--{}{}'.format(outdir_root, spec, spec, plotfilename, fending))
+    plt.close()
+
+
+# %% Plot weightings
+def plot_map(data: Dict, title_string: str = ''):
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    plt.figure()
+    hp.mollview(data["map"]*data["mask"], title=title_string, norm="hist")
+    return plt
+
+
 # %% Plot weightings
 def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', outdir_root: str = ''):
     fending = ".jpg"
@@ -521,62 +562,3 @@ def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', o
             plotfilename,
             fending))
         plt.close()
-
-
-def plotsave_weights_binned(df: Dict, cf: Dict, specfilter: List[str], plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = ''):
-    """Plotting
-    Args:
-        df (Dict): Data to be plotted
-        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
-        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
-    """
-    lmax = cf['pa']['lmax']
-    bins = np.arange(0, lmax+1, lmax/20)
-    bl = bins[:-1]
-    br = bins[1:]
-    fending = ".jpg"
-
-    def std_dev_binned(d):
-        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
-        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
-        return mean, err
-
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            plt.figure(figsize=(8,6))
-            plt.xlabel("Multipole l")
-            plt.ylabel("Weighting")
-            for name, data in df[spec].items():
-                # plt.loglog(data, label=name)
-                binmean, binerr = std_dev_binned(data)
-                plt.errorbar(
-                    0.5 * bl + 0.5 * br,
-                    binmean,
-                    yerr=binerr,
-                    label=name,
-                    capsize=3,
-                    elinewidth=2
-                    )
-                plt.title("{} weighting - {}".format(spec, plotsubtitle))
-                plt.xlim((1,4000))
-                plt.ylim((-0.2,1.0))
-            plt.grid(which='both', axis='x')
-            plt.grid(which='major', axis='y')
-            plt.legend()
-            plt.savefig('{}vis/weighting/{}_weighting/{}_weighting_binned--{}{}'.format(outdir_root, spec, spec, plotfilename, fending))
-            plt.close()
-
-
-# %% Plot weightings
-def plot_map(data: Dict, title_string: str = ''):
-
-    """Plotting
-    Args:
-        df (Dict): Data to be plotted
-        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
-        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
-    """
-    plt.figure()
-    hp.mollview(data["map"]*data["mask"], title=title_string, norm="hist")
-    return plt
-

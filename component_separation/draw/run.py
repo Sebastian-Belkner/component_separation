@@ -7,6 +7,7 @@ __author__ = "S. Belkner"
 
 import json
 import logging
+import itertools
 import logging.handlers
 import os
 import platform
@@ -63,13 +64,10 @@ def set_logger(loglevel=logging.INFO):
 
 
 def plot_maps(fname):
-    if dcf["plot"]["maps"]["type"] == "syn":
-        maps = io.load_synmap(
-            path = "data/tmp/",
-            dpath = dcf["plot"]["maps"]["dpath"],
-            ddesc = dcf["plot"]["maps"]["ddesc"],
-            fname = fname
-            )
+    dc = dcf["plot"]["maps"]
+    if dc["type"] == "syn":
+        inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname+".npy"
+        maps = io.load_synmap(path_name=inpath_name)
     else:
         maps = io.load_plamap(dcf["pa"])
 
@@ -77,64 +75,87 @@ def plot_maps(fname):
     for data in maps:
         idx=0
         for freq, val in data.items():
-
+            outpath_name = dc["outdir_root"]+dc["outdir_rel"]+tqu[idx]+freq+"-"+dc["out_desc"]+"-"+fname+".jpg"
             mp = cplt.plot_map(
                 data = val,
                 title_string = tqu[idx] +" @ "+freq+"GHz")
-
-            io.save_mapfigure(
+            io.save_figure(
                 mp = mp,
-                outdir_root = dcf["plot"]["maps"]["outdir_root"],
-                rel_dir = dcf["plot"]["maps"]["rel_dir"],
-                pfiledesc = tqu[idx]+freq+"-"+dcf["plot"]["maps"]["ddesc"],
-                fname = fname)
+                path_name = outpath_name)
             idx+=1
 
 
 def plot_weights(fname):
-    weights = io.load_weights(spec_path, fname)
+    dc = dcf["plot"]["weights"]
+    weights = io.load_weights(dc["indir_root"], fname)
 
     plotsubtitle = 'weights-{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
         split = split)
 
-    cplt.plotsave_weights_binned(
-        weights,
-        cf,
-        specfilter,
-        plotsubtitle = plotsubtitle,
-        plotfilename=fname)
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+
+            title_string = "{} weighting - {}".format(spec, plotsubtitle)
+            cplt.plotsave_weights_binned(
+                weights[spec],
+                lmax = cf['pa']['lmax'],
+                title_string = title_string,
+                )
+
+            outpath_name = dc["outdir_root"]+dc["outdir_rel"]+"-"+dc["out_desc"]+"-"+fname+".jpg"
+            outpath_name = \
+                dc["outdir_root"] + \
+                dc["outdir_rel"] + \
+                TEB[field1]+TEB[field2]+"_beamf/" + \
+                TEB[field1]+TEB[field2]+"_beamf-" + \
+                dc["out_desc"]+ ab + ".jpg"        
+
+            io.save_figure(
+                mp = mp,
+                path_name = outpath_name)
 
 
 def plot_beamwindowfunctions():
-    freqfilter= [
-            "545",
-            "857"
-            ]
-    set_logger(DEBUG)
-    freqcomb =  [
-        "{}-{}".format(FREQ,FREQ2)
-            for FREQ in PLANCKMAPFREQ
-            if FREQ not in freqfilter
-            for FREQ2 in PLANCKMAPFREQ
-            if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
-    speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+    dc = dcf["plot"]["beamf"]
+    FREQS = [FR for FR in PLANCKMAPFREQ if FR not in freqfilter]
+    freqcomb =  ["{}-{}".format(p[0],p[1])
+            for p in itertools.product(FREQS, FREQS)
+            if (int(p[1])>=int(p[0]))]
 
-    filename = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
-        freqdset = freqdset,
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        mskset = mskset,
-        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
-        split = split)
-
-    #%%
     beamf = io.load_beamf(freqcomb=freqcomb)
-    freq = ['030', '044', '070', "100", "143", "217", "353"]
 
-    cplt.plot_beamwindowfunction()
+    TEB = {
+            0: "T",
+            1: "E",
+            2: "B"
+    }
+    for p in itertools.product(FREQS, FREQS):
+        if int(p[0])<int(p[1]):
+            aa = "{}-{}".format(p[0], p[0])
+            bb = "{}-{}".format(p[1], p[1])
+            ab = "{}-{}".format(p[0], p[1])
+            for field1 in [0,1,2]:
+                for field2 in [0,1,2]:
+                    if field2 >= field1:
+                        mp = cplt.plot_beamwindowfunction(
+                            beamf,
+                            aa = aa,
+                            bb = bb,
+                            ab = ab,
+                            field1 = field1,
+                            field2 = field2,
+                            p = p)
+                        outpath_name = \
+                            dc["outdir_root"] + \
+                            dc["outdir_rel"] + \
+                            TEB[field1]+TEB[field2]+"_beamf/" + \
+                            TEB[field1]+TEB[field2]+"_beamf-" + \
+                            dc["out_desc"]+ ab + ".jpg"       
+                        io.save_figure(
+                            mp = mp,
+                            path_name = outpath_name)
 
 
 def plot_spectrum_difference(fname):
@@ -227,20 +248,24 @@ if __name__ == '__main__':
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 
+
     if dcf["plot"]["maps"]["do_plot"]:
         plot_maps(
             fname = fname
             )
+    
+    if dcf["plot"]["beamf"]["do_plot"]:
+        plot_beamwindowfunctions()
+
+    if dcf["plot"]["weights"]["do_plot"]:
+        plot_weights(fname = fname)
 
     if dcf["plot"]["spectrum"]["do_plot"]:
         plot_spectrum(fname = "syn/0_SYNunscaled"+fnamesuf)
         # plot_spectrum(fname = "SYNscaled"+fnamesuf)
 
     if dcf["plot"]["spectrum_bias"]["do_plot"]:
-        plot_spectrum_difference(fname = fnamesuf)
+        plot_spectrum_difference(fname = fname)
 
-    if dcf["plot"]["beamf"]["do_plot"]:
-        plot_beamwindowfunctions()
 
-    if dcf["plot"]["weights"]["do_plot"]:
-        plot_weights(fname = 'weights'+fnamesuf)
+

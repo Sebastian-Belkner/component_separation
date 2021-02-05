@@ -62,26 +62,28 @@
             }
         },
         "weights": {
-            "do_plot": false,
-            "dfiledesc": [
-                "syn/0_SYNunscaled",
-                "SYNscaled"],
-            "pfiledesc": "dfiledesc"
+            "do_plot": true,
+            "indir_root": "data/tmp/weights/",
+            "indir_rel": "",
+            "outdir_root": "vis/weights/",
+            "outdir_rel": "",
+            "out_desc": ""
         },
         "beamf": {
             "do_plot": false,
-            "dfiledesc": [
-                "syn/0_SYNunscaled",
-                "SYNscaled"],
-            "pfiledesc": "dfiledesc"
+            "outdir_root": "vis/beamf/",
+            "outdir_rel": "",
+            "out_desc": ""
         },
         "maps": {
-            "do_plot": true,
+            "do_plot": false,
             "type": "syn",
-            "ddesc": "0_synmaps",
-            "dpath": "syn/",
-            "outdir_root": "",
-            "rel_dir": "syn/"
+            "indir_root": "data/tmp/map/",
+            "indir_rel": "syn/",
+            "outdir_root": "vis/map/",
+            "outdir_rel": "syn/",
+            "in_desc": "0_synmaps",
+            "out_desc": "0_synmaps"
         }
     }
 }
