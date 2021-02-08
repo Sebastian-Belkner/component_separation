@@ -79,7 +79,7 @@ def set_logger(loglevel=logging.INFO):
 def plot_maps(fname):
     dc = dcf["plot"]["maps"]
     if dc["type"] == "syn":
-        inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname+".npy"
+        inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
         maps = io.load_synmap(path_name=inpath_name)
     else:
         maps = io.load_plamap(dcf["pa"])
@@ -100,7 +100,7 @@ def plot_maps(fname):
 
 def plot_weights(fname):
     dc = dcf["plot"]["weights"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname+".npy"
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
         
     weights = io.load_weights(inpath_name, fname)
 
@@ -112,7 +112,7 @@ def plot_weights(fname):
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             title_string = "{} weigthts - {}".format(spec, plotsubtitle)
-            mp = cplt.plotsave_weights_binned(
+            mp = cplt.plot_weights_binned(
                 weights[spec],
                 lmax = dcf['pa']['lmax'],
                 title_string = title_string,
@@ -176,8 +176,8 @@ def plot_spectrum_bias(fname):
     import matplotlib.gridspec as gridspec
     import matplotlib.pyplot as plt
     dc = dcf["plot"]["spectrum_bias"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname+".npy"
-    inpath_name_syn = dc["indir_root_syn"]+dc["indir_rel_syn"]+dc["in_desc_syn"]+fname+".npy"
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    inpath_name_syn = dc["indir_root_syn"]+dc["indir_rel_syn"]+dc["in_desc_syn"]+fname
     
     spectrum = io.load_spectrum(inpath_name, fname)
     syn_spectrum = io.load_spectrum(inpath_name_syn, fname)
@@ -193,17 +193,17 @@ def plot_spectrum_bias(fname):
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
     diff_spectrum = dict()
-    for spec, va in syn_spectrum_re.items():
-        for freqc, val in syn_spectrum_re[spec].items():
-            diff_spectrum.update({spec: {}})
-            diff_spectrum[spec].update({freqc: 
-                (syn_spectrum_re[spec][freqc]-spectrum_re[spec][freqc])/spectrum_re[spec][freqc]})
-    
+    for specc, va in syn_spectrum_re.items():
+        for freqc, val in syn_spectrum_re[specc].items():
+            if specc not in diff_spectrum.keys():
+                diff_spectrum.update({specc: {}})
+            diff_spectrum[specc].update({freqc: 
+                (syn_spectrum_re[specc][freqc]-spectrum_re[specc][freqc])/spectrum_re[specc][freqc]})
     spectrum_truth = io.load_truthspectrum()
 
     for specc, diff_data in diff_spectrum.items():
-        color = ['r', 'g', 'b', 'y']
-        title_string = spec+"-spectrum - " + plotsubtitle
+        color = ['red', 'green', 'blue', 'yellow', 'black', 'orange', 'purple']
+        title_string = specc+"-spectrum - " + plotsubtitle
         if "Planck-"+specc in spectrum_truth.columns:
             spectrum_trth = spectrum_truth["Planck-"+specc]
 
@@ -242,7 +242,7 @@ def plot_spectrum_bias(fname):
 
 def plot_spectrum(fname):
     dc = dcf["plot"]["spectrum"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname+".npy"
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     spectrum = io.load_spectrum(inpath_name, fname)
     lmax = dcf['pa']['lmax']
 

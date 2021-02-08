@@ -7,10 +7,6 @@
         "lmax_mask": 8000,
         "freqdatsplit": "",
         "freqfilter": [
-            "030",
-            "044",
-            "070",
-            "100",
             "545",
             "857"
         ],
@@ -44,12 +40,6 @@
         },
         "spectrum_bias": {
             "do_plot": true,
-            "dfiledesc": [
-                "syn/0_SYNunscaled",
-                "SYNscaled"],
-            "pfiledesc": "dfiledesc",
-            "freqcomb": "freqcomb",
-            "speccomb": "speccomb",
             "indir_root": "data/tmp/spectrum/",
             "indir_rel": "",
             "indir_root_syn": "data/tmp/spectrum/",
@@ -57,8 +47,8 @@
             "outdir_root": "vis/spectrum/",
             "outdir_rel": "bias/",
             "in_desc": "scaled",
-            "in_desc_syn": "0_SYNscaled",
-            "out_desc": "",
+            "in_desc_syn": "scaled-synavg-",
+            "out_desc": "scaled-synavg",
             "style": {
                 "grid": {
         

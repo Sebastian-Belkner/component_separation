@@ -7,8 +7,6 @@ __author__ = "S. Belkner"
 
 
 # TODO
-# move all hardcoded configurations to config.json (e.g. filenames)
-# cleanup plotting configuration etc. (maybe have a plot.config?)
 # beam windowfunction for LFI is FAKED for multipole>2049  -remove weighting calculation for LFI above ell = 2050
 # pospace: is the second mask added correctly?
 # use, in addition to the current datasets, cross and diff datasets
@@ -112,8 +110,10 @@ def specsc2weights(spectrum, diag):
 
 def synmaps2average(fname):
     # Load all syn spectra
+    def _synpath_name(i):
+        return spec_path + 'spectrum/syn/scaled-{}_synmap-'.format(str(i)) + filename
     spectrum = {
-        i: io.load_spectrum(spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
+        i: io.load_spectrum(path_name=_synpath_name(i))
         for i in range(num_sim)}
 
     # sum all syn spectra
@@ -150,19 +150,20 @@ if __name__ == '__main__':
     filename = io.make_filenamestring(cf)
 
     if cf['pa']['new_spectrum']:
-        spectrum = map2spec(io.load_plamap(cf), freqcomb)
+        spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
     else:
-        spectrum = io.load_spectrum(spec_path, 'unscaled'+filename)
+        path_name = spec_path + 'spectrum/unscaled' + filename
+        spectrum = io.load_spectrum(path_name=path_name)
     if spectrum is None:
-        spectrum = map2spec(io.load_plamap(cf), freqcomb)
+        spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
-    spectrum_scaled = spec2specsc(spectrum)
-    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
+    # spectrum_scaled = spec2specsc(spectrum)
+    # io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
-    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
-    io.save_weights(weights, spec_path, 'weights'+filename)
+    # weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
+    # io.save_weights(weights, spec_path, 'weights'+filename)
     
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)
@@ -174,21 +175,21 @@ if __name__ == '__main__':
     if cf['pa']["run_sim"]:
         for i in range(num_sim):
             print("Starting simulation {} of {}.".format(i+1, num_sim))
-            spectrum = io.load_spectrum(spec_path, 'unscaled'+filename)
+            path_name = spec_path + 'spectrum/unscaled' + filename
+            spectrum = io.load_spectrum(path_name=path_name)
 
             synmap = spec2synmap(spectrum, freqcomb)
             io.save_map(synmap, spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
 
             syn_spectrum = map2spec(synmap, freqcomb)
-            # io.save_spectrum(syn_spectrum, spec_path, "syn/"+str(i)+"_SYNunscaled"+filename)
+            # io.save_spectrum(syn_spectrum, spec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
 
             syn_spectrum_scaled = spec2specsc(syn_spectrum)
             io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)
     
 
-    syn_spectrum_avg = synmaps2average(filename)
-    syn_spectrum_avgsc = spec2specsc(syn_spectrum_avgsc)
-    io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "avg-"+ filename)
+        syn_spectrum_avgsc = synmaps2average(filename)
+        io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "synavg-"+ filename)
 
     # weights = specsc2weights(syn_spectrum_avg, False)
     # io.save_weights(weights, spec_path, "syn/"+"SYNweights"+filename)

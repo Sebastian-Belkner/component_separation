@@ -148,8 +148,18 @@ def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqc
     Returns:
         Dict[str, Dict]: Powerspectra as provided from MSC.pospace
     """
-    #TODO once LFI x HFI is added to the calculation, need to pass tmask2 and pmask2
 
+    # ww = dict
+    # for FREQC in freqcomb:
+    #     if 
+    #     ww.update({FREQC: ps.mask2ww(
+    #         tmask=tqumap[0][FREQC.split("-")[0]]['mask'],
+    #         pmask=tqumap[1][FREQC.split("-")[0]]['mask'],
+    #         tmask2=tqumap[0][FREQC.split("-")[1]]['mask'],
+    #         pmask2=tqumap[1][FREQC.split("-")[1]]['mask'],
+    #         lmax=lmax,
+    #         lmax_mask=lmax_mask)
+    #     })
     buff = {
         FREQC:
             ps.map2cls(
@@ -161,6 +171,9 @@ def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqc
                 tqumap2=[tqumap[0][FREQC.split("-")[1]]['map'], tqumap[1][FREQC.split("-")[1]]['map'], tqumap[2][FREQC.split("-")[1]]['map']],
                 tmask2=tqumap[0][FREQC.split("-")[1]]['mask'],
                 pmask2=tqumap[1][FREQC.split("-")[1]]['mask'] #this needs to be fixed, once LFI x HFI is passed
+                # wwt = ww[0],
+                # wwp = ww[1],
+                # wwtp = ww[2]
                 )
             for FREQC in freqcomb}
     spectrum = dict()
@@ -336,6 +349,7 @@ def create_df(spectrum: Dict[str, Dict[str, List]], offdiag: bool, freqfilter: L
 
     return df
 
+
 #%% Apply 1e12*l(l+1)/2pi
 @log_on_start(INFO, "Starting to apply scaling onto data {data}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
@@ -359,6 +373,7 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
             else:
                 print("Nothing has been scaled.")
     return data
+
 
 #%% Apply Beamfunction
 @log_on_start(INFO, "Starting to apply Beamfunnction on dataframe with {data}")
@@ -386,6 +401,9 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
         "044": 29,
         "070": 30
     }
+    # data[freqc][specID] /= np.concatenate(
+    #     (np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)),
+    #     np.array([0.12 for n in range(lmax+1-len(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)))])))
     for freqc, spec in data.items():
         freqs = freqc.split('-')
         hdul = beamf[freqc]
@@ -394,19 +412,13 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
             elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
-                data[freqc][specID] /= np.concatenate(
-                    (np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)),
-                    np.array([0.12 for n in range(lmax+1-len(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)))])))
-                data[freqc][specID] /= np.concatenate((
-                    np.sqrt(hdul["LFI"][LFI_dict[freqs[1]]].data.field(0)[:lmax+1]),
-                    np.array([0.12 for n in range(lmax+1-len(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)))])))
+                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))[:lmax+1]
+                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[1]]].data.field(0)[:lmax+1])
             else:
-                data[freqc][specID] /= np.concatenate((
-                    np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)[:lmax+1]),
-                    np.array([0.12 for n in range(lmax+1-len(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)))])))
- 
+                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)[:lmax+1])
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
     return data
+
 
 #%% Build covariance matrices
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
@@ -444,6 +456,7 @@ def build_covmatrices(data: Dict, offdiag: str, lmax: int, freqfilter: List[str]
                                 cov[spec][ifreq2][ifreq] = data[FREQ+'-'+FREQ2][spec]
     return cov
 
+
 #%% slice along l (3rd axis) and invert
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
@@ -470,6 +483,7 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         }
     return cov_inv_l
 
+
 # %% Calculate weightings and store in df
 @log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
 @log_on_end(DEBUG, "channel weights calculated successfully: '{result}' ")
@@ -493,7 +507,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     
     weights = {spec:
                 pd.DataFrame(
-                    data=weighting[spec],
+                    data = weighting[spec],
                     columns = ["channel @{}GHz".format(FREQ)
                                 for FREQ in PLANCKMAPFREQ
                                 if FREQ not in freqfilter])
@@ -504,6 +518,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
             weights[spec].index.name = 'multipole'
 
     return weights
+
 
 if __name__ == '__main__':
     import doctest

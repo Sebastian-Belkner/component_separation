@@ -358,7 +358,6 @@ def plotsave_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str =
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
-        print(freqc)
         idx_max+=len(freqc)
         if True: #"070" in freqc:
             binmean, binerr = std_dev_binned(data[freqc])
@@ -372,7 +371,7 @@ def plotsave_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str =
                 fmt='x',
                 # ls='-',
                 ms=4,
-                alpha=(2*idx_max-idx)/(2*idx_max),
+                alpha=0.9,
                 color=color[idx]
                 )
             idx+=1
@@ -420,7 +419,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
             elinewidth=2,
             fmt='x',
             color=color[idx],
-            alpha=(idx_max-idx)/(2*idx_max))
+            alpha=0.9)
         binmean2, binerr2 = std_dev_binned(data2[freqc])
         plt.errorbar(
             0.5 * bl + 0.5 * br,
@@ -431,7 +430,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
             elinewidth=2,
             fmt='x',
             color=color[idx],
-            alpha=(2*idx_max-idx)/(2*idx_max))
+            alpha=0.3)
         idx+=1
 
     if truthfile is not None:
