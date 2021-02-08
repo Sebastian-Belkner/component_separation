@@ -211,7 +211,7 @@ def plot_beamwindowfunction(beamf, aa, bb, ab, field1, field2, p):
 
 
 # %% Plot
-def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '') -> None:
+def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
     """Plotting
 
     Args:
@@ -256,7 +256,7 @@ def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtit
 
 
 # %% Plot
-def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True, color: List = None, alttext: str = None) -> None:
+def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
     """Plotting
 
     Args:
@@ -264,80 +264,69 @@ def plotsave_powspec_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    fending = '.jpg'
-    koi = next(iter(data.keys()))
-    specs = list(data[koi].keys())
+    # koi = next(iter(data.keys()))
+    # specs = list(data[koi].keys())
 
-    lmax = cf['pa']['lmax']
     bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
     bl = bins[:-1]
     br = bins[1:]
 
-    spectrum_truth = pd.read_csv(
-        truthfile,
-        header=0,
-        sep='    ',
-        index_col=0)
+
 
     def std_dev_binned(d):
         mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
         err = np.array([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
         return mean, err
 
-    for spec in specs:
-        plt.figure(figsize=(8,6))
-        plt.xlabel("Multipole l")
-        plt.ylabel("Powerspectrum")
-
-        plt.grid(which='both', axis='x')
-        plt.grid(which='major', axis='y')
-        idx=0
-        idx_max = len(next(iter(data.keys())))
-   
     
-        plt.title("{} spectrum - {}".format(spec, plotsubtitle))
-        plt.xlim((10,4000))
-        # plt.ylim((1e-20,1e1))
-        plt.xscale("log", nonpositive='clip')
-        plt.yscale("log", nonpositive='clip')
-        for freqc, val in data.items():
-            idx_max+=len(freqc)
-            if True: #"070" in freqc:
-                binmean, binerr = std_dev_binned(data[freqc][spec])
-                binerr_low = np.array([0 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
-                plt.errorbar(
-                    # 0.5 * bl[binmean>1e-2] + 0.5 * br[binmean>1e-2],
-                    # binmean[binmean>1e-2],
-                    # yerr=(binerr_low[binmean>1e-2], binerr[binmean>1e-2]),
-                    0.5 * bl + 0.5 * br,
-                    binmean,
-                    yerr=binerr,
-                    label=freqc,
-                    capsize=2,
-                    elinewidth=1,
-                    fmt='x',
-                    # ls='-',
-                    ms=4,
-                    alpha=(2*idx_max-idx)/(2*idx_max)
-                    )
-                idx+=1
-        if "Planck-"+spec in spectrum_truth.columns:
-            plt.plot(
-                spectrum_truth["Planck-"+spec],
-                label = "Planck-"+spec,
-                ls='-', marker='.',
-                ms=0,
-                lw=3)
-        plt.legend()
-        if "syn" in plotfilename:
-            pf = plotfilename[4:]
-        else:
-            pf = plotfilename
-        plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}.{}'.format(outdir_root, spec, spec, pf, fending))
-        # plt.close()
+    plt.figure(figsize=(8,6))
+    plt.xlabel("Multipole l")
+    plt.ylabel("Powerspectrum")
+
+    plt.grid(which='both', axis='x')
+    plt.grid(which='major', axis='y')
+    idx=0
+    idx_max = len(next(iter(data.keys())))
 
 
-def plotsave_powspec_diff_binned(plt, data: Dict, cf: Dict, truthfile: str, spec: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True, color: List = None, alttext: str = None) -> None:
+    plt.title(title_string)
+    plt.xlim((10,4000))
+    # plt.ylim((1e-20,1e1))
+    plt.xscale("log", nonpositive='clip')
+    plt.yscale("log", nonpositive='clip')
+    for freqc, val in data.items():
+        idx_max+=len(freqc)
+        if True: #"070" in freqc:
+            binmean, binerr = std_dev_binned(data[freqc])
+            binerr_low = np.array([binmean[n]*0.1 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean,
+                yerr=(binerr_low, binerr),
+                # 0.5 * bl + 0.5 * br,
+                # binmean,
+                # yerr=binerr,
+                label=freqc,
+                capsize=2,
+                elinewidth=1,
+                fmt='x',
+                # ls='-',
+                ms=4,
+                alpha=(2*idx_max-idx)/(2*idx_max)
+                )
+            idx+=1
+    if truthfile is not None:
+        plt.plot(
+            truthfile,
+            label = truth_label,
+            ls='-', marker='.',
+            ms=0,
+            lw=3)
+    plt.legend()
+    return plt
+
+
+def plotsave_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'default', plotfilename: str = 'default', color: List = None) -> None:
     """Plotting
 
     Args:
@@ -346,8 +335,6 @@ def plotsave_powspec_diff_binned(plt, data: Dict, cf: Dict, truthfile: str, spec
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
 
-    fending = '.jpg'
-    lmax = cf['pa']['lmax']
     bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
     bl = bins[:-1]
     br = bins[1:]
@@ -358,28 +345,24 @@ def plotsave_powspec_diff_binned(plt, data: Dict, cf: Dict, truthfile: str, spec
         return mean, err
 
     plt.xscale("log", nonpositive='clip')
-    plt.yscale("log", nonpositive='clip')
+    plt.yscale("linear")
 
     plt.xlabel("Multipole l")
+    plt.ylabel('Rel. difference')
 
-    plt.ylabel(alttext)
     plt.grid(which='both', axis='x')
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.xlim((10,4000))
-    ylim = (0.001,1e-1)
-    # plt.ylim(ylim)
-    # plt.yticks(np.arange(ylim[0],ylim[1], step=(-ylim[0]+ylim[1])/9))
+    plt.ylim((-0.01,0.01))
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
+        print(freqc)
         idx_max+=len(freqc)
         if True: #"070" in freqc:
-            binmean, binerr = std_dev_binned(data[freqc][spec])
+            binmean, binerr = std_dev_binned(data[freqc])
             plt.errorbar(
-                # 0.5 * bl[binmean>1e-2] + 0.5 * br[binmean>1e-2],
-                # binmean[binmean>1e-2],
-                # yerr=(binerr_low[binmean>1e-2], binerr[binmean>1e-2]),
                 0.5 * bl + 0.5 * br,
                 binmean,
                 yerr=binerr,
@@ -393,12 +376,10 @@ def plotsave_powspec_diff_binned(plt, data: Dict, cf: Dict, truthfile: str, spec
                 color=color[idx]
                 )
             idx+=1
-
-        plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}{}'.format(outdir_root, spec, spec, plotfilename, fending))
-        # plt.close()
+    return plt
 
 
-def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfile: str, spec: str, plotsubtitle: str = 'default', plotfilename: str = 'default', outdir_root: str = '', loglog: bool = True) -> None:
+def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str, truthfile: str, truth_label: str, color: List, plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
     """Plotting
 
     Args:
@@ -406,43 +387,30 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    fending = '.jpg'
-    from scipy.signal import savgol_filter
+
     lmax = cf['pa']['lmax']
-    if loglog:
-        bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
-    else:
-        bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
     bl = bins[:-1]
     br = bins[1:]
-
-    if loglog:
-        spectrum_truth = pd.read_csv(
-            truthfile,
-            header=0,
-            sep='    ',
-            index_col=0)
 
     def std_dev_binned(d):
         mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
         err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
         return mean, err
 
-    color = ['r', 'g', 'b', 'y']
     plt.xscale("log", nonpositive='clip')
-    if loglog:
-        plt.yscale("log", nonpositive='clip')
+    plt.yscale("log", nonpositive='clip')
     # plt.xlabel("Multipole l")
     plt.ylabel("Powerspectrum")
     plt.grid(which='both', axis='x')
     plt.grid(which='major', axis='y')
     idx=0
     idx_max = len(next(iter(data2.keys())))
-    plt.title("{} spectrum - {}".format(spec, plotsubtitle))
+    plt.title(title_string)
     plt.xlim((10,4000))
     plt.ylim((1e-3,1e5))
     for freqc, val in data2.items():
-        binmean1, binerr1 = std_dev_binned(data1[freqc][spec])
+        binmean1, binerr1 = std_dev_binned(data1[freqc])
         plt.errorbar(
             0.5 * bl + 0.5 * br,
             binmean1,
@@ -453,7 +421,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
             fmt='x',
             color=color[idx],
             alpha=(idx_max-idx)/(2*idx_max))
-        binmean2, binerr2 = std_dev_binned(data2[freqc][spec])
+        binmean2, binerr2 = std_dev_binned(data2[freqc])
         plt.errorbar(
             0.5 * bl + 0.5 * br,
             binmean2,
@@ -465,20 +433,15 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, cf: Dict, truthfi
             color=color[idx],
             alpha=(2*idx_max-idx)/(2*idx_max))
         idx+=1
-    if loglog:
-        if "Planck-"+spec in spectrum_truth.columns:
-            plt.plot(spectrum_truth["Planck-"+spec], label = "Planck-"+spec)
+
+    if truthfile is not None:
+        plt.plot(truthfile, label = truth_label)
     plt.legend()
-    plt.savefig('{}vis/spectrum/{}_spectrum/{}_binned--{}{}'.format(
-        outdir_root,
-        spec,
-        spec,
-        plotfilename,
-        fending))
-    # plt.close()
+    return plt
 
 
-def plotsave_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
+
+def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
     """Plotting
     Args:
         df (Dict): Data to be plotted
@@ -488,7 +451,6 @@ def plotsave_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str)
     bins = np.arange(0, lmax+1, lmax/20)
     bl = bins[:-1]
     br = bins[1:]
-    fending = ".jpg"
 
     def std_dev_binned(d):
         mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
@@ -509,14 +471,13 @@ def plotsave_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str)
             capsize=3,
             elinewidth=2
             )
-        plt.title(titlestring)
+        plt.title(title_string)
         plt.xlim((1,4000))
         plt.ylim((-0.2,1.0))
     plt.grid(which='both', axis='x')
     plt.grid(which='major', axis='y')
     plt.legend()
-    plt.savefig('{}vis/weighting/{}_weighting/{}_weighting_binned--{}{}'.format(outdir_root, spec, spec, plotfilename, fending))
-    plt.close()
+    return plt
 
 
 # %% Plot weightings

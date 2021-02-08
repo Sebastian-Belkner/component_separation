@@ -18,8 +18,6 @@ from typing import Dict, List, Optional, Tuple
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
-import matplotlib.gridspec as gridspec
-import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from component_separation.cs_util import Planckf, Plancks
@@ -56,7 +54,22 @@ lmax_mask = dcf['pa']["lmax_mask"]
 
 freqfilter = dcf['pa']["freqfilter"]
 specfilter = dcf['pa']["specfilter"]
-split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"]
+split = "Full" if dcf['pa']["freqdatsplit"] == "" else dcf['pa']["freqdatsplit"]
+
+
+def _reorder_spectrum_dict(spectrum):
+    spec_data = dict()
+    for f in spectrum.keys():
+        for s in spectrum[f].keys():
+            if s in spec_data:
+                spec_data[s].update({
+                    f: spectrum[f][s]})
+            else:
+                spec_data.update({s:{}})
+                spec_data[s].update({
+                    f: spectrum[f][s]
+                })
+    return spec_data
 
 
 def set_logger(loglevel=logging.INFO):
@@ -87,30 +100,31 @@ def plot_maps(fname):
 
 def plot_weights(fname):
     dc = dcf["plot"]["weights"]
-    weights = io.load_weights(dc["indir_root"], fname)
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname+".npy"
+        
+    weights = io.load_weights(inpath_name, fname)
 
-    plotsubtitle = 'weights-{freqdset}"{split}" dataset - {mskset} masks'.format(
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
         split = split)
 
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
-
-            title_string = "{} weighting - {}".format(spec, plotsubtitle)
-            cplt.plotsave_weights_binned(
+            title_string = "{} weigthts - {}".format(spec, plotsubtitle)
+            mp = cplt.plotsave_weights_binned(
                 weights[spec],
-                lmax = cf['pa']['lmax'],
+                lmax = dcf['pa']['lmax'],
                 title_string = title_string,
                 )
 
-            outpath_name = dc["outdir_root"]+dc["outdir_rel"]+"-"+dc["out_desc"]+"-"+fname+".jpg"
             outpath_name = \
                 dc["outdir_root"] + \
                 dc["outdir_rel"] + \
-                TEB[field1]+TEB[field2]+"_beamf/" + \
-                TEB[field1]+TEB[field2]+"_beamf-" + \
-                dc["out_desc"]+ ab + ".jpg"        
+                spec+"_weights/" + \
+                spec+"_weights" + "-" + \
+                dc["out_desc"] +"-" + \
+                fname + ".jpg"        
 
             io.save_figure(
                 mp = mp,
@@ -158,83 +172,113 @@ def plot_beamwindowfunctions():
                             path_name = outpath_name)
 
 
-def plot_spectrum_difference(fname):
-    desc = "0_SYNscaled"#+"_avg_"
-    syn_spectrum = io.load_spectrum(spec_path, "syn/"+desc+fname)
-    spectrum = io.load_spectrum(spec_path, "scaled"+fname)
-    if "avg" in desc:
-        plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks - average over 6-10 simulation(s)'.format(
-            mskset = mskset,
-            freqdset = freqdset,
-            split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    else:
-        plotsubtitle = 'DIFFERENCE-{freqdset}"{split}" dataset - {mskset} masks - average over 1 simulation(s)'.format(
-            mskset = mskset,
-            freqdset = freqdset,
-            split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    diff_spectrum = dict()
-    for freqc, val in syn_spectrum.items():
-        diff_spectrum.update({freqc: {}})
-        for spec, va in syn_spectrum[freqc].items():
-            diff_spectrum[freqc].update({spec: np.abs(syn_spectrum[freqc][spec]-spectrum[freqc][spec])/spectrum[freqc][spec]})
+def plot_spectrum_bias(fname):
+    import matplotlib.gridspec as gridspec
+    import matplotlib.pyplot as plt
+    dc = dcf["plot"]["spectrum_bias"]
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname+".npy"
+    inpath_name_syn = dc["indir_root_syn"]+dc["indir_rel_syn"]+dc["in_desc_syn"]+fname+".npy"
+    
+    spectrum = io.load_spectrum(inpath_name, fname)
+    syn_spectrum = io.load_spectrum(inpath_name_syn, fname)
 
-    koi = next(iter(syn_spectrum.keys()))
-    specs = list(syn_spectrum[koi].keys())
-    for spec in specs:
-        plt.figure(figsize=(8,6))
-        gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
-        ax1 = plt.subplot(gs[0])
-        cplt.plot_compare_powspec_binned(
-            plt,
-            spectrum,
-            syn_spectrum,
-            cf,
-            truthfile=cf[mch]['powspec_truthfile'],
-            spec=spec,
-            plotsubtitle=plotsubtitle,
-            plotfilename="compare"+fname,
-            loglog=True)
-        
-        ax2 = plt.subplot(gs[1])
-        cplt.plotsave_powspec_diff_binned(
-            plt,
-            diff_spectrum,
-            cf,
-            truthfile=cf[mch]['powspec_truthfile'],
-            spec=spec,
-            plotsubtitle=plotsubtitle,
-            plotfilename="DIFFERENCE"+fname,
-            loglog=True,
-            color = ['r', 'g', 'b', 'y'],
-            alttext='Rel. difference')
+    spectrum_re = _reorder_spectrum_dict(spectrum)
+    syn_spectrum_re = _reorder_spectrum_dict(syn_spectrum)
 
-        # cplt.plotsave_powspec_combined_binned(
-        #     ax1,
-        #     ax2,
-        #     spec,
-        #     plotsubtitle=plotsubtitle,
-        #     plotfilename="combined"+fname)
+    lmax = dcf['pa']['lmax']
 
-        plt.savefig('vis/spectrum/{}_spectrum/{}_binned_combined--{}.jpg'.format(spec, spec, desc+fname))
-        plt.close()
-
-
-def plot_spectrum(fname):
-    spectrum = io.load_spectrum(spec_path, fname)
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
-    cplt.plotsave_powspec_binned(
-        plt,
-        spectrum,
-        cf,
-        truthfile=cf[mch]['powspec_truthfile'],
-        spec=None,
-        plotsubtitle=plotsubtitle,
-        plotfilename=fname
-        )
+    diff_spectrum = dict()
+    for spec, va in syn_spectrum_re.items():
+        for freqc, val in syn_spectrum_re[spec].items():
+            diff_spectrum.update({spec: {}})
+            diff_spectrum[spec].update({freqc: 
+                (syn_spectrum_re[spec][freqc]-spectrum_re[spec][freqc])/spectrum_re[spec][freqc]})
+    
+    spectrum_truth = io.load_truthspectrum()
+
+    for specc, diff_data in diff_spectrum.items():
+        color = ['r', 'g', 'b', 'y']
+        title_string = spec+"-spectrum - " + plotsubtitle
+        if "Planck-"+specc in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+specc]
+
+        plt.figure(figsize=(8,6))
+        gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+        ax1 = plt.subplot(gs[0])
+
+        mp = cplt.plot_compare_powspec_binned(plt,
+            spectrum_re[specc],
+            syn_spectrum_re[specc],
+            lmax,
+            title_string = title_string,
+            truthfile = spectrum_trth,
+            truth_label = "Planck-"+specc,
+            plotsubtitle = plotsubtitle,
+            color = color)
+        
+        ax2 = mp.subplot(gs[1])
+        mp = cplt.plotsave_powspec_diff_binned(
+            mp,
+            diff_spectrum[specc],
+            lmax,
+            color = color)
+            
+        outpath_name = \
+            dc["outdir_root"] + \
+            dc["outdir_rel"] + \
+            specc+"_spectrum/" + \
+            specc+"_spectrumbias" + "-" + \
+            dc["out_desc"] + "-" + \
+            fname + ".jpg"
+        io.save_figure(
+            mp = mp,
+            path_name = outpath_name)
+
+
+def plot_spectrum(fname):
+    dc = dcf["plot"]["spectrum"]
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname+".npy"
+    spectrum = io.load_spectrum(inpath_name, fname)
+    lmax = dcf['pa']['lmax']
+
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = split)
+   
+    spec_data = _reorder_spectrum_dict(spectrum)
+
+    spectrum_truth = io.load_truthspectrum()
+
+    for specc, data in spec_data.items():
+            title_string = "{} spectrum - {}".format(specc, plotsubtitle)
+            if "Planck-"+specc in spectrum_truth.columns:
+                spectrum_trth = spectrum_truth["Planck-"+specc]
+            else:
+                spectrum_trth = None
+
+            mp = cplt.plot_powspec_binned(
+                data,
+                lmax,
+                title_string = title_string,
+                truthfile = spectrum_trth,
+                truth_label = "Planck-"+specc
+                )
+            outpath_name = \
+                dc["outdir_root"] + \
+                dc["outdir_rel"] + \
+                specc+"_spectrum/" + \
+                specc+"_spectrum" + "-" + \
+                dc["out_desc"] + "-" + \
+                fname + ".jpg"
+            io.save_figure(
+                mp = mp,
+                path_name = outpath_name)    
 
 
 if __name__ == '__main__':
@@ -261,11 +305,10 @@ if __name__ == '__main__':
         plot_weights(fname = fname)
 
     if dcf["plot"]["spectrum"]["do_plot"]:
-        plot_spectrum(fname = "syn/0_SYNunscaled"+fnamesuf)
-        # plot_spectrum(fname = "SYNscaled"+fnamesuf)
+        plot_spectrum(fname = fname)
 
     if dcf["plot"]["spectrum_bias"]["do_plot"]:
-        plot_spectrum_difference(fname = fname)
+        plot_spectrum_bias(fname = fname)
 
 
 

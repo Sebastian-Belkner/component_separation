@@ -25,12 +25,12 @@
     "plot": {
         "spectrum": {
             "do_plot": false,
-            "dfiledesc": [
-                "syn/0_SYNunscaled",
-                "SYNscaled"],
-            "pfiledesc": "dfiledesc",
-            "freqcomb": "freqcomb",
-            "speccomb": "speccomb",
+            "indir_root": "data/tmp/spectrum/",
+            "indir_rel": "",
+            "outdir_root": "vis/spectrum/",
+            "outdir_rel": "",
+            "in_desc": "scaled",
+            "out_desc": "",
 
             "style": {
                 "grid": {
@@ -43,14 +43,22 @@
             }
         },
         "spectrum_bias": {
-            "do_plot": false,
+            "do_plot": true,
             "dfiledesc": [
                 "syn/0_SYNunscaled",
                 "SYNscaled"],
             "pfiledesc": "dfiledesc",
             "freqcomb": "freqcomb",
             "speccomb": "speccomb",
-
+            "indir_root": "data/tmp/spectrum/",
+            "indir_rel": "",
+            "indir_root_syn": "data/tmp/spectrum/",
+            "indir_rel_syn": "syn/",
+            "outdir_root": "vis/spectrum/",
+            "outdir_rel": "bias/",
+            "in_desc": "scaled",
+            "in_desc_syn": "0_SYNscaled",
+            "out_desc": "",
             "style": {
                 "grid": {
         
@@ -62,11 +70,12 @@
             }
         },
         "weights": {
-            "do_plot": true,
+            "do_plot": false,
             "indir_root": "data/tmp/weights/",
             "indir_rel": "",
             "outdir_root": "vis/weights/",
             "outdir_rel": "",
+            "in_desc": "weights",
             "out_desc": ""
         },
         "beamf": {

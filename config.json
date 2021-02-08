@@ -1,7 +1,7 @@
 {
 "pa":{
     "new_spectrum": false,
-    "mskset": "lens",
+    "mskset": "smica",
     "offdiag": true,
     "freqdset": "DX12",
     "llp1": true,
@@ -12,10 +12,6 @@
     "run_sim": true,
     "num_sim": 6,
     "freqfilter": [
-        "030",
-        "044",
-        "070",
-        "100",
         "545",
         "857"
     ],

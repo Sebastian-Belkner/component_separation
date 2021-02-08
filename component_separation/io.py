@@ -152,19 +152,28 @@ def load_plamap(pa: Dict) -> List[Dict]:
     return [tmap, qmap, umap]
 
 
-@log_on_start(INFO, "Trying to load spectrum {filename}")
+def load_truthspectrum():
+    return pd.read_csv(
+        cf[mch]['powspec_truthfile'],
+        header=0,
+        sep='    ',
+        index_col=0)
+
+@log_on_start(INFO, "Trying to load weights {path_name}")
 @log_on_end(DEBUG, "{result} loaded")
-def load_weights(path: str, filename: str = 'default') -> Dict[str, Dict]:
-    fending = ".npy"
-    if os.path.isfile(path+"weights/"+filename+fending):
-        data = np.load(path+"weights/"+filename+fending, allow_pickle=True)
+def load_weights(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
+    if path_name == None:
+        fending = ".npy"
+        path_name = indir_root+indir_rel+in_desc+fname+fending
+    if os.path.isfile(path_name):
+        data = np.load(path_name, allow_pickle=True)
         return data.item()
     else:
-        print("no existing weights at {}".format(path+"weights/"+filename))
+        print("no existing weights at {}".format(path_name))
         return None
 
 
-@log_on_start(INFO, "Trying to load spectrum {path_name}")
+@log_on_start(INFO, "Trying to load synmap {path_name}")
 @log_on_end(DEBUG, "{result} loaded")
 def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
     if path_name == None:
@@ -178,15 +187,17 @@ def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, i
         return None
 
 
-@log_on_start(INFO, "Trying to load spectrum {filename}")
+@log_on_start(INFO, "Trying to load spectrum {path_name}")
 @log_on_end(DEBUG, "{result} loaded")
-def load_spectrum(path: str, filename: str = 'default') -> Dict[str, Dict]:
-    fending = ".npy"
-    if os.path.isfile(path+"spectrum/"+filename+fending):
-        data = np.load(path+"spectrum/"+filename+fending, allow_pickle=True)
+def load_spectrum(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
+    if path_name == None:
+        fending = ".npy"
+        path_name = indir_root+indir_rel+in_desc+fname+fending
+    if os.path.isfile(path_name):
+        data = np.load(path_name, allow_pickle=True)
         return data.item()
     else:
-        print("no existing spectrum at {}".format(path+"spectrum/"+filename))
+        print("no existing spectrum at {}".format(path_name))
         return None
         
 
