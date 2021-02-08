@@ -1,28 +1,27 @@
 {
 "pa":{
-    "mskset": "smica",
-    "freqdset": "NPIPE",
+    "new_spectrum": false,
+    "mskset": "lens",
+    "offdiag": true,
+    "freqdset": "DX12",
     "llp1": true,
     "bf": true,
     "lmax": 4000,
     "lmax_mask": 8000,
     "freqdatsplit": "",
+    "run_sim": true,
+    "num_sim": 5,
     "freqfilter": [
-        "030",
-        "044",
-        "070",
         "545",
         "857"
-        ],
+    ],
     "specfilter": [
-        "TT",
-        "TE",
         "TB",
         "EB",
         "ET",
         "BT",
         "BE"
-        ],
+    ],
     "nside": [
         1024,
         2048
@@ -91,8 +90,8 @@
         },
     "lens":{
         "tmask":{
-            "path": null,
-            "filename": null
+            "path": "mask/",
+            "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
             "path": "mask/",
