@@ -37,6 +37,23 @@ with open('config.json', "r") as f:
     cf = json.load(f)
 
 
+def make_filenamestring(cf):
+    mskset = cf['pa']['mskset'] # smica or lens
+    freqdset = cf['pa']['freqdset'] # DX12 or NERSC
+    lmax = cf['pa']["lmax"]
+    lmax_mask = cf['pa']["lmax_mask"]
+    freqfilter = cf['pa']["freqfilter"]
+    specfilter = cf['pa']["specfilter"]
+    
+    return '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+        freqdset = freqdset,
+        lmax = lmax,
+        lmax_mask = lmax_mask,
+        mskset = mskset,
+        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+
 #%% Collect maps
 @log_on_start(INFO, "Starting to load data")
 @log_on_end(DEBUG, "Data loaded successfully: '{result}' ")

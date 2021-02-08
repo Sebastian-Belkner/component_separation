@@ -283,15 +283,7 @@ def plot_spectrum(fname):
 
 if __name__ == '__main__':
     set_logger(DEBUG)
-    fname = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}'.format(
-        freqdset = freqdset,
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        mskset = mskset,
-        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-
+    fname = io.make_filenamestring(dcf)
 
     if dcf["plot"]["maps"]["do_plot"]:
         plot_maps(

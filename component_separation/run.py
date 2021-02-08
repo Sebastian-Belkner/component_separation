@@ -55,13 +55,6 @@ else:
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-
-
-mskset = cf['pa']['mskset'] # smica or lens
-freqdset = cf['pa']['freqdset'] # DX12 or NERSC
-
-lmax = cf['pa']["lmax"]
-lmax_mask = cf['pa']["lmax_mask"]
 llp1 = cf['pa']["llp1"]
 bf = cf['pa']["bf"]
 
@@ -69,9 +62,11 @@ num_sim = cf['pa']["num_sim"]
 
 spec_path = cf[mch]['outdir']
 indir_path = cf[mch]['indir']
+
+lmax = cf['pa']["lmax"]
+lmax_mask = cf['pa']["lmax_mask"]
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
-
 
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
@@ -115,10 +110,10 @@ def specsc2weights(spectrum, diag):
     return weights
 
 
-def syn_spectrum_average(fname, desc):
+def synmaps2average(fname):
     # Load all syn spectra
     spectrum = {
-        i: io.load_spectrum(spec_path, "syn/"+str(i)+desc+filename)
+        i: io.load_spectrum(spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
         for i in range(num_sim)}
 
     # sum all syn spectra
@@ -152,31 +147,23 @@ if __name__ == '__main__':
             if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
     speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
 
-    filename = '{freqdset}_lmax_{lmax}-lmaxmsk_{lmax_mask}-msk_{mskset}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
-        freqdset = freqdset,
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        mskset = mskset,
-        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    filename = io.make_filenamestring(cf)
 
     if cf['pa']['new_spectrum']:
-        spectrum = map2spec(io.load_tqumap(), freqcomb)
+        spectrum = map2spec(io.load_plamap(cf), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
     else:
         spectrum = io.load_spectrum(spec_path, 'unscaled'+filename)
     if spectrum is None:
-        spectrum = map2spec(io.load_tqumap(), freqcomb)
+        spectrum = map2spec(io.load_plamap(cf), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
-    # spectrum_scaled = spec2specsc(spectrum)
-    # io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
+    spectrum_scaled = spec2specsc(spectrum)
+    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
-    # weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
-    # io.save_weights(weights, spec_path, 'weights'+filename)
+    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
+    io.save_weights(weights, spec_path, 'weights'+filename)
     
-
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)
             for FREQ in PLANCKMAPFREQ
@@ -189,19 +176,19 @@ if __name__ == '__main__':
             print("Starting simulation {} of {}.".format(i+1, num_sim))
             spectrum = io.load_spectrum(spec_path, 'unscaled'+filename)
 
-            synmaps = spec2synmap(spectrum, freqcomb)
-            io.save_map(synmaps, spec_path, "syn/"+str(i)+"_synmaps"+filename)
+            synmap = spec2synmap(spectrum, freqcomb)
+            io.save_map(synmap, spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
 
-            syn_spectrum = map2spec(synmaps, freqcomb)
+            syn_spectrum = map2spec(synmap, freqcomb)
             # io.save_spectrum(syn_spectrum, spec_path, "syn/"+str(i)+"_SYNunscaled"+filename)
 
             syn_spectrum_scaled = spec2specsc(syn_spectrum)
-            io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/"+str(i)+"_SYNscaled"+filename)
+            io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)
     
 
-    desc = "_SYNunscaled"
-    syn_spectrum_avg = syn_spectrum_average(filename, desc)
-    io.save_spectrum(syn_spectrum_avg, spec_path, "syn/"+desc+"_avg_"+filename)
+    syn_spectrum_avg = synmaps2average(filename)
+    syn_spectrum_avgsc = spec2specsc(syn_spectrum_avgsc)
+    io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "avg-"+ filename)
 
     # weights = specsc2weights(syn_spectrum_avg, False)
     # io.save_weights(weights, spec_path, "syn/"+"SYNweights"+filename)
