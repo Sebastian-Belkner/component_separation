@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 
 from functools import reduce
 import numpy as np
-import seaborn as sns
 
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps

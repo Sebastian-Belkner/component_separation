@@ -211,51 +211,6 @@ def plot_beamwindowfunction(beamf, aa, bb, ab, field1, field2, p):
 
 
 # %% Plot
-def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
-    """Plotting
-
-    Args:
-        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
-        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
-    """
-    fending = '.jpg'
-    spectrum_truth = pd.read_csv(
-        truthfile,
-        header=0,
-        sep='    ',
-        index_col=0)
-
-    # plt.figure(figsize=(8,6))
-    idx=1
-    idx_max = len(PLANCKSPECTRUM) - len(specfilter)
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            plt.figure()
-            df[spec].plot(
-                figsize=(8,6),
-                loglog=True,
-                alpha=(idx_max-idx)/idx_max,
-                xlim=(10,4000),
-                ylim=(1e-3,1e5),
-                ylabel="power spectrum",
-                grid=True,
-                title="{} spectrum - {}".format(spec, plotsubtitle))
-            if "Planck-"+spec in spectrum_truth.columns:
-                spectrum_truth["Planck-"+spec].plot(
-                    loglog=True,
-                    grid=True,
-                    ylabel="power spectrum",
-                    legend=True
-                    )
-            plt.savefig('{}vis/spectrum/{}_spectrum--{}.jpg'.format(outdir_root, spec, plotfilename, fending))
-            plt.close()
-    # %% Compare to truth
-    # plt.figure(figsize=(8,6))
-
-
-# %% Plot
 def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
     """Plotting
 
@@ -490,35 +445,3 @@ def plot_map(data: Dict, title_string: str = ''):
     plt.figure()
     hp.mollview(data["map"]*data["mask"], title=title_string, norm="hist")
     return plt
-
-
-# %% Plot weightings
-def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', outdir_root: str = ''):
-    fending = ".jpg"
-    """Plotting
-    Args:
-        df (Dict): Data to be plotted
-        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
-        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
-    """
-    plt.figure()
-    for spec in df.keys():
-        df[spec].columns[0:3]
-        df[spec].plot(
-            figsize=(8,6),
-            ylabel='weigthing',
-            # y = df[spec].columns.to_list()[0:3],
-            # marker="x",
-            # style= '--',
-            grid=True,
-            xlim=(0,4000),
-            ylim=(-0.2,1.0),
-            # logx=True,
-            title="{} weighting - {}".format(spec, plotsubtitle))
-        plt.savefig('{}vis/weighting/{}_weighting/{}_weighting--{}{}'.format(
-            outdir_root,
-            spec,
-            spec,
-            plotfilename,
-            fending))
-        plt.close()
