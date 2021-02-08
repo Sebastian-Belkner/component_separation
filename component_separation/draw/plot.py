@@ -210,7 +210,6 @@ def plot_beamwindowfunction(beamf, aa, bb, ab, field1, field2, p):
     return plt
 
 
-# %% Plot
 def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
     """Plotting
 
@@ -314,12 +313,13 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
 
     for freqc, val in data.items():
         idx_max+=len(freqc)
-        if True: #"070" in freqc:
+        if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        # if "070" in freqc or "030" in freqc or "044" in freqc:
             binmean, binerr = std_dev_binned(data[freqc])
             plt.errorbar(
                 0.5 * bl + 0.5 * br,
                 binmean,
-                yerr=binerr,
+                yerr=binerr*0.1,
                 label=freqc,
                 capsize=2,
                 elinewidth=1,
@@ -364,35 +364,35 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.xlim((10,4000))
     plt.ylim((1e-3,1e5))
     for freqc, val in data2.items():
-        binmean1, binerr1 = std_dev_binned(data1[freqc])
-        plt.errorbar(
-            0.5 * bl + 0.5 * br,
-            binmean1,
-            yerr=binerr1,
-            label=freqc,
-            capsize=3,
-            elinewidth=2,
-            fmt='x',
-            color=color[idx],
-            alpha=0.9)
-        binmean2, binerr2 = std_dev_binned(data2[freqc])
-        plt.errorbar(
-            0.5 * bl + 0.5 * br,
-            binmean2,
-            yerr=binerr2,
-            label="syn "+ freqc,
-            capsize=3,
-            elinewidth=2,
-            fmt='x',
-            color=color[idx],
-            alpha=0.3)
-        idx+=1
+        if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+            binmean1, binerr1 = std_dev_binned(data1[freqc])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean1,
+                yerr=binerr1,
+                label=freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='x',
+                color=color[idx],
+                alpha=0.9)
+            binmean2, binerr2 = std_dev_binned(data2[freqc])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean2,
+                yerr=binerr2,
+                label="syn "+ freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='x',
+                color=color[idx],
+                alpha=0.3)
+            idx+=1
 
     if truthfile is not None:
         plt.plot(truthfile, label = truth_label)
     plt.legend()
     return plt
-
 
 
 def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
@@ -434,7 +434,6 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
     return plt
 
 
-# %% Plot weightings
 def plot_map(data: Dict, title_string: str = ''):
     """Plotting
     Args:
