@@ -222,7 +222,7 @@ def plot_spectrum_bias(fname):
             color = color)
         
         ax2 = mp.subplot(gs[1])
-        mp = cplt.plotsave_powspec_diff_binned(
+        mp = cplt.plot_powspec_diff_binned(
             mp,
             diff_spectrum[specc],
             lmax,

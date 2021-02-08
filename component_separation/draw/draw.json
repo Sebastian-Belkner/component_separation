@@ -20,7 +20,7 @@
     },
     "plot": {
         "spectrum": {
-            "do_plot": false,
+            "do_plot": true,
             "indir_root": "data/tmp/spectrum/",
             "indir_rel": "",
             "outdir_root": "vis/spectrum/",
@@ -39,7 +39,7 @@
             }
         },
         "spectrum_bias": {
-            "do_plot": true,
+            "do_plot": false,
             "indir_root": "data/tmp/spectrum/",
             "indir_rel": "",
             "indir_root_syn": "data/tmp/spectrum/",
@@ -60,7 +60,7 @@
             }
         },
         "weights": {
-            "do_plot": false,
+            "do_plot": true,
             "indir_root": "data/tmp/weights/",
             "indir_rel": "",
             "outdir_root": "vis/weights/",

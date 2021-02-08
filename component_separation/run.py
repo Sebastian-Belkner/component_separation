@@ -7,7 +7,6 @@ __author__ = "S. Belkner"
 
 
 # TODO
-# beam windowfunction for LFI is FAKED for multipole>2049  -remove weighting calculation for LFI above ell = 2050
 # pospace: is the second mask added correctly?
 # use, in addition to the current datasets, cross and diff datasets
 # analytic expression for weight estimates
@@ -159,11 +158,11 @@ if __name__ == '__main__':
         spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
-    # spectrum_scaled = spec2specsc(spectrum)
-    # io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
+    spectrum_scaled = spec2specsc(spectrum)
+    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
-    # weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
-    # io.save_weights(weights, spec_path, 'weights'+filename)
+    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
+    io.save_weights(weights, spec_path, 'weights'+filename)
     
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)

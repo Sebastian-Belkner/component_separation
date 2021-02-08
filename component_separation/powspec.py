@@ -412,10 +412,18 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
             elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
-                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))[:lmax+1]
-                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[1]]].data.field(0)[:lmax+1])
+                b = np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))
+                buff = np.concatenate((
+                    b[:min(lmax+1, len(b))],
+                    np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
+                data[freqc][specID] /= buff
+                data[freqc][specID] /= buff
             else:
-                data[freqc][specID] /= np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)[:lmax+1])
+                b = np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))
+                buff = np.concatenate((
+                    b[:min(lmax+1, len(b))],
+                    np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
+                data[freqc][specID] /= buff
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
     return data
 
@@ -469,6 +477,11 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         freqfilter (List[str]): Frequency channels which are to be ignored
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
     """
+    def maskit(a):
+        masked = a[ ~np.isnan(a) ]
+        mskd = masked.reshape(int(np.sqrt(len(masked))),int(np.sqrt(len(masked))))
+        return mskd
+
     def is_invertible(a, l):
         truth = a.shape[0] == a.shape[1] and np.linalg.matrix_rank(a) == a.shape[0]
         if not truth:
@@ -476,7 +489,7 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         return truth
     cov_inv_l = {
         spec: {
-            l: np.linalg.inv(cov[spec][:,:,l]) if is_invertible(cov[spec][:,:,l], l) else None
+            l: np.linalg.inv(maskit(cov[spec][:,:,l])) if is_invertible(maskit(cov[spec][:,:,l]), l) else None
                 for l in range(lmax)
             }for spec in PLANCKSPECTRUM 
                 if spec not in specfilter
@@ -500,24 +513,56 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
         Dict[str, DataFrame]: The weightings of the respective Frequency channels
     """
     elaw = np.ones(len([dum for dum in PLANCKMAPFREQ if dum not in freqfilter]))
-    weighting = {spec: np.array([(cov[spec][l] @ elaw) / (elaw.T @ cov[spec][l] @ elaw)
-                     if cov[spec][l] is not None else np.array([0.0 for n in range(len(elaw))])
-                        for l in range(lmax) if l in cov[spec].keys()])
-                    for spec in PLANCKSPECTRUM if spec not in specfilter}
-    
-    weights = {spec:
-                pd.DataFrame(
-                    data = weighting[spec],
-                    columns = ["channel @{}GHz".format(FREQ)
-                                for FREQ in PLANCKMAPFREQ
-                                if FREQ not in freqfilter])
-                    for spec in PLANCKSPECTRUM
-                    if spec not in specfilter}
+
+    weighting_LFI = {
+        spec:
+            np.array([
+        (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
+            if cov[spec][l] is not None else np.array([np.nan for n in range(len(elaw))])
+            for l in range(2049)])
+        for spec in PLANCKSPECTRUM if spec not in specfilter}
+
+    weighting_HFI = {
+        spec:
+            np.array([
+        (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
+            if cov[spec][l] is not None else np.array([np.nan for n in range(3)])
+            for l in range(2049, lmax)])
+        for spec in PLANCKSPECTRUM if spec not in specfilter}
+
+    weights_LFI = {spec:
+        pd.DataFrame(
+            data = weighting_LFI[spec],
+            columns = ["channel @{}GHz".format(FREQ)
+                        for FREQ in PLANCKMAPFREQ
+                        if FREQ not in freqfilter]
+            )
+            for spec in PLANCKSPECTRUM
+            if spec not in specfilter}
+
+    weights_HFI = {spec:
+        pd.DataFrame(
+            data = weighting_HFI[spec],
+            columns = ["channel @{}GHz".format(FREQ) 
+                        for FREQ in PLANCKMAPFREQ
+                        if FREQ not in freqfilter and int(FREQ)>=100]
+            )
+            for spec in PLANCKSPECTRUM
+            if spec not in specfilter}
+
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
-            weights[spec].index.name = 'multipole'
+            weights_LFI[spec].index.name = 'multipole'
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            weights_HFI[spec].index = np.arange(2049, lmax)
+            weights_HFI[spec].index.name = 'multipole'
 
-    return weights
+    res = dict()
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            res.update({ spec: pd.concat([weights_LFI[spec], weights_HFI[spec]])})
+    return res
 
 
 if __name__ == '__main__':

@@ -298,7 +298,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = N
         idx_max+=len(freqc)
         if True: #"070" in freqc:
             binmean, binerr = std_dev_binned(data[freqc])
-            binerr_low = np.array([binmean[n]*0.1 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+            binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
             plt.errorbar(
                 0.5 * bl + 0.5 * br,
                 binmean,
@@ -326,7 +326,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = N
     return plt
 
 
-def plotsave_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'default', plotfilename: str = 'default', color: List = None) -> None:
+def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'default', plotfilename: str = 'default', color: List = None) -> None:
     """Plotting
 
     Args:
