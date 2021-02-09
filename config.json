@@ -1,10 +1,6 @@
 {
 "pa":{
-<<<<<<< HEAD
     "new_spectrum": false,
-=======
-    "new_spectrum": true,
->>>>>>> cc33940a47f0af95d62ff421e8f343ec90652f47
     "mskset": "smica",
     "offdiag": true,
     "freqdset": "NPIPE",
