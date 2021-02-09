@@ -312,14 +312,14 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
-        idx_max+=len(freqc)
-        if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
         # if "070" in freqc or "030" in freqc or "044" in freqc:
+            idx_max+=len(freqc)
             binmean, binerr = std_dev_binned(data[freqc])
             plt.errorbar(
                 0.5 * bl + 0.5 * br,
                 binmean,
-                yerr=binerr*0.1,
+                yerr=binerr,
                 label=freqc,
                 capsize=2,
                 elinewidth=1,
@@ -364,7 +364,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.xlim((10,4000))
     plt.ylim((1e-3,1e5))
     for freqc, val in data2.items():
-        if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
             binmean1, binerr1 = std_dev_binned(data1[freqc])
             plt.errorbar(
                 0.5 * bl + 0.5 * br,

@@ -519,15 +519,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
             np.array([
         (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
             if cov[spec][l] is not None else np.array([np.nan for n in range(len(elaw))])
-            for l in range(2049)])
-        for spec in PLANCKSPECTRUM if spec not in specfilter}
-
-    weighting_HFI = {
-        spec:
-            np.array([
-        (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
-            if cov[spec][l] is not None else np.array([np.nan for n in range(3)])
-            for l in range(2049, lmax)])
+            for l in range(min(lmax,2049))])
         for spec in PLANCKSPECTRUM if spec not in specfilter}
 
     weights_LFI = {spec:
@@ -540,28 +532,37 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
             for spec in PLANCKSPECTRUM
             if spec not in specfilter}
 
-    weights_HFI = {spec:
-        pd.DataFrame(
-            data = weighting_HFI[spec],
-            columns = ["channel @{}GHz".format(FREQ) 
-                        for FREQ in PLANCKMAPFREQ
-                        if FREQ not in freqfilter and int(FREQ)>=100]
-            )
-            for spec in PLANCKSPECTRUM
-            if spec not in specfilter}
-
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
             weights_LFI[spec].index.name = 'multipole'
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            weights_HFI[spec].index = np.arange(2049, lmax)
-            weights_HFI[spec].index.name = 'multipole'
 
     res = dict()
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            res.update({ spec: pd.concat([weights_LFI[spec], weights_HFI[spec]])})
+    if lmax>2049:
+        weighting_HFI = {
+            spec:
+                np.array([
+            (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
+                if cov[spec][l] is not None else np.array([np.nan for n in range(3)])
+                for l in range(2049, lmax)])
+            for spec in PLANCKSPECTRUM if spec not in specfilter}
+        weights_HFI = {spec:
+            pd.DataFrame(
+                data = weighting_HFI[spec],
+                columns = ["channel @{}GHz".format(FREQ) 
+                            for FREQ in PLANCKMAPFREQ
+                            if FREQ not in freqfilter and int(FREQ)>=100]
+                )
+                for spec in PLANCKSPECTRUM
+                if spec not in specfilter}
+        for spec in PLANCKSPECTRUM:
+            if spec not in specfilter:
+                weights_HFI[spec].index = np.arange(2049, lmax)
+                weights_HFI[spec].index.name = 'multipole'
+        for spec in PLANCKSPECTRUM:
+            if spec not in specfilter:
+                res.update({ spec: pd.concat([weights_LFI[spec], weights_HFI[spec]])})
+    else:
+        res = weights_LFI
     return res
 
 

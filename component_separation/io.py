@@ -242,8 +242,8 @@ def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
                         .format(
                             abs_path = abs_path,
                             indir_path = cf[mch]['indir'],
-                            bf_path = cf[mch]["beamf"]['path'],
-                            bf_filename = cf[mch]["beamf"]['filename']
+                            bf_path = cf[mch]["beamf"]["HFI"]['path'],
+                            bf_filename = cf[mch]["beamf"]["HFI"]['filename']
                                 .replace("{freq1}", freqs[0])
                                 .replace("{freq2}", freqs[1])
                         ))
@@ -257,20 +257,34 @@ def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
                         .format(
                             abs_path = abs_path,
                             indir_path = cf[mch]['indir'],
-                            bf_path = cf[mch]["beamf"]['path'],
-                            bf_filename = cf[mch]["beamf"]['filename']
+                            bf_path = cf[mch]["beamf"]["HFI"]['path'],
+                            bf_filename = cf[mch]["beamf"]["HFI"]['filename']
                                 .replace("{freq1}", freqs[1])
                                 .replace("{freq2}", freqs[1])
                     ))
                 }
             })
             beamf[freqc].update({
-                "LFI": fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
+                "LFI": fits.open(
+                        "{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        .format(
+                            abs_path = abs_path,
+                            indir_path = cf[mch]['indir'],
+                            bf_path = cf[mch]["beamf"]["LFI"]['path'],
+                            bf_filename = cf[mch]["beamf"]["LFI"]['filename']
+                    ))
             })
         if int(freqs[0]) < 100 and int(freqs[1]) < 100:
              beamf.update({
                 freqc: {
-                    "LFI": fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
+                    "LFI": fits.open(
+                        "{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        .format(
+                            abs_path = abs_path,
+                            indir_path = cf[mch]['indir'],
+                            bf_path = cf[mch]["beamf"]["LFI"]['path'],
+                            bf_filename = cf[mch]["beamf"]["LFI"]['filename']
+                    ))
                 }})
     return beamf
 
