@@ -5,6 +5,7 @@ io.py: Filehandling functions
 
 __author__ = "S. Belkner"
 
+# '/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx
 
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start

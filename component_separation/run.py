@@ -89,7 +89,7 @@ def map2spec(maps, freqcomb):
     return spectrum
 
 
-def spec2specsc(spectrum):
+def spec2specsc(spectrum, freqcomb):
     # df = pw.create_df(spectrum, cf["pa"]["offdiag"], freqfilter, specfilter)
     spec_sc = pw.apply_scale(spectrum, llp1=llp1)
     if bf:
