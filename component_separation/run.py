@@ -1,24 +1,40 @@
 """
-run.py: runner script for calling component_separation
+run.py: script for executing main functionality of component_separation
 
 """
 
 __author__ = "S. Belkner"
 
 
-import component_separation.MSC.MSC.pospace as ps
-from component_separation.cs_util import Planckf, Plancks
+# TODO
+# compare syn unscaled with unscaled for bias. does it depend on lmax, lmax_mask?
+# pospace: is the second mask added correctly?
+# use, in addition to the current datasets, cross and diff datasets
+# analytic expression for weight estimates
+
+import json
 import logging
 import logging.handlers
-from logging import DEBUG, ERROR, INFO, CRITICAL
-import os, sys
-import component_separation.powspec as pw
-import component_separation.io as io
+import os
+import platform
+import sys
+from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
+import matplotlib.pyplot as plt
 
-PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-LOGFILE = 'messages.log'
+from functools import reduce
+import numpy as np
+
+import component_separation.io as io
+import component_separation.MSC.MSC.pospace as ps
+import component_separation.powspec as pw
+from component_separation.cs_util import Planckf, Plancks
+
+with open('config.json', "r") as f:
+    cf = json.load(f)
+
+LOGFILE = 'data/tmp/messages.log'
 logger = logging.getLogger("")
 handler = logging.handlers.RotatingFileHandler(
         LOGFILE, maxBytes=(1048576*5), backupCount=7
@@ -27,113 +43,153 @@ formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+
+uname = platform.uname()
+if uname.node == "DESKTOP-KMIGUPV":
+    mch = "XPS"
+else:
+    mch = "NERSC"
+
+PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+PLANCKSPECTRUM = [p.value for p in list(Plancks)]
+llp1 = cf['pa']["llp1"]
+bf = cf['pa']["bf"]
+
+num_sim = cf['pa']["num_sim"]
+
+spec_path = cf[mch]['outdir']
+indir_path = cf[mch]['indir']
+
+lmax = cf['pa']["lmax"]
+lmax_mask = cf['pa']["lmax_mask"]
+freqfilter = cf['pa']["freqfilter"]
+specfilter = cf['pa']["specfilter"]
+
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
-    
 
-def general_pipeline():
 
-    freqfilter = [
-        Planckf.LFI_1.value,
-        Planckf.LFI_2.value,
-        Planckf.LFI_3.value,
-        # Planckf.HFI_1.value,
-        # Planckf.HFI_2.value,
-        # Planckf.HFI_3.value,
-        # Planckf.HFI_4.value,
-        Planckf.HFI_5.value,
-        Planckf.HFI_6.value
-        ]
-    specfilter = [
-        Plancks.TE.value,
-        Plancks.TB.value,
-        Plancks.ET.value,
-        Plancks.BT.value,
-        Plancks.TT.value,
-        Plancks.BE.value,
-        Plancks.EB.value
-        ]
-    lmax = 4000
-    lmax_mask = 8000
-    llp1=True
-    bf=True
+def spec2synmap(spectrum, freqcomb):
+    return pw.create_synmap(spectrum, cf, mch, freqcomb, specfilter) 
 
-    set_logger(DEBUG)
-    
-    path = 'data/'
-    spec_path = 'data/tmp/spectrum/'
-    
-    tmask_filename = 'HFI_Mask_GalPlane-apo0_2048_R2.00.fits'
-    # HFI_Mask_GalPlane-apo0_128_R2.00.fits
 
-    pmask_filename = ['psmaskP_2048.fits.gz', 'gmaskP_apodized_0_2048.fits.gz']
-    # ['HFI_Mask_GalPlane-apo0_2048_R2.00.fits']
-    # ['psmaskP_2048.fits.gz', 'gmaskP_apodized_0_2048.fits.gz']
+def map2spec(maps, freqcomb):
+    if maps[0] == None:
+        maps = maps[1:]
+    elif maps[1] == None:
+        maps = [maps[0]]
+    maps_hpcorrected = pw.hphack(maps)
+    # tqumap_hpcorrected = tqumap
+    if len(maps) == 3:
+        spectrum = pw.tqupowerspec(maps_hpcorrected, lmax, lmax_mask, freqcomb, specfilter)
+    elif len(maps) == 2:
+        spectrum = pw.qupowerspec(maps_hpcorrected, lmax, lmax_mask, freqcomb, specfilter)
+    elif len(maps) == 1:
+        print("Only TT spectrum caluclation requested. This is currently not supported.")
+    return spectrum
 
-    spec_filename = 'lmax_{lmax}-lmax_mask_{lmax_mask}-tmask_{tmask}-pmask_{pmask}-freqs_{freqs}_.npy'.format(
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        tmask = tmask_filename[::5],
-        pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter])
-    )
 
-    spectrum = io.load_spectrum(spec_path, spec_filename)
-    if spectrum is None:
-        tqumap = io.get_data(
-            path=path,
-            freqfilter=freqfilter,
-            tmask_filename=tmask_filename,
-            pmask_filename=pmask_filename,
-            nside=[1024,2048])
-        logger.log(DEBUG, tqumap)
-        tqumap_hpcorrected = pw.hphack(tqumap)
-        spectrum = pw.powerspectrum(tqumap_hpcorrected, lmax, lmax_mask, freqfilter, specfilter)
-        io.save_spectrum(spectrum, spec_path, spec_filename)
-    df = pw.create_df(spectrum, freqfilter, specfilter)
-
-    df_sc = pw.apply_scale(df, specfilter, llp1=llp1)
-    
-    freqcomb =  ["{}-{}".format(FREQ,FREQ2)
-                        for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
-                        for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
-    print(freqcomb)
-    
+def spec2specsc(spectrum, freqcomb):
+    # df = pw.create_df(spectrum, cf["pa"]["offdiag"], freqfilter, specfilter)
+    spec_sc = pw.apply_scale(spectrum, llp1=llp1)
     if bf:
-        beamf = io.get_beamf(path=path, freqcomb=freqcomb)
-        df_scbf = pw.apply_beamfunction(df_sc, beamf, lmax, specfilter) #df_sc #
+        beamf = io.load_beamf(freqcomb=freqcomb)
+        spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
     else:
-        df_scbf = df_sc
+        spec_scbf = spec_sc
+    return spec_scbf
 
-    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}'.format(
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        tmask = tmask_filename[::5],
-        pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]))
-    subtitle = 'scaled, {} l(l+1), {} beamfunction'.format('w' if llp1 else 'wout', 'w' if bf else 'wout')
-    io.plotsave_powspec(
-        df_scbf,
-        specfilter,
-        subtitle=subtitle,
-        filetitle=filetitle)
-    # print(df_scbf)
-    cov = pw.build_covmatrices(df_scbf, lmax, freqfilter, specfilter)
-    # print(cov)
+
+def specsc2weights(spectrum, diag):
+    cov = pw.build_covmatrices(spectrum, diag, lmax, freqfilter, specfilter)
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
-    # print(cov_inv_l)
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
+    return weights
 
-    filetitle = '_{lmax}_{lmax_mask}_{tmask}_{pmask}_{freqs}'.format(
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        tmask = tmask_filename[::5],
-        pmask = ','.join([pmsk[::5] for pmsk in pmask_filename]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter])
-        )
-    io.plotsave_weights(
-        weights,
-        subtitle=subtitle,
-        filetitle=filetitle)
+
+def synmaps2average(fname):
+    # Load all syn spectra
+    def _synpath_name(i):
+        return spec_path + 'spectrum/syn/scaled-{}_synmap-'.format(str(i)) + filename
+    spectrum = {
+        i: io.load_spectrum(path_name=_synpath_name(i))
+        for i in range(num_sim)}
+
+    # sum all syn spectra
+    spectrum_avg = dict()
+    for FREQC in freqcomb:
+        for spec in speccomb:
+            if FREQC in spectrum_avg.keys():
+                pass
+            else:
+                spectrum_avg.update({FREQC: {}})
+            if spec in spectrum_avg[FREQC].keys():
+                pass
+            else:
+                spectrum_avg[FREQC].update({spec: []})
+                    
+            spectrum_avg[FREQC][spec] = np.array(list(reduce(lambda x, y: x+y, [
+                spectrum[idx][FREQC][spec]
+                    for idx, _ in spectrum.items()
+                ])))
+            spectrum_avg[FREQC][spec] /= num_sim
+    return spectrum_avg
+                
 
 if __name__ == '__main__':
-    general_pipeline()
+    set_logger(DEBUG)
+    freqcomb =  [
+        "{}-{}".format(FREQ,FREQ2)
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+            for FREQ2 in PLANCKMAPFREQ
+            if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
+    speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+
+    filename = io.make_filenamestring(cf)
+    if cf['pa']['new_spectrum']:
+        spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
+        io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
+    else:
+        path_name = spec_path + 'spectrum/unscaled' + filename
+        spectrum = io.load_spectrum(path_name=path_name)
+    if spectrum is None:
+        print("couldn't find spectrum with given specifications at {}. Exiting..".format(path_name))
+        sys.exit()
+        # spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
+        # io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
+
+    spectrum_scaled = spec2specsc(spectrum)
+    io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
+
+    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
+    io.save_weights(weights, spec_path, 'weights'+filename)
+    
+    freqcomb =  [
+        "{}-{}".format(FREQ,FREQ2)
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+            for FREQ2 in PLANCKMAPFREQ
+            if (FREQ2 not in freqfilter) and (int(FREQ2)==int(FREQ))]
+
+    if cf['pa']["run_sim"]:
+        for i in range(num_sim):
+            print("Starting simulation {} of {}.".format(i+1, num_sim))
+            path_name = spec_path + 'spectrum/unscaled' + filename
+            spectrum = io.load_spectrum(path_name=path_name)
+
+            synmap = spec2synmap(spectrum, freqcomb)
+            io.save_map(synmap, spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
+
+            syn_spectrum = map2spec(synmap, freqcomb)
+            # io.save_spectrum(syn_spectrum, spec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
+
+            syn_spectrum_scaled = spec2specsc(syn_spectrum)
+            io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)
+    
+
+        syn_spectrum_avgsc = synmaps2average(filename)
+        io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "synavg-"+ filename)
+
+    # weights = specsc2weights(syn_spectrum_avg, False)
+    # io.save_weights(weights, spec_path, "syn/"+"SYNweights"+filename)

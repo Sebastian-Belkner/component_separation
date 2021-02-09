@@ -12,8 +12,9 @@ class Planckf(Enum):
     HFI_4 = '353'
     HFI_5 = '545'
     HFI_6 = '857'
-
+    
 class Plancks(Enum):
+    # the order must be the same as the order of pospace function returns
     TT = "TT"
     EE = "EE"
     BB = "BB"

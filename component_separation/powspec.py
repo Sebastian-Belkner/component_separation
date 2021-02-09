@@ -30,7 +30,6 @@ in your command line.
         >>> cov_inv_l = invert_covmatrices(cov, lmax, freqfilter, specfilter)
         >>> weights = calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
 
-
 """
 
 import logging
@@ -40,11 +39,11 @@ import sys
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
-
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
+import functools
+import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
 
 import component_separation.MSC.MSC.pospace as ps
@@ -67,6 +66,11 @@ lmax_mask = 80
 def set_logger(loglevel=logging.INFO):
     logging.basicConfig(format='   %(levelname)s:      %(message)s', level=loglevel)
 
+def _crosscomb(option, f1, f2):
+        if option:
+            return int(f1) <= int(f2)
+        else:
+            return int(f1) == int(f2)
 
 @log_on_start(INFO, "Starting to replace UNSEEN pixels for 100Ghz map")
 @log_on_end(DEBUG, "UNSEEN pixels replaced successfully: '{result}' ")
@@ -109,22 +113,30 @@ def hphack(tqumap: List[Dict]) -> List[Dict]:
                     mask[i] = 1
         mask.dtype = bool
         return mask
-
-    if '100' in tqumap[1].keys():
-        maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
+    
+    if '100' in tqumap[0].keys():
+        # only fixing q and u maps
+        if len(tqumap)==2:
+            maps = [tqumap[0]["100"]['map'], tqumap[1]["100"]['map']]
+        else:
+            maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
         maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]
-        masks = [False if count_bad(m) == 0 else mkmask(m) for m in maps_c]
+
+        masks = [np.array([False]) if count_bad(m) == 0 else mkmask(m) for m in maps_c]
         for idx, (m, mask) in enumerate(zip(maps_c, masks)):
             if mask.any():
                 m[mask] = 0.0
-            tqumap[idx+1]["100"]['map'] = m
+            if len(tqumap)==2:
+                tqumap[idx]["100"]['map'] = m
+            else:
+                tqumap[idx+1]["100"]['map'] = m
     return tqumap
 
 #%% Calculate spectrum
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
-def powerspectrum(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqfilter: List[str], specfilter: List[str]) -> Dict[str, Dict]:
-    """Calculate powerspectrum using MSC.pospace
+def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqcomb: List[str], specfilter: List[str]) -> Dict[str, Dict]:
+    """Calculate powerspectrum using MSC.pospace and TQUmaps
 
     Args:
         tqumap List[Dict[str, Dict]]: Planck maps (data and masks) and some header information
@@ -137,24 +149,179 @@ def powerspectrum(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freq
         Dict[str, Dict]: Powerspectra as provided from MSC.pospace
     """
 
-    spectrum = {
-        FREQ+'-'+FREQ2: 
-            {spec: ps.map2cls(
-                    tqumap=[tqumap[0][FREQ]['map'], tqumap[1][FREQ]['map'], tqumap[2][FREQ]['map']],
-                    tqumap2=[tqumap[0][FREQ2]['map'], tqumap[1][FREQ2]['map'], tqumap[2][FREQ2]['map']],
-                    tmask=tqumap[0][FREQ]['mask'],
-                    pmask=tqumap[1][FREQ]['mask'],
-                    lmax=lmax,
-                    lmax_mask=lmax_mask)[idx]
-                for idx, spec in enumerate(PLANCKSPECTRUM) if spec not in specfilter}
-            for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
-            for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and int(FREQ2)>=int(FREQ)}
+    # ww = dict
+    # for FREQC in freqcomb:
+    #     if 
+    #     ww.update({FREQC: ps.mask2ww(
+    #         tmask=tqumap[0][FREQC.split("-")[0]]['mask'],
+    #         pmask=tqumap[1][FREQC.split("-")[0]]['mask'],
+    #         tmask2=tqumap[0][FREQC.split("-")[1]]['mask'],
+    #         pmask2=tqumap[1][FREQC.split("-")[1]]['mask'],
+    #         lmax=lmax,
+    #         lmax_mask=lmax_mask)
+    #     })
+    buff = {
+        FREQC:
+            ps.map2cls(
+                tqumap=[tqumap[0][FREQC.split("-")[0]]['map'], tqumap[1][FREQC.split("-")[0]]['map'], tqumap[2][FREQC.split("-")[0]]['map']],
+                tmask=tqumap[0][FREQC.split("-")[0]]['mask'],
+                pmask=tqumap[1][FREQC.split("-")[0]]['mask'],
+                lmax=lmax,
+                lmax_mask=lmax_mask,
+                tqumap2=[tqumap[0][FREQC.split("-")[1]]['map'], tqumap[1][FREQC.split("-")[1]]['map'], tqumap[2][FREQC.split("-")[1]]['map']],
+                tmask2=tqumap[0][FREQC.split("-")[1]]['mask'],
+                pmask2=tqumap[1][FREQC.split("-")[1]]['mask'] #this needs to be fixed, once LFI x HFI is passed
+                # wwt = ww[0],
+                # wwp = ww[1],
+                # wwtp = ww[2]
+                )
+            for FREQC in freqcomb}
+    spectrum = dict()
+    for FREQC, _ in buff.items():
+        spectrum.update({
+            FREQC: {
+                spec: buff[FREQC][idx]
+                    for idx, spec in enumerate([p for p in PLANCKSPECTRUM if p not in specfilter])
+                    }
+           })
     return spectrum
+
+
+#%% Calculate spectrum
+@log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
+@log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
+def qupowerspec(qumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqcomb: List[str], specfilter: List[str]) -> Dict[str, Dict]:
+    """Calculate powerspectrum using MSC.pospace and TQUmaps
+
+    Args:
+        qumap List[Dict[str, Dict]]: Planck maps (data and masks) and some header information
+        lmax (int): Maximum multipol of data to be considered
+        lmax_mask (int): Maximum multipol of mask to be considered. Hint: take >3*lmax
+        freqfilter (List[str]): Frequency channels which are to be ignored
+        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["EB"]
+
+    Returns:
+        Dict[str, Dict]: Powerspectra as provided from MSC.pospace
+    """
+    buff = {
+        FREQC: 
+            ps.map2cl_spin(
+                qumap = [qumap[0][FREQC.split("-")[0]]['map'], qumap[1][FREQC.split("-")[0]]['map']],
+                lmax = lmax,
+                lmax_mask = lmax_mask,
+                spin = 2,
+                mask = qumap[0][FREQC.split("-")[0]]['mask'],
+                qumap2 = [qumap[0][FREQC.split("-")[1]]['map'], qumap[1][FREQC.split("-")[1]]['map']],
+                spin2 = 2,
+                mask2 = qumap[0][FREQC.split("-")[1]]['mask'],
+                ret_eb_be = True
+                )
+            for FREQC in freqcomb}
+
+    spectrum = dict()
+    for FREQC, _ in buff.items():
+        spectrum.update({
+            FREQC: {
+                spec: buff[FREQC][idx]
+                    for idx, spec in enumerate([p for p in PLANCKSPECTRUM if p not in specfilter])
+                    }
+           })
+    return spectrum
+
+
+def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[str], specfilter: List[str]) -> List[Dict[str, Dict]]:
+    indir_path = cf[mch]['indir']
+    mskset = cf['pa']['mskset'] # smica or lens
+    freqfilter = cf['pa']["freqfilter"]
+    specfilter = cf['pa']["specfilter"]
+
+    tmask_path = cf[mch][mskset]['tmask']["path"]
+    pmask_path = cf[mch][mskset]['pmask']["path"]
+
+    tmask_filename = cf[mch][mskset]['tmask']['filename']
+    pmask_filename = cf[mch][mskset]['pmask']['filename']
+
+    nside = cf['pa']["nside"]
+
+    synmap = dict()
+    for freqc in freqcomb:
+        synmap.update({
+            freqc: hp.synfast(
+                cls = [
+                    spectrum[freqc]["TT"],
+                    spectrum[freqc]["EE"],
+                    spectrum[freqc]["BB"],
+                    spectrum[freqc]["TE"]],
+                nside = nside[0] if int(freqc.split("-")[0])<100 else nside[1],
+                new=True)})
+
+    if tmask_filename is None:
+        tmask = None
+        tmask_d = None
+    else:
+        tmask = hp.read_map(
+            '{path}{tmask_path}{tmask_filename}'
+            .format(
+                path = indir_path,
+                tmask_path = tmask_path,
+                tmask_filename = tmask_filename), field=0, dtype=np.bool)
+        # tmask = np.array([True for t in tmask])
+        tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
+
+    def multi(a,b):
+        return a*b
+    pmasks = [hp.read_map(
+        '{path}{pmask_path}{pmask_filename}'
+        .format(
+            path = indir_path,
+            pmask_path = pmask_path,
+            pmask_filename = a), dtype=np.bool) for a in pmask_filename]
+    pmask = functools.reduce(multi, pmasks)
+    # pmask = np.array([True for p in pmask])
+    pmask_d = hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
+
+
+    flag = False
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            if "T" in spec:
+                flag = True
+                break
+    if flag and (tmask is not None):
+        tmap = {
+            FREQ: {
+                "map": synmap["-".join([FREQ,FREQ])][0],
+                "mask": tmask_d if int(FREQ)<100 else tmask
+                }for FREQ in PLANCKMAPFREQ
+                    if FREQ not in freqfilter
+        }
+    elif flag and (tmask is None):
+        print("Temperature spectra requested, but no Temperature masking provided. Spectra including temperature are skipped")
+        tmap = None
+    elif flag == False:
+        tmap = None
+
+    qmap = {
+        FREQ: {
+            "map": synmap["-".join([FREQ,FREQ])][1],
+            "mask": pmask_d if int(FREQ)<100 else pmask
+            }for FREQ in PLANCKMAPFREQ
+                if FREQ not in freqfilter
+    }
+    umap = {
+        FREQ: {
+            "map": synmap["-".join([FREQ,FREQ])][2],
+            "mask": pmask_d if int(FREQ)<100 else pmask
+            }for FREQ in PLANCKMAPFREQ
+                if FREQ not in freqfilter
+    }
+    return [tmap, qmap, umap]
+
 
 #%% Create df for no apparent reason
 @log_on_start(INFO, "Starting to create powerspectrum dataframe with {spectrum}")
 @log_on_end(DEBUG, "Dataframe created successfully: '{result}' ")
-def create_df(spectrum: Dict[str, Dict[str, List]], freqfilter: List[str], specfilter: List[str]) -> Dict:
+def create_df(spectrum: Dict[str, Dict[str, List]], offdiag: bool, freqfilter: List[str], specfilter: List[str]) -> Dict:
     """For easier parallelisation, tracking, and plotting
 
     Args:
@@ -163,14 +330,14 @@ def create_df(spectrum: Dict[str, Dict[str, List]], freqfilter: List[str], specf
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
 
     Returns:
-        Dict: A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+        Dict: powerspectra with spectrum and frequency-combinations in the columns
     """
     df = {
         spec: 
             pd.DataFrame(
                 data={"{}-{}".format(FREQ,FREQ2): spectrum[FREQ+'-'+FREQ2][spec]
                     for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
-                    for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))
+                    for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and _crosscomb(offdiag, FREQ, FREQ2)
             }) 
         for spec in PLANCKSPECTRUM if spec not in specfilter
     }
@@ -179,73 +346,96 @@ def create_df(spectrum: Dict[str, Dict[str, List]], freqfilter: List[str], specf
         if spec not in specfilter:
             for fkey, _ in df[spec].items():
                 df[spec][fkey].index.name = 'multipole'
-    
+
     return df
 
+
 #%% Apply 1e12*l(l+1)/2pi
-@log_on_start(INFO, "Starting to apply scaling onto data {df}")
+@log_on_start(INFO, "Starting to apply scaling onto data {data}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
-def apply_scale(df: Dict, specfilter: List[str], llp1: bool = True) -> Dict:
+def apply_scale(data: Dict, llp1: bool = True) -> Dict:
     """Multiplies powerspectra by :math:`l(l+1)/(2\pi)1e12`
 
     Args:
-        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+        df (Dict): powerspectra with spectrum and frequency-combinations in the columns
         df (llp1, Optional): Set to False, if :math:`l(l+1)/(2\pi)` should not be applied. Default: True
 
     Returns:
-        Dict: A "2D"-DataFrame of scaled powerspectra with spectrum and frequency-combinations in the columns
+        Dict: scaled powerspectra with spectrum and frequency-combinations in the columns
     """
-    df_scaled = df.copy()
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            for fkey, fval in df_scaled[spec].items():
-                if llp1:
-                    lnorm = pd.Series(fval.index.to_numpy()*(fval.index.to_numpy()+1)/(2*np.pi))
-                    df_scaled[spec][fkey] = df[spec][fkey].multiply(lnorm*1e12, axis='index')
-                else:
-                    df_scaled[spec][fkey] = df[spec][fkey]*1e12
-    return df_scaled
+    for freqc, spec in data.items():
+        for specID, val in spec.items():
+            if llp1:
+                lmax = len(next(iter((next(iter(data.values()))).values())))
+                ll = lambda x: x*(x+1)*1e12/(2*np.pi)
+                sc = np.array([ll(idx) for idx in range(lmax)])
+                data[freqc][specID] *= sc
+            else:
+                print("Nothing has been scaled.")
+    return data
+
 
 #%% Apply Beamfunction
-@log_on_start(INFO, "Starting to apply Beamfunnction on dataframe with {df}")
+@log_on_start(INFO, "Starting to apply Beamfunnction on dataframe with {data}")
 @log_on_end(DEBUG, "Beamfunction applied successfully: '{result}' ")
-def apply_beamfunction(df: Dict,  beamf: Dict, lmax: int, specfilter: List[str]) -> Dict:
-    """divides the spectrum derivded from channel `ij` and provided via `df_(ij)`,
+def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str]) -> Dict:
+    """divides the spectrum derived from channel `ij` and provided via `df_(ij)`,
     by `beamf_i beamf_j` as described by the planck beamf .fits-file header.
 
     Args:
-        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+        df (Dict): powerspectra with spectrum and frequency-combinations in the columns
 
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
 
     Returns:
-        DataFrame: A "2D"-DataFrame of powerspectra including effect of Beam, with spectrum and frequency-combinations in the columns
+        DataFrame: powerspectra including effect of Beam, with spectrum and frequency-combinations in the columns
 
     """
-    df_bf = df.copy()
     TEB_dict = {
         "T": 0,
         "E": 1,
         "B": 2
     }
+    LFI_dict = {
+        "030": 28,
+        "044": 29,
+        "070": 30
+    }
+    # data[freqc][specID] /= np.concatenate(
+    #     (np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)),
+    #     np.array([0.12 for n in range(lmax+1-len(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0)))])))
+    for freqc, spec in data.items():
+        freqs = freqc.split('-')
+        hdul = beamf[freqc]
+        for specID, val in spec.items():
+            if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
+                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
+            elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
+                b = np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))
+                buff = np.concatenate((
+                    b[:min(lmax+1, len(b))],
+                    np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
+                data[freqc][specID] /= buff
+                data[freqc][specID] /= buff
+            else:
+                b = np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))
+                buff = np.concatenate((
+                    b[:min(lmax+1, len(b))],
+                    np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
+                data[freqc][specID] /= buff
+                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
+    return data
 
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            for fkey in df[spec]:
-                hdul = beamf[fkey]
-                df_bf[spec][fkey] = df[spec][fkey] \
-                    .divide(hdul[1].data.field(TEB_dict[spec[0]])[:lmax+1], axis='index') \
-                    .divide(hdul[1].data.field(TEB_dict[spec[1]])[:lmax+1], axis='index')
-    return df_bf
 
 #%% Build covariance matrices
-@log_on_start(INFO, "Starting to build convariance matrices with {df}")
+@log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(df: Dict, lmax: int, freqfilter: List[str], specfilter: List[str]) -> Dict[str, np.ndarray]:
+def build_covmatrices(data: Dict, offdiag: str, lmax: int, freqfilter: List[str], specfilter: List[str]) -> Dict[str, np.ndarray]:
     """Calculates the covariance matrices from the data
 
     Args:
-        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
         lmax (int): Maximum multipol of data to be considered
         freqfilter (List[str]): Frequency channels which are to be ignored
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
@@ -265,16 +455,15 @@ def build_covmatrices(df: Dict, lmax: int, freqfilter: List[str], specfilter: Li
             for FREQ2 in PLANCKMAPFREQ:
                 if FREQ2 not in freqfilter:
                     ifreq2+=1
-                    if int(FREQ2) >= int(FREQ):
+                    if _crosscomb(offdiag, FREQ, FREQ2):
                         ispec=-1
                         for spec in PLANCKSPECTRUM:
                             if spec not in specfilter:
                                 ispec+=1
-                                cov[spec][ifreq][ifreq2] = df[spec][FREQ+'-'+FREQ2]
-                                cov[spec][ifreq2][ifreq] = df[spec][FREQ+'-'+FREQ2]
-    print('\n\nCovariance matrix EE:', cov['EE'].shape)
-    # print(cov['EE'])
+                                cov[spec][ifreq][ifreq2] = data[FREQ+'-'+FREQ2][spec]
+                                cov[spec][ifreq2][ifreq] = data[FREQ+'-'+FREQ2][spec]
     return cov
+
 
 #%% slice along l (3rd axis) and invert
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
@@ -288,6 +477,11 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         freqfilter (List[str]): Frequency channels which are to be ignored
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
     """
+    def maskit(a):
+        masked = a[ ~np.isnan(a) ]
+        mskd = masked.reshape(int(np.sqrt(len(masked))),int(np.sqrt(len(masked))))
+        return mskd
+
     def is_invertible(a, l):
         truth = a.shape[0] == a.shape[1] and np.linalg.matrix_rank(a) == a.shape[0]
         if not truth:
@@ -295,13 +489,13 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         return truth
     cov_inv_l = {
         spec: {
-            l: np.linalg.inv(cov[spec][:,:,l]) if is_invertible(cov[spec][:,:,l], l) else None
+            l: np.linalg.inv(maskit(cov[spec][:,:,l])) if is_invertible(maskit(cov[spec][:,:,l]), l) else None
                 for l in range(lmax)
             }for spec in PLANCKSPECTRUM 
                 if spec not in specfilter
         }
-    # print(cov_inv_l)
     return cov_inv_l
+
 
 # %% Calculate weightings and store in df
 @log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
@@ -310,7 +504,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     """Calculates weightings of the respective Frequency channels
 
     Args:
-        cov (Dict): The inverted covariance matrices of Dimension [Nspec,Nspec,lmax]
+        cov (Dict): The inverted covariance matrices of Dimension [lmax,Nspec,Nspec]
         lmax (int): Maximum multipol of data to be considered
         freqfilter (List[str]): Frequency channels which are to be ignored
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
@@ -318,36 +512,60 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     Returns:
         Dict[str, DataFrame]: The weightings of the respective Frequency channels
     """
-
-    # TODO add dummy value for spec: np.array(..) when cov is not invertible
     elaw = np.ones(len([dum for dum in PLANCKMAPFREQ if dum not in freqfilter]))
-    weighting = {spec: np.array([(cov[spec][l] @ elaw) / (elaw.T @ cov[spec][l] @ elaw)
-                     if cov[spec][l] is not None else np.array([0.0 for n in range(len(elaw))])
-                        for l in range(lmax) if l in cov[spec].keys()])
-                    for spec in PLANCKSPECTRUM if spec not in specfilter}
-    
-    # print(cov)
-    weights = {spec:
-                pd.DataFrame(
-                    data=weighting[spec],
-                    columns = ["channel @{}GHz".format(FREQ)
-                                for FREQ in PLANCKMAPFREQ
-                                if FREQ not in freqfilter])
-                    for spec in PLANCKSPECTRUM
-                    if spec not in specfilter}
+
+    weighting_LFI = {
+        spec:
+            np.array([
+        (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
+            if cov[spec][l] is not None else np.array([np.nan for n in range(len(elaw))])
+            for l in range(min(lmax,2049))])
+        for spec in PLANCKSPECTRUM if spec not in specfilter}
+
+    weights_LFI = {spec:
+        pd.DataFrame(
+            data = weighting_LFI[spec],
+            columns = ["channel @{}GHz".format(FREQ)
+                        for FREQ in PLANCKMAPFREQ
+                        if FREQ not in freqfilter]
+            )
+            for spec in PLANCKSPECTRUM
+            if spec not in specfilter}
+
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
-            weights[spec].index.name = 'multipole'
+            weights_LFI[spec].index.name = 'multipole'
 
-    # print(weights)
-    return weights
+    res = dict()
+    if lmax>2049:
+        weighting_HFI = {
+            spec:
+                np.array([
+            (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
+                if cov[spec][l] is not None else np.array([np.nan for n in range(3)])
+                for l in range(2049, lmax)])
+            for spec in PLANCKSPECTRUM if spec not in specfilter}
+        weights_HFI = {spec:
+            pd.DataFrame(
+                data = weighting_HFI[spec],
+                columns = ["channel @{}GHz".format(FREQ) 
+                            for FREQ in PLANCKMAPFREQ
+                            if FREQ not in freqfilter and int(FREQ)>=100]
+                )
+                for spec in PLANCKSPECTRUM
+                if spec not in specfilter}
+        for spec in PLANCKSPECTRUM:
+            if spec not in specfilter:
+                weights_HFI[spec].index = np.arange(2049, lmax)
+                weights_HFI[spec].index.name = 'multipole'
+        for spec in PLANCKSPECTRUM:
+            if spec not in specfilter:
+                res.update({ spec: pd.concat([weights_LFI[spec], weights_HFI[spec]])})
+    else:
+        res = weights_LFI
+    return res
+
 
 if __name__ == '__main__':
     import doctest
     # doctest.run_docstring_examples(get_data, globals(), verbose=True)
-
-
-def general_pipeline():
-    pass
-
-# %%
