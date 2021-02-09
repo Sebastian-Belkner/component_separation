@@ -1,7 +1,7 @@
 {
 "pa":{
     "new_spectrum": false,
-    "mskset": "smica",
+    "mskset": "lens",
     "offdiag": true,
     "freqdset": "NPIPE",
     "llp1": true,
@@ -28,14 +28,14 @@
     ]
 },
 "NERSC":{
-    "powspec_truthfile": "/global/homes/s/sebibel/git/component_separation/data/powspecplanck.txt",
+    "powspec_truthfile": "/global/u2/s/sebibel/git/component_separation/data/powspecplanck.txt",
     "beamf":{
-        "HFI": {
-            "path": "/global/homes/s/sebibel/data/beamf/",
+        "HFI": {     
+            "path": "/global/u2/s/sebibel/data/beamf/",
             "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
-        "LFI": {
-            "path": "global/homes/s/sebibel/git/component_separation/data/beamf/",
+        "LFI": {     
+            "path": "/global/u2/s/sebibel/git/component_separation/data/beamf/",
             "filename": "LFI_RIMO_R3.31.fits"
         }
     },
@@ -70,14 +70,14 @@
             "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
-            "path": "/global/homes/s/sebibel/data/mask/",
+            "path": "/global/u2/s/sebibel/data/mask/",
             "filename": [
                 "psmaskP_2048.fits.gz",
                 "gmaskP_apodized_0_2048.fits.gz"
                 ]
             }
         },
-    "outdir": "/global/homes/s/sebibel/tmp/",
+    "outdir": "/global/u2/s/sebibel/tmp/",
     "indir": ""
     },
 "XPS":{
