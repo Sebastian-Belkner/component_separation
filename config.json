@@ -1,13 +1,13 @@
 {
 "pa":{
     "new_spectrum": false,
-    "mskset": "lens",
+    "mskset": "smica",
     "offdiag": true,
-    "freqdset": "DX12",
+    "freqdset": "NPIPE",
     "llp1": true,
     "bf": true,
-    "lmax": 4000,
-    "lmax_mask": 8000,
+    "lmax": 3000,
+    "lmax_mask": 6000,
     "freqdatsplit": "",
     "run_sim": true,
     "num_sim": 5,
@@ -48,8 +48,8 @@
         },
     "lens":{
         "tmask":{
-            "path": null,
-            "filename": null
+            "path": "data/mask/",
+            "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
             "path": "/project/projectdirs/cmb/data/planck2018/pr3/Planck_L08_inputs/",
@@ -60,8 +60,8 @@
         },
     "smica":{
         "tmask":{
-            "path": null,
-            "filename": null
+            "path": "data/mask/",
+            "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
             "path": "/global/homes/s/sebibel/data/mask/",

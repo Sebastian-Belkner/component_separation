@@ -5,7 +5,7 @@ io.py: Filehandling functions
 
 __author__ = "S. Belkner"
 
-'/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx
+# '/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx
 
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
@@ -266,7 +266,15 @@ def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
                 }
             })
             beamf[freqc].update({
-                "LFI": fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
+                "LFI": fits.open("{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        .format(
+                            abs_path = abs_path,
+                            indir_path = cf[mch]['indir'],
+                            bf_path = cf[mch]["beamf"]['path'],
+                            bf_filename = cf[mch]["beamf"]['filename']
+                                .replace("{freq1}", freqs[1])
+                                .replace("{freq2}", freqs[1])
+            "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
             })
         if int(freqs[0]) < 100 and int(freqs[1]) < 100:
              beamf.update({
