@@ -1,9 +1,9 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "mskset": "lens",
     "offdiag": true,
-    "freqdset": "NPIPE",
+    "freqdset": "DX12",
     "llp1": true,
     "bf": true,
     "lmax": 3000,

@@ -7,9 +7,11 @@ __author__ = "S. Belkner"
 
 
 # TODO
-# compare syn unscaled with unscaled for bias. does it depend on lmax, lmax_mask?
 # pospace: is the second mask added correctly?
-# use, in addition to the current datasets, cross and diff datasets
+# check mean from maps and subtract
+# check bright pixels
+# monopole and dipole regression on apodized galmask (available in healpy ?) (healpy.pixelfunc.remove_dipole)
+# use jackknives to compute a noise estimate (half mission)
 # analytic expression for weight estimates
 
 import json
@@ -159,7 +161,7 @@ if __name__ == '__main__':
         # spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
         # io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
-    spectrum_scaled = spec2specsc(spectrum)
+    spectrum_scaled = spec2specsc(spectrum, freqcomb)
     io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
     weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
@@ -172,8 +174,9 @@ if __name__ == '__main__':
             for FREQ2 in PLANCKMAPFREQ
             if (FREQ2 not in freqfilter) and (int(FREQ2)==int(FREQ))]
 
+    start = 3
     if cf['pa']["run_sim"]:
-        for i in range(num_sim):
+        for i in range(start, num_sim):
             print("Starting simulation {} of {}.".format(i+1, num_sim))
             path_name = spec_path + 'spectrum/unscaled' + filename
             spectrum = io.load_spectrum(path_name=path_name)
@@ -184,7 +187,7 @@ if __name__ == '__main__':
             syn_spectrum = map2spec(synmap, freqcomb)
             # io.save_spectrum(syn_spectrum, spec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
 
-            syn_spectrum_scaled = spec2specsc(syn_spectrum)
+            syn_spectrum_scaled = spec2specsc(syn_spectrum, freqcomb)
             io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)
     
 
