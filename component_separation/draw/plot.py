@@ -245,7 +245,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = N
 
     plt.title(title_string)
     plt.xlim((10,4000))
-    # plt.ylim((1e-20,1e1))
+    plt.ylim((1e-3,1e5))
     plt.xscale("log", nonpositive='clip')
     plt.yscale("log", nonpositive='clip')
     for freqc, val in data.items():
@@ -308,7 +308,7 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.xlim((10,4000))
-    plt.ylim((-0.01,0.01))
+    plt.ylim((-0.02,0.02))
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():

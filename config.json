@@ -1,7 +1,7 @@
 {
 "pa":{
     "new_spectrum": true,
-    "mskset": "smica",
+    "mskset": "lens",
     "offdiag": true,
     "freqdset": "DX12",
     "llp1": true,

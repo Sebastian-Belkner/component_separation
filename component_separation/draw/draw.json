@@ -1,15 +1,12 @@
 {
     "pa": {
-        "mskset": "lens",
+        "mskset": "smica",
         "offdiag": true,
         "freqdset": "DX12",
-        "lmax": 1000,
-        "lmax_mask": 2000,
+        "lmax": 3000,
+        "lmax_mask": 6000,
         "freqdatsplit": "",
         "freqfilter": [
-            "100",
-            "143",
-            "217",
             "545",
             "857"
         ],
@@ -63,7 +60,7 @@
             }
         },
         "weights": {
-            "do_plot": false,
+            "do_plot": true,
             "indir_root": "data/tmp/weights/",
             "indir_rel": "",
             "outdir_root": "vis/weights/",
