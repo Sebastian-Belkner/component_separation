@@ -1,6 +1,10 @@
 {
 "pa":{
+<<<<<<< HEAD
     "new_spectrum": false,
+=======
+    "new_spectrum": true,
+>>>>>>> cc33940a47f0af95d62ff421e8f343ec90652f47
     "mskset": "smica",
     "offdiag": true,
     "freqdset": "NPIPE",
@@ -30,9 +34,15 @@
 "NERSC":{
     "powspec_truthfile": "/global/homes/s/sebibel/git/component_separation/data/powspecplanck.txt",
     "beamf":{
-        "path": "/global/homes/s/sebibel/data/beamf/",
-        "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
+        "HFI": {
+            "path": "/global/homes/s/sebibel/data/beamf/",
+            "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
+        "LFI": {
+            "path": "global/homes/s/sebibel/git/component_separation/data/beamf/",
+            "filename": "LFI_RIMO_R3.31.fits"
+        }
+    },
     "NPIPE":{
         "path": "/global/cfs/cdirs/cmb/data/planck2020/npipe/",
         "filename": "npipe6v20{split}/npipe6v20{split}_{freq}_map.fits",
@@ -77,8 +87,14 @@
 "XPS":{
     "powspec_truthfile": "data/powspecplanck.txt",
     "beamf":{
-        "path": "beamf/BeamWf_HFI_R3.01/",
-        "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
+        "HFI": {
+            "path": "beamf/BeamWf_HFI_R3.01/",
+            "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
+            },
+        "LFI": {
+            "path": "beamf/BeamWF_LFI/",
+        "filename": "LFI_RIMO_R3.31.fits"
+            }
         },
     "NPIPE":{
             "path": null,
@@ -102,8 +118,8 @@
         },
     "smica":{
         "tmask":{
-            "path": null,
-            "filename": null
+            "path": "mask/",
+            "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
             "path": "mask/",

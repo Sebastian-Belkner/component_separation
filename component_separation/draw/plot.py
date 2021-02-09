@@ -210,52 +210,6 @@ def plot_beamwindowfunction(beamf, aa, bb, ab, field1, field2, p):
     return plt
 
 
-# %% Plot
-def plotsave_powspec(df: Dict, specfilter: List[str], truthfile: str, plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
-    """Plotting
-
-    Args:
-        df (Dict): A "2D"-DataFrame of powerspectra with spectrum and frequency-combinations in the columns
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
-        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
-    """
-    fending = '.jpg'
-    spectrum_truth = pd.read_csv(
-        truthfile,
-        header=0,
-        sep='    ',
-        index_col=0)
-
-    # plt.figure(figsize=(8,6))
-    idx=1
-    idx_max = len(PLANCKSPECTRUM) - len(specfilter)
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            plt.figure()
-            df[spec].plot(
-                figsize=(8,6),
-                loglog=True,
-                alpha=(idx_max-idx)/idx_max,
-                xlim=(10,4000),
-                ylim=(1e-3,1e5),
-                ylabel="power spectrum",
-                grid=True,
-                title="{} spectrum - {}".format(spec, plotsubtitle))
-            if "Planck-"+spec in spectrum_truth.columns:
-                spectrum_truth["Planck-"+spec].plot(
-                    loglog=True,
-                    grid=True,
-                    ylabel="power spectrum",
-                    legend=True
-                    )
-            plt.savefig('{}vis/spectrum/{}_spectrum--{}.jpg'.format(outdir_root, spec, plotfilename, fending))
-            plt.close()
-    # %% Compare to truth
-    # plt.figure(figsize=(8,6))
-
-
-# %% Plot
 def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
     """Plotting
 
@@ -358,8 +312,9 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
-        idx_max+=len(freqc)
-        if True: #"070" in freqc:
+        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        # if "070" in freqc or "030" in freqc or "044" in freqc:
+            idx_max+=len(freqc)
             binmean, binerr = std_dev_binned(data[freqc])
             plt.errorbar(
                 0.5 * bl + 0.5 * br,
@@ -409,35 +364,35 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.xlim((10,4000))
     plt.ylim((1e-3,1e5))
     for freqc, val in data2.items():
-        binmean1, binerr1 = std_dev_binned(data1[freqc])
-        plt.errorbar(
-            0.5 * bl + 0.5 * br,
-            binmean1,
-            yerr=binerr1,
-            label=freqc,
-            capsize=3,
-            elinewidth=2,
-            fmt='x',
-            color=color[idx],
-            alpha=0.9)
-        binmean2, binerr2 = std_dev_binned(data2[freqc])
-        plt.errorbar(
-            0.5 * bl + 0.5 * br,
-            binmean2,
-            yerr=binerr2,
-            label="syn "+ freqc,
-            capsize=3,
-            elinewidth=2,
-            fmt='x',
-            color=color[idx],
-            alpha=0.3)
-        idx+=1
+        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+            binmean1, binerr1 = std_dev_binned(data1[freqc])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean1,
+                yerr=binerr1,
+                label=freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='x',
+                color=color[idx],
+                alpha=0.9)
+            binmean2, binerr2 = std_dev_binned(data2[freqc])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean2,
+                yerr=binerr2,
+                label="syn "+ freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='x',
+                color=color[idx],
+                alpha=0.3)
+            idx+=1
 
     if truthfile is not None:
         plt.plot(truthfile, label = truth_label)
     plt.legend()
     return plt
-
 
 
 def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
@@ -479,7 +434,6 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
     return plt
 
 
-# %% Plot weightings
 def plot_map(data: Dict, title_string: str = ''):
     """Plotting
     Args:
@@ -490,35 +444,3 @@ def plot_map(data: Dict, title_string: str = ''):
     plt.figure()
     hp.mollview(data["map"]*data["mask"], title=title_string, norm="hist")
     return plt
-
-
-# %% Plot weightings
-def plotsave_weights(df: Dict, plotsubtitle: str = '', plotfilename: str = '', outdir_root: str = ''):
-    fending = ".jpg"
-    """Plotting
-    Args:
-        df (Dict): Data to be plotted
-        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
-        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
-    """
-    plt.figure()
-    for spec in df.keys():
-        df[spec].columns[0:3]
-        df[spec].plot(
-            figsize=(8,6),
-            ylabel='weigthing',
-            # y = df[spec].columns.to_list()[0:3],
-            # marker="x",
-            # style= '--',
-            grid=True,
-            xlim=(0,4000),
-            ylim=(-0.2,1.0),
-            # logx=True,
-            title="{} weighting - {}".format(spec, plotsubtitle))
-        plt.savefig('{}vis/weighting/{}_weighting/{}_weighting--{}{}'.format(
-            outdir_root,
-            spec,
-            spec,
-            plotfilename,
-            fending))
-        plt.close()

@@ -7,6 +7,7 @@ __author__ = "S. Belkner"
 
 
 # TODO
+# compare syn unscaled with unscaled for bias. does it depend on lmax, lmax_mask?
 # pospace: is the second mask added correctly?
 # use, in addition to the current datasets, cross and diff datasets
 # analytic expression for weight estimates
@@ -24,7 +25,6 @@ import matplotlib.pyplot as plt
 
 from functools import reduce
 import numpy as np
-import seaborn as sns
 
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
@@ -147,7 +147,6 @@ if __name__ == '__main__':
     speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
 
     filename = io.make_filenamestring(cf)
-
     if cf['pa']['new_spectrum']:
         spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
@@ -155,14 +154,16 @@ if __name__ == '__main__':
         path_name = spec_path + 'spectrum/unscaled' + filename
         spectrum = io.load_spectrum(path_name=path_name)
     if spectrum is None:
-        spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
-        io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
+        print("couldn't find spectrum with given specifications at {}. Exiting..".format(path_name))
+        sys.exit()
+        # spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
+        # io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
     spectrum_scaled = spec2specsc(spectrum)
     io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
-    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
-    io.save_weights(weights, spec_path, 'weights'+filename)
+    # weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
+    # io.save_weights(weights, spec_path, 'weights'+filename)
     
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)

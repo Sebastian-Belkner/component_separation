@@ -1,8 +1,8 @@
 __pycache__/
 ext/
 data/beamf/
-data/mask/
 data/map/
+data/mask/
 data/tmp/
 data/simulations/
 test/data/
