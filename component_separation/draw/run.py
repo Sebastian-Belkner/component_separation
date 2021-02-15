@@ -254,31 +254,85 @@ def plot_spectrum(fname):
     spec_data = _reorder_spectrum_dict(spectrum)
 
     spectrum_truth = io.load_truthspectrum()
-
     for specc, data in spec_data.items():
-            title_string = "{} spectrum - {}".format(specc, plotsubtitle)
-            if "Planck-"+specc in spectrum_truth.columns:
-                spectrum_trth = spectrum_truth["Planck-"+specc]
-            else:
-                spectrum_trth = None
+        title_string = "{} spectrum - {}".format(specc, plotsubtitle)
+        if "Planck-"+specc in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+specc]
+        else:
+            spectrum_trth = None
+        mp = cplt.plot_powspec_binned(
+            data,
+            lmax,
+            title_string = title_string,
+            truthfile = spectrum_trth,
+            truth_label = "Planck-"+specc
+            )
+        outpath_name = \
+            dc["outdir_root"] + \
+            dc["outdir_rel"] + \
+            specc+"_spectrum/" + \
+            specc+"_spectrum" + "-" + \
+            dc["out_desc"] + "-" + \
+            fname + ".jpg"
+        io.save_figure(
+            mp = mp,
+            path_name = outpath_name)    
 
-            mp = cplt.plot_powspec_binned(
-                data,
-                lmax,
-                title_string = title_string,
-                truthfile = spectrum_trth,
-                truth_label = "Planck-"+specc
-                )
-            outpath_name = \
-                dc["outdir_root"] + \
-                dc["outdir_rel"] + \
-                specc+"_spectrum/" + \
-                specc+"_spectrum" + "-" + \
-                dc["out_desc"] + "-" + \
-                fname + ".jpg"
-            io.save_figure(
-                mp = mp,
-                path_name = outpath_name)    
+def plot_weighted_spectrum(fname):
+    def _weightspec(weights, spectrum):
+        import copy
+        retspec = copy.deepcopy(spectrum)
+        for specc, data in spectrum.items():
+
+            buff = np.zeros_like(spectrum[specc]["030-030"][:lmax])
+            for freqc, val in data.items():
+                freqs = freqc.split("-")
+                if freqs[0] == freqs[1]:
+                    # probably, i need to take the variance, not the mean value.. see wikipedia..
+                    b = np.nan_to_num(weights[specc].to_numpy())
+                    normaliser = np.sum(b, axis=1)
+                    # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
+                    buff += (1)/(spectrum[specc][freqc][:lmax])
+            retspec[specc].update({'optimal-optimal': 1/buff})
+        return retspec
+
+    dc = dcf["plot"]["weights"]
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    weights = io.load_weights(inpath_name, fname)
+
+    dc = dcf["plot"]["spectrum"]
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    spectrum = io.load_spectrum(inpath_name, fname)
+    lmax = dcf['pa']['lmax']
+    spec_data = _reorder_spectrum_dict(spectrum)
+    spectrum_truth = io.load_truthspectrum()
+    spec_data_wweighted = _weightspec(weights, spec_data)
+
+    for specc, data in spec_data_wweighted.items():
+        title_string = "{} spectrum - {}".format(specc, "optimal spectrum included")
+        if "Planck-"+specc in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+specc]
+        else:
+            spectrum_trth = None
+
+        mp = cplt.plot_powspec_binned(
+            data,
+            lmax,
+            title_string = title_string,
+            truthfile = spectrum_trth,
+            truth_label = "Planck-"+specc
+            )
+
+        outpath_name = \
+            dc["outdir_root"] + \
+            dc["outdir_rel"] + \
+            specc+"_spectrum/" + \
+            specc+"_spectrum" + "-" + \
+            "withoptimal" + "-" + \
+            fname + ".jpg"
+        io.save_figure(
+            mp = mp,
+            path_name = outpath_name)
 
 
 if __name__ == '__main__':
@@ -291,16 +345,19 @@ if __name__ == '__main__':
             )
     
     if dcf["plot"]["beamf"]["do_plot"]:
+        print("plotting beam windowfunctions")
         plot_beamwindowfunctions()
 
     if dcf["plot"]["weights"]["do_plot"]:
+        print("plotting weights")
         plot_weights(fname = fname)
 
     if dcf["plot"]["spectrum"]["do_plot"]:
+        print("plotting spectrum")
         plot_spectrum(fname = fname)
 
     if dcf["plot"]["spectrum_bias"]["do_plot"]:
+        print("plotting spectrum bias")
         plot_spectrum_bias(fname = fname)
 
-
-
+    plot_weighted_spectrum(fname)

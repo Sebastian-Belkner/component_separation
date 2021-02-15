@@ -354,7 +354,7 @@ def create_df(spectrum: Dict[str, Dict[str, List]], offdiag: bool, freqfilter: L
 @log_on_start(INFO, "Starting to apply scaling onto data {data}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
 def apply_scale(data: Dict, llp1: bool = True) -> Dict:
-    """Multiplies powerspectra by :math:`l(l+1)/(2\pi)1e12`
+    """Multiplies powerspectra by :math:`l(l+1)/(2\pi)1e12` and the pixwindowfunction
 
     Args:
         df (Dict): powerspectra with spectrum and frequency-combinations in the columns
@@ -370,6 +370,18 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
                 ll = lambda x: x*(x+1)*1e12/(2*np.pi)
                 sc = np.array([ll(idx) for idx in range(lmax)])
                 data[freqc][specID] *= sc
+                # print("before")
+                # print(data[freqc][specID])
+                # if int(freqc.split("-")[0]) < 100:
+                #     data[freqc][specID] /= hp.pixwin(1024)[:lmax]
+                # else:
+                #     data[freqc][specID] /= hp.pixwin(2048)[:lmax]
+                # if int(freqc.split("-")[1]) < 100:
+                #     data[freqc][specID] /= hp.pixwin(1024)[:lmax]
+                # else:
+                #     data[freqc][specID] /= hp.pixwin(2048)[:lmax]
+                # print("after")
+                # print(data[freqc][specID])
             else:
                 print("Nothing has been scaled.")
     return data
@@ -460,8 +472,15 @@ def build_covmatrices(data: Dict, offdiag: str, lmax: int, freqfilter: List[str]
                         for spec in PLANCKSPECTRUM:
                             if spec not in specfilter:
                                 ispec+=1
-                                cov[spec][ifreq][ifreq2] = data[FREQ+'-'+FREQ2][spec]
-                                cov[spec][ifreq2][ifreq] = data[FREQ+'-'+FREQ2][spec]
+                                if int(FREQ)<100 or int(FREQ2)<100:
+                                    b  = np.array([np.nan for n in range(2049)])
+                                    a = np.concatenate((data[FREQ+'-'+FREQ2][spec][:min(lmax+1, len(b))], b[:max(0, lmax+1-len(b))]))
+                                    cov[spec][ifreq][ifreq2] = a
+                                    cov[spec][ifreq2][ifreq] = a
+                                else:
+                                    a = data[FREQ+'-'+FREQ2][spec]
+                                    cov[spec][ifreq][ifreq2] = a
+                                    cov[spec][ifreq2][ifreq] = a
     return cov
 
 
@@ -564,6 +583,17 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     else:
         res = weights_LFI
     return res
+
+
+def spec2alms(spectrum):
+    return None
+
+
+def alms2almsxweight(alms, weights):
+    return None
+
+def alms2cls(alms_w):
+    return None
 
 
 if __name__ == '__main__':

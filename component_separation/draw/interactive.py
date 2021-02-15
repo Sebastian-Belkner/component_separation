@@ -64,17 +64,20 @@ hdul = fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_sepa
 
 # %%
 hdul[31].header
+
+
 # %%
 hp.read_map("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits", field=0)
+
+
 # %%
 plt.plot(np.sqrt(hdul[28].data.field(0)))
 plt.plot(np.sqrt(hdul[29].data.field(0)))
 plt.plot(np.sqrt(hdul[30].data.field(0)))
 plt.plot(np.sqrt(np.sqrt(hdul[28].data.field(0))*np.sqrt(hdul[29].data.field(0))))
 plt.grid()
+
 # %%
 hdul = hp.read_map("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/LFI_SkyMap_030-field_1024_R3.00_full.fits")
 
-# %%
-sns.histplot(hdul)
-# %%
+# %% Pixelisation

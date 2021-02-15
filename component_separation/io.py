@@ -185,6 +185,7 @@ def load_weights(path_name: str, indir_root: str = None, indir_rel: str = None, 
         path_name = indir_root+indir_rel+in_desc+fname+fending
     if os.path.isfile(path_name):
         data = np.load(path_name, allow_pickle=True)
+        print( "loaded {}".format(path_name))
         return data.item()
     else:
         print("no existing weights at {}".format(path_name))
@@ -199,6 +200,7 @@ def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, i
         path_name = indir_root+indir_rel+in_desc+fname+fending
     if os.path.isfile(path_name):
         data = np.load(path_name, allow_pickle=True)
+        print( "loaded {}".format(path_name))
         return data
     else:
         print("no existing map at {}".format(path_name))
@@ -213,6 +215,7 @@ def load_spectrum(path_name: str, indir_root: str = None, indir_rel: str = None,
         path_name = indir_root+indir_rel+in_desc+fname+fending
     if os.path.isfile(path_name):
         data = np.load(path_name, allow_pickle=True)
+        print( "loaded {}".format(path_name))
         return data.item()
     else:
         print("no existing spectrum at {}".format(path_name))

@@ -10,6 +10,7 @@ __author__ = "S. Belkner"
 # pospace: is the second mask added correctly?
 # check mean from maps and subtract
 # check bright pixels
+# how does binning work? do i have to take 2l+1 into account as described in https://arxiv.org/pdf/0803.1814.pdf on page9?
 # monopole and dipole regression on apodized galmask (available in healpy ?) (healpy.pixelfunc.remove_dipole)
 # use jackknives to compute a noise estimate (half mission)
 # analytic expression for weight estimates
@@ -94,6 +95,7 @@ def map2spec(maps, freqcomb):
 def spec2specsc(spectrum, freqcomb):
     # df = pw.create_df(spectrum, cf["pa"]["offdiag"], freqfilter, specfilter)
     spec_sc = pw.apply_scale(spectrum, llp1=llp1)
+    spec_sc = spectrum
     if bf:
         beamf = io.load_beamf(freqcomb=freqcomb)
         spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
@@ -136,7 +138,14 @@ def synmaps2average(fname):
                 ])))
             spectrum_avg[FREQC][spec] /= num_sim
     return spectrum_avg
-                
+
+
+def spec_weight2weighted_spec(spectrum, weights):
+    alms = pw.spec2alms(spectrum)
+    alms_w = pw.alms2almsxweight(alms, weights)
+    spec = pw.alms2cls(alms_w)
+    return spec
+
 
 if __name__ == '__main__':
     set_logger(DEBUG)
@@ -161,11 +170,17 @@ if __name__ == '__main__':
         # spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
         # io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
+    # weights = specsc2weights(spectrum, cf["pa"]["offdiag"])
+    # io.save_weights(weights, spec_path, 'weights_unscaled'+filename)
+
     spectrum_scaled = spec2specsc(spectrum, freqcomb)
     io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
     weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
     io.save_weights(weights, spec_path, 'weights'+filename)
+
+    # weighted_spec = spec_weight2weighted_spec(spectrum, weights)
+
     
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)
@@ -174,7 +189,7 @@ if __name__ == '__main__':
             for FREQ2 in PLANCKMAPFREQ
             if (FREQ2 not in freqfilter) and (int(FREQ2)==int(FREQ))]
 
-    start = 3
+    start = 0
     if cf['pa']["run_sim"]:
         for i in range(start, num_sim):
             print("Starting simulation {} of {}.".format(i+1, num_sim))
@@ -182,10 +197,10 @@ if __name__ == '__main__':
             spectrum = io.load_spectrum(path_name=path_name)
 
             synmap = spec2synmap(spectrum, freqcomb)
-            io.save_map(synmap, spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
+            # io.save_map(synmap, spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
 
             syn_spectrum = map2spec(synmap, freqcomb)
-            # io.save_spectrum(syn_spectrum, spec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
+            io.save_spectrum(syn_spectrum, spec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
 
             syn_spectrum_scaled = spec2specsc(syn_spectrum, freqcomb)
             io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)

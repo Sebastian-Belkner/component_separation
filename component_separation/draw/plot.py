@@ -229,7 +229,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = N
 
     def std_dev_binned(d):
         mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
+        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))
         return mean, err
 
     
@@ -245,12 +245,13 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = N
 
     plt.title(title_string)
     plt.xlim((10,4000))
-    plt.ylim((1e-3,1e5))
+    plt.ylim((1e-3,1e6))
     plt.xscale("log", nonpositive='clip')
     plt.yscale("log", nonpositive='clip')
     for freqc, val in data.items():
         idx_max+=len(freqc)
-        if True: #"070" in freqc:
+        freqs = freqc.split("-")
+        if freqs[0]  == freqs[1]:
             binmean, binerr = std_dev_binned(data[freqc])
             binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
             plt.errorbar(
@@ -295,7 +296,7 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
 
     def std_dev_binned(d):
         mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
+        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))/np.sqrt(5)
         return mean, err
 
     plt.xscale("log", nonpositive='clip')
@@ -308,7 +309,7 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.xlim((10,4000))
-    plt.ylim((-0.02,0.02))
+    plt.ylim((-0.1,0.1))
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
@@ -349,7 +350,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
 
     def std_dev_binned(d):
         mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
-        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
+        err = np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
         return mean, err
 
     plt.xscale("log", nonpositive='clip')
@@ -402,35 +403,70 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    bins = np.arange(0, lmax+1, lmax/20)
+    import matplotlib.ticker as mticker
+    nbins=50
+    # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
+    base = 2
+    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
+    #np.arange(0, lmax+1, lmax/20)
     bl = bins[:-1]
     br = bins[1:]
 
     def std_dev_binned(d):
         mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
-        err = [np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
-        return mean, err
+        var = np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
+        return mean, var
 
-    plt.figure(figsize=(8,6))
+    def std_dev_binned2(d):
+        val = np.nan_to_num(d.to_numpy())
+        n, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins)
+        sy, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val)
+        sy2, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val * val)
+        mean = sy / n
+        std = np.sqrt(sy2/n - mean*mean)
+        return mean, std, _
+
+    fig, ax = plt.subplots(figsize=(8,6))
     plt.xlabel("Multipole l")
     plt.ylabel("Weighting")
+    plt.xscale("log", base=base)
 
     for name, data in weights.items():
-        binmean, binerr = std_dev_binned(data)
+        # binmean, binerr = std_dev_binned(data)
+        # plt.errorbar(
+        #     0.5 * bl + 0.5 * br,
+        #     binmean,
+        #     yerr=binerr,
+        #     label=name,
+        #     capsize=3,
+        #     elinewidth=2
+        #     )
+        mean, std, _ = std_dev_binned2(data)
         plt.errorbar(
-            0.5 * bl + 0.5 * br,
-            binmean,
-            yerr=binerr,
+            (_[1:] + _[:-1])/2,
+            mean,
+            yerr=std,
             label=name,
-            capsize=3,
-            elinewidth=2
+            capsize=2,
+            elinewidth=1
             )
         plt.title(title_string)
-        plt.xlim((1,4000))
+        plt.xlim((100,4000))
         plt.ylim((-0.2,1.0))
+    ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
+    ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
     plt.grid(which='both', axis='x')
     plt.grid(which='major', axis='y')
     plt.legend()
+    plt.get
     return plt
 
 
