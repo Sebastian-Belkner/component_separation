@@ -104,8 +104,8 @@ def spec2specsc(spectrum, freqcomb):
     return spec_scbf
 
 
-def specsc2weights(spectrum, diag):
-    cov = pw.build_covmatrices(spectrum, diag, lmax, freqfilter, specfilter)
+def specsc2weights(spectrum, offdiag=True):
+    cov = pw.build_covmatrices(spectrum, offdiag, lmax, freqfilter, specfilter)
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
     return weights

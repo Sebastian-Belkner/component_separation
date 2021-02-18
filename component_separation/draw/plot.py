@@ -33,7 +33,9 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-with open('config.json', "r") as f:
+import component_separation
+compath = os.path.dirname(component_separation.__file__)
+with open('{}/draw/draw.json'.format(compath), "r") as f:
     cf = json.load(f)
 
 
@@ -278,6 +280,100 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = N
             ms=0,
             lw=3)
     plt.legend()
+    return plt
+
+
+def plot_powspec_binned_bokeh(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
+    """Plotting
+
+    Args:
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    # koi = next(iter(data.keys()))
+    # specs = list(data[koi].keys())
+
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
+    bl = bins[:-1]
+    br = bins[1:]
+
+
+
+    def std_dev_binned(d):
+        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
+        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))
+        return mean, err
+
+    from bokeh.plotting import figure as bfigure
+    plt = bfigure(title=title_string, y_axis_type="log", x_axis_type="log",
+           x_range=(10,4000), y_range=(1e-3,1e6),
+           background_fill_color="#fafafa")
+    # plt.xlabel("Multipole l")
+    # plt.ylabel("Powerspectrum")
+
+    idx=0
+    idx_max = 8
+    from bokeh.palettes import inferno
+    for freqc, val in data.items():
+        col = inferno(idx_max)
+        freqs = freqc.split("-")
+        if freqs[0]  == freqs[1]:
+            binmean, binerr = std_dev_binned(data[freqc])
+            binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+            plt.line(
+                0.5 * bl + 0.5 * br,
+                np.nan_to_num(binmean),
+                legend_label=freqc+ " Channel",
+                # yerr=(binerr_low, binerr),
+                # # 0.5 * bl + 0.5 * br,
+                # # binmean,
+                # # yerr=binerr,
+                # label=freqc,
+                # capsize=2,
+                # elinewidth=1,
+                # fmt='x',
+                # # ls='-',
+                # ms=4,
+                # alpha=(2*idx_max-idx)/(2*idx_max)
+                color = col[idx],
+                line_width=3,
+                muted_alpha=0.2)
+            plt.multi_line(#[(bm, bm) for bm in np.nan_to_num(binmean)]
+                [(bx, bx) for bx in 0.5 * bl + 0.5 * br],
+                [(bm-br, bm+br) for bm, br in zip(np.nan_to_num(binmean), np.nan_to_num(binerr))],
+                legend_label=freqc+ " Channel",
+                # yerr=(binerr_low, binerr),
+                # # 0.5 * bl + 0.5 * br,
+                # # binmean,
+                # # yerr=binerr,
+                # label=freqc,
+                # capsize=2,
+                # elinewidth=1,
+                # fmt='x',
+                # # ls='-',
+                # ms=4,
+                # alpha=(2*idx_max-idx)/(2*idx_max)
+                line_color = col[idx],
+                line_width=2,
+                muted_alpha=0.2)
+            idx+=1
+            plt.xaxis.axis_label = "Multipole l"
+            plt.yaxis.axis_label = "Powerspectrum"
+    
+    plt.line(
+        np.arange(0,4000,1),
+        truthfile,
+        color='red',
+        line_width=4,
+        legend_label="Best Planck EE",
+        muted_alpha=0.2)
+        # label = truth_label,
+        # ls='-', marker='.',
+        # ms=0,
+        # lw=3)
+    plt.legend.location = "top_left"
+    plt.legend.click_policy="mute"
     return plt
 
 

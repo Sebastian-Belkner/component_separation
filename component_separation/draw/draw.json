@@ -1,8 +1,8 @@
 {
     "pa": {
-        "mskset": "smica",
+        "mskset": "lens",
         "offdiag": false,
-        "freqdset": "DX12",
+        "freqdset": "NPIPE",
         "lmax": 3000,
         "lmax_mask": 6000,
         "freqdatsplit": "",
@@ -20,7 +20,7 @@
     },
     "plot": {
         "spectrum": {
-            "do_plot": true,
+            "do_plot": false,
             "indir_root": "data/tmp/spectrum/",
             "indir_rel": "",
             "outdir_root": "vis/spectrum/",
@@ -59,8 +59,17 @@
                 }
             }
         },
-        "weights": {
-            "do_plot": true,
+        "weights_bias": {
+            "do_plot": false,
+            "indir_root": "data/tmp/weights/",
+            "indir_rel": "",
+            "outdir_root": "vis/weights/",
+            "outdir_rel": "",
+            "in_desc": "weights",
+            "out_desc": ""
+        },
+        "compare_weights": {
+            "do_plot": false,
             "indir_root": "data/tmp/weights/",
             "indir_rel": "",
             "outdir_root": "vis/weights/",

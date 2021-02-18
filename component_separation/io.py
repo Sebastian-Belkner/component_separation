@@ -23,6 +23,8 @@ import healpy as hp
 from scipy import stats
 import json
 import platform
+import component_separation
+compath = os.path.dirname(component_separation.__file__)[:-21]
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
@@ -34,7 +36,7 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-with open('config.json', "r") as f:
+with open('{}/config.json'.format(compath), "r") as f:
     cf = json.load(f)
 
 
@@ -170,9 +172,9 @@ def load_plamap(pa: Dict) -> List[Dict]:
     return [tmap, qmap, umap]
 
 
-def load_truthspectrum():
+def load_truthspectrum(abspath=""):
     return pd.read_csv(
-        cf[mch]['powspec_truthfile'],
+        abspath+cf[mch]['powspec_truthfile'],
         header=0,
         sep='    ',
         index_col=0)

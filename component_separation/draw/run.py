@@ -23,6 +23,7 @@ import seaborn as sns
 from component_separation.cs_util import Planckf, Plancks
 from component_separation.draw import plot as cplt
 
+
 with open('config.json', "r") as f:
     cf = json.load(f)
 
@@ -279,21 +280,13 @@ def plot_spectrum(fname):
             path_name = outpath_name)    
 
 def plot_weighted_spectrum(fname):
-    def _weightspec(weights, spectrum):
+    def _weightspec(icov_l, spectrum):
         import copy
         retspec = copy.deepcopy(spectrum)
         for specc, data in spectrum.items():
-
-            buff = np.zeros_like(spectrum[specc]["030-030"][:lmax])
-            for freqc, val in data.items():
-                freqs = freqc.split("-")
-                if freqs[0] == freqs[1]:
-                    # probably, i need to take the variance, not the mean value.. see wikipedia..
-                    b = np.nan_to_num(weights[specc].to_numpy())
-                    normaliser = np.sum(b, axis=1)
-                    # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
-                    buff += (1)/(spectrum[specc][freqc][:lmax])
-            retspec[specc].update({'optimal-optimal': 1/buff})
+            icovsum = [np.sum(icov_l[specc][l]) for l in range(lmax)]
+                # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
+            retspec[specc].update({'optimal-optimal': [1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum]})
         return retspec
 
     dc = dcf["plot"]["weights"]
@@ -304,9 +297,15 @@ def plot_weighted_spectrum(fname):
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     spectrum = io.load_spectrum(inpath_name, fname)
     lmax = dcf['pa']['lmax']
+
     spec_data = _reorder_spectrum_dict(spectrum)
+
     spectrum_truth = io.load_truthspectrum()
-    spec_data_wweighted = _weightspec(weights, spec_data)
+
+    cov = pw.build_covmatrices(spectrum, offdiag=True, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+    icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+
+    spec_data_wweighted = _weightspec(icov_l, spec_data)
 
     for specc, data in spec_data_wweighted.items():
         title_string = "{} spectrum - {}".format(specc, "optimal spectrum included")
@@ -360,4 +359,8 @@ if __name__ == '__main__':
         print("plotting spectrum bias")
         plot_spectrum_bias(fname = fname)
 
-    plot_weighted_spectrum(fname)
+    if dcf["plot"]["weights_bias"]["do_plot"]:
+        print("plotting weights")
+        plot_weights(fname = fname)
+
+    # plot_weighted_spectrum(fname)
