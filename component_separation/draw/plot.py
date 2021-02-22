@@ -430,24 +430,36 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     return plt
 
 
-def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str, truthfile: str, truth_label: str, color: List, plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
+def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str, truthfile: str, truth_label: str, color: List, plotfilename: str = 'default') -> None:
     """Plotting
 
     Args:
         data (Dict): powerspectra with spectrum and frequency-combinations in the columns
-        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
 
-    lmax = cf['pa']['lmax']
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    base = 2
+    nbins=50
+    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
     bl = bins[:-1]
     br = bins[1:]
 
     def std_dev_binned(d):
-        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
-        err = np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        return mean, err
+        val = np.nan_to_num(d.to_numpy())
+        n, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins)
+        sy, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val)
+        sy2, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val * val)
+        mean = sy / n
+        std = np.sqrt(sy2/n - mean*mean)
+        return mean, std, _
 
     plt.xscale("log", nonpositive='clip')
     plt.yscale("log", nonpositive='clip')
@@ -462,22 +474,22 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.ylim((1e-3,1e5))
     for freqc, val in data2.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
-            binmean1, binerr1 = std_dev_binned(data1[freqc])
+            mean, std, _ = std_dev_binned(data1[freqc])
             plt.errorbar(
-                0.5 * bl + 0.5 * br,
-                binmean1,
-                yerr=binerr1,
+                (_[1:] + _[:-1])/2,
+                mean,
+                yerr=std,
                 label=freqc,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
                 color=color[idx],
                 alpha=0.9)
-            binmean2, binerr2 = std_dev_binned(data2[freqc])
+            mean, std, _ = std_dev_binned(data2[freqc])
             plt.errorbar(
-                0.5 * bl + 0.5 * br,
-                binmean2,
-                yerr=binerr2,
+                (_[1:] + _[:-1])/2,
+                mean,
+                yerr=std,
                 label="syn "+ freqc,
                 capsize=3,
                 elinewidth=2,
@@ -489,6 +501,129 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     if truthfile is not None:
         plt.plot(truthfile, label = truth_label)
     plt.legend()
+    return plt
+
+
+def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str, color: List) -> None:
+    """Plotting
+
+    Args:
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+
+    lmax = cf['pa']['lmax']
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    bl = bins[:-1]
+    br = bins[1:]
+
+    def std_dev_binned(d):
+        if type(d) == np.ndarray:
+            val = d
+        else:
+            val = np.nan_to_num(d.to_numpy())
+        n, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins)
+        sy, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val)
+        sy2, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val * val)
+        mean = sy / n
+        std = np.sqrt(sy2/n - mean*mean)
+        return mean, std, _
+
+    # plt.xlabel("Multipole l")
+    plt.ylabel("Weights")
+    plt.grid(which='both', axis='x')
+    plt.grid(which='major', axis='y')
+    idx=0
+    idx_max = 10
+    plt.title(title_string)
+    plt.xlim((100,4000))
+    plt.ylim((-0.1,1))
+    for freqc, val in data1.items():
+        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+            mean, std, _ = std_dev_binned(data1[freqc])
+            plt.errorbar(
+                (_[1:] + _[:-1])/2,
+                mean,
+                yerr=std,
+                label=freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='x',
+                color=color[idx],
+                alpha=0.9)
+            mean, std, _ = std_dev_binned(data2[idx])
+            plt.errorbar(
+                (_[1:] + _[:-1])/2,
+                mean,
+                yerr=std,
+                label="smica "+ freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='x',
+                color=color[idx],
+                alpha=0.3)
+            idx+=1
+            plt.legend()
+    return plt
+
+
+def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'default', plotfilename: str = 'default', color: List = None) -> None:
+    """Plotting
+
+    Args:
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
+    bl = bins[:-1]
+    br = bins[1:]
+
+    def std_dev_binned(d):
+        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
+        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))/np.sqrt(2)
+        return mean, err
+
+    plt.yscale("linear")
+
+    plt.xlabel("Multipole l")
+    plt.ylabel('Rel. difference')
+
+    plt.grid(which='both', axis='x')
+    idx=0
+    idx_max = len(next(iter(data.keys())))
+    plt.xlim((100,4000))
+    plt.ylim((-0.5,0.5))
+    plt.grid(which='both', axis='y')
+
+    for freqc, val in data.items():
+        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        # if "070" in freqc or "030" in freqc or "044" in freqc:
+            idx_max+=len(freqc)
+            binmean, binerr = std_dev_binned(data[freqc])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean,
+                yerr=binerr,
+                label=freqc,
+                capsize=2,
+                elinewidth=1,
+                fmt='x',
+                # ls='-',
+                ms=4,
+                alpha=0.9,
+                color=color[idx]
+                )
+            idx+=1
     return plt
 
 
@@ -509,11 +644,6 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
     br = bins[1:]
 
     def std_dev_binned(d):
-        mean = [np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]
-        var = np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        return mean, var
-
-    def std_dev_binned2(d):
         val = np.nan_to_num(d.to_numpy())
         n, _ = np.histogram(
             np.linspace(0,lmax,lmax),
@@ -545,7 +675,7 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
         #     capsize=3,
         #     elinewidth=2
         #     )
-        mean, std, _ = std_dev_binned2(data)
+        mean, std, _ = std_dev_binned(data)
         plt.errorbar(
             (_[1:] + _[:-1])/2,
             mean,
@@ -564,7 +694,6 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
     plt.legend()
     plt.get
     return plt
-
 
 def plot_map(data: Dict, title_string: str = ''):
     """Plotting

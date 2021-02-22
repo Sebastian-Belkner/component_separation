@@ -39,6 +39,8 @@ import sys
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
+sys.path.append('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/component_separation/spherelib/python/spherelib/')
+
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
@@ -48,6 +50,7 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 
 import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks, Planckr
+import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
@@ -384,6 +387,50 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
                 # print(data[freqc][specID])
             else:
                 print("Nothing has been scaled.")
+    return data
+
+
+@log_on_start(INFO, "Generating mask using hitscount map {data}")
+@log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
+def get_mask_hitshist(hitsmap, tresh_low, tresh_up):
+    """Generates a map mask based on the hits-count of the planck scanning strategy. It uses the histogram of the hitscount to derive a sky-area, which
+    has the same noise level.
+
+    Args:
+        hitsmap (np.ndarray): [description]
+        tresh_low: float): the lower limit of the noise variance. E.g. :math:`tresh_low=0` returns the complete map,
+                            whereas :math:`upper_noise=0.5` returns the areas which have noise levels up to 50% of the minimum
+                            noise level.
+        tresh_up (float): the upper limit of the noise variance. E.g. :math:`tresh_up=1` returns the complete map,
+                            whereas :math:`tresh_up=0.5` returns the areas which have noise levels up to 50% of the maximum
+                            noise level.
+    """
+    mask = dict()
+    for FREQ, mp in hitsmap.items():
+        hist, bin_edges = np.histogram(hitsmap, range=(tresh_low, tresh_up))
+        noise_low = bin_edges[0] + (bin_edges[-1] - bin_edges[0]) * tresh_low
+        noise_up = bin_edges[0] + (bin_edges[-1] - bin_edges[0]) * tresh_up
+        mask.update({FREQ: np.where((hitsmap<=noise_up)&(hitsmap>=noise_low), True, False)})
+    return mask
+
+
+
+#%% Apply 1e12*l(l+1)/2pi
+@log_on_start(INFO, "Starting to convert temperature scale to K_RJ")
+@log_on_end(DEBUG, "Data converted successfully: '{result}' ")
+def tcmb2trj(data: List[Dict]) -> List[Dict]:
+    """Converts maps (which are presumably in K_CMB) to K_RJ scale.
+
+    Args:
+        data (Dict): Maps in K_CMB scale
+
+    Returns:
+        Dict: Converted maps in K_RJ scale
+    """
+    for idx, planckmap in enumerate(data):
+        for freq, val in planckmap.items():
+            factor = slhpastro.convfact(freq=int(freq)*1e9, fr=r'K_CMB',to=r'K_RJ')
+            data[idx][freq]["map"] *= factor
     return data
 
 

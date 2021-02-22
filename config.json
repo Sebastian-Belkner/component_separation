@@ -1,6 +1,7 @@
 {
 "pa":{
     "new_spectrum": true,
+    "Tscale": "K_RJ",
     "mskset": "smica",
     "offdiag": true,
     "freqdset": "DX12",
@@ -123,6 +124,12 @@
                 "psmaskP_2048.fits.gz",
                 "gmaskP_apodized_0_2048.fits.gz"
                 ]
+            }
+        },
+    "hitshist":{
+        "mask":{
+            "path": "mask/hitshist/",
+            "filename": "{freqdset}-freq_{freq}-{tresh_low}to{tresh_up}-split_{split}.hitshist.npy"
             }
         },
     "outdir": "data/tmp/",

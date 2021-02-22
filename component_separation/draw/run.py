@@ -219,7 +219,6 @@ def plot_spectrum_bias(fname):
             title_string = title_string,
             truthfile = spectrum_trth,
             truth_label = "Planck-"+specc,
-            plotsubtitle = plotsubtitle,
             color = color)
         
         ax2 = mp.subplot(gs[1])
@@ -239,6 +238,63 @@ def plot_spectrum_bias(fname):
         io.save_figure(
             mp = mp,
             path_name = outpath_name)
+
+
+def plot_weights_bias(fname):
+    import matplotlib.gridspec as gridspec
+    import matplotlib.pyplot as plt
+    dc = dcf["plot"]["weights_bias"]
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    inpath_name_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/ext/smica_propagation/weights_EB_smica_R3.00.txt"
+    lmax = dcf['pa']['lmax']
+    weights = io.load_weights(inpath_name, fname)
+    smica_weights = io.load_weights_smica(inpath_name_smica)[0,:,:lmax]
+    # ["030", "044", "070", "100", "143", "217","353", "030", "044", "070", "100", "143", "217", "353"]
+    
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    
+    diff_weights = dict()
+    for specc, va in weights.items():
+        if specc == "EE":
+            if specc not in diff_weights.keys():
+                diff_weights.update({specc: {}})
+            diff_weights[specc] = (weights[specc] - smica_weights.T)/weights[specc]
+
+    for specc, diff_data in diff_weights.items():
+        if specc == "EE":
+            color = ['red', 'green', 'blue', 'yellow', 'black', 'orange', 'purple']
+            title_string = "Weights - " + plotsubtitle
+
+            plt.figure(figsize=(8,6))
+            gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+            ax1 = plt.subplot(gs[0])
+            mp = cplt.plot_compare_weights_binned(plt,
+                weights[specc],
+                smica_weights,
+                lmax,
+                title_string = title_string,
+                color = color)
+            
+            ax2 = mp.subplot(gs[1])
+            mp = cplt.plot_weights_diff_binned(
+                mp,
+                diff_weights[specc],
+                lmax,
+                color = color)
+                
+            outpath_name = \
+                dc["outdir_root"] + \
+                dc["outdir_rel"] + \
+                specc+"_weights/" + \
+                specc+"_weightsbias" + "-" + \
+                dc["out_desc"] + "-" + \
+                fname + ".jpg"
+            io.save_figure(
+                mp = mp,
+                path_name = outpath_name)
 
 
 def plot_spectrum(fname):
@@ -361,6 +417,6 @@ if __name__ == '__main__':
 
     if dcf["plot"]["weights_bias"]["do_plot"]:
         print("plotting weights")
-        plot_weights(fname = fname)
+        plot_weights_bias(fname = fname)
 
     # plot_weighted_spectrum(fname)

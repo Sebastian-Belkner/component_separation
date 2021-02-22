@@ -1,3 +1,4 @@
+#!/usr/local/bin/python
 """
 run.py: script for executing main functionality of component_separation
 
@@ -34,6 +35,7 @@ import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
 from component_separation.cs_util import Planckf, Plancks
 
+
 with open('config.json', "r") as f:
     cf = json.load(f)
 
@@ -61,6 +63,7 @@ bf = cf['pa']["bf"]
 num_sim = cf['pa']["num_sim"]
 
 spec_path = cf[mch]['outdir']
+
 indir_path = cf[mch]['indir']
 
 lmax = cf['pa']["lmax"]
@@ -147,6 +150,23 @@ def spec_weight2weighted_spec(spectrum, weights):
     return spec
 
 
+def buildandsave_masks():
+    tresh_low, tresh_up = 0.0, 0.1
+    freqdset = cf['pa']['freqdset'] # DX12 or NERSC
+    
+    hitsmap = io.load_hitsmaps(cf["pa"])
+    masks = pw.get_mask_hitshist(hitsmap, 0.0, 0.1)
+    for FREQ, mask in masks.items():
+        fname = '{freqdset}-freq_{freq}-{tresh_low}to{tresh_up}-split_{split}.hitshist.npy'.format(
+            freqdset = freqdset,
+            freq = FREQ,
+            split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"],
+            tresh_low = tresh_low,
+            tresh_up = tresh_up)
+        path_name = spec_path + 'mask/hitscount/'+ fname
+        io.save_mask(mask, path_name)
+
+
 if __name__ == '__main__':
     set_logger(DEBUG)
     freqcomb =  [
@@ -158,7 +178,15 @@ if __name__ == '__main__':
     speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
 
     filename = io.make_filenamestring(cf)
+
+
+    # buildandsave_masks()
+
     if cf['pa']['new_spectrum']:
+        if cf['pa']['Tscale'] == "K_RJ":
+            data = pw.tcmb2trj(io.load_plamap(cf['pa']))
+        else:
+            data = io.load_plamap(cf['pa'])
         spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
     else:

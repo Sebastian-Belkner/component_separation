@@ -1,8 +1,9 @@
 {
     "pa": {
-        "mskset": "lens",
-        "offdiag": false,
-        "freqdset": "NPIPE",
+        "mskset": "smica",
+        "Tscale": "K_RJ",
+        "offdiag": true,
+        "freqdset": "DX12",
         "lmax": 3000,
         "lmax_mask": 6000,
         "freqdatsplit": "",
@@ -68,8 +69,8 @@
             "in_desc": "weights",
             "out_desc": ""
         },
-        "compare_weights": {
-            "do_plot": false,
+        "weights": {
+            "do_plot": true,
             "indir_root": "data/tmp/weights/",
             "indir_rel": "",
             "outdir_root": "vis/weights/",

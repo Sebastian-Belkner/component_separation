@@ -2,3 +2,6 @@
 	path = component_separation/MSC
 	url = https://github.com/carronj/MSC.git
 	branch = fix
+[submodule "component_separation/spherelib"]
+	path = component_separation/spherelib
+	url = https://gitlab.in2p3.fr/spherelib/spherelib.git
