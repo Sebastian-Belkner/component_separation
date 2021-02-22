@@ -21,7 +21,7 @@
     },
     "plot": {
         "spectrum": {
-            "do_plot": false,
+            "do_plot": true,
             "indir_root": "data/tmp/spectrum/",
             "indir_rel": "",
             "outdir_root": "vis/spectrum/",

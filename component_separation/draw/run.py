@@ -419,4 +419,4 @@ if __name__ == '__main__':
         print("plotting weights")
         plot_weights_bias(fname = fname)
 
-    # plot_weighted_spectrum(fname)
+    plot_weighted_spectrum(fname)
