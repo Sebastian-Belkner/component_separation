@@ -73,6 +73,7 @@ specfilter = cf['pa']["specfilter"]
 
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
+    logging.StreamHandler(sys.stdout)
 
 
 def spec2synmap(spectrum, freqcomb):
@@ -150,23 +151,6 @@ def spec_weight2weighted_spec(spectrum, weights):
     return spec
 
 
-def buildandsave_masks():
-    tresh_low, tresh_up = 0.0, 0.1
-    freqdset = cf['pa']['freqdset'] # DX12 or NERSC
-    
-    hitsmap = io.load_hitsmaps(cf["pa"])
-    masks = pw.get_mask_hitshist(hitsmap, 0.0, 0.1)
-    for FREQ, mask in masks.items():
-        fname = '{freqdset}-freq_{freq}-{tresh_low}to{tresh_up}-split_{split}.hitshist.npy'.format(
-            freqdset = freqdset,
-            freq = FREQ,
-            split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"],
-            tresh_low = tresh_low,
-            tresh_up = tresh_up)
-        path_name = spec_path + 'mask/hitscount/'+ fname
-        io.save_mask(mask, path_name)
-
-
 if __name__ == '__main__':
     set_logger(DEBUG)
     freqcomb =  [
@@ -178,9 +162,6 @@ if __name__ == '__main__':
     speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
 
     filename = io.make_filenamestring(cf)
-
-
-    # buildandsave_masks()
 
     if cf['pa']['new_spectrum']:
         if cf['pa']['Tscale'] == "K_RJ":
@@ -209,33 +190,7 @@ if __name__ == '__main__':
 
     # weighted_spec = spec_weight2weighted_spec(spectrum, weights)
 
-    
-    freqcomb =  [
-        "{}-{}".format(FREQ,FREQ2)
-            for FREQ in PLANCKMAPFREQ
-            if FREQ not in freqfilter
-            for FREQ2 in PLANCKMAPFREQ
-            if (FREQ2 not in freqfilter) and (int(FREQ2)==int(FREQ))]
 
-    start = 0
-    if cf['pa']["run_sim"]:
-        for i in range(start, num_sim):
-            print("Starting simulation {} of {}.".format(i+1, num_sim))
-            path_name = spec_path + 'spectrum/unscaled' + filename
-            spectrum = io.load_spectrum(path_name=path_name)
-
-            synmap = spec2synmap(spectrum, freqcomb)
-            # io.save_map(synmap, spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
-
-            syn_spectrum = map2spec(synmap, freqcomb)
-            io.save_spectrum(syn_spectrum, spec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
-
-            syn_spectrum_scaled = spec2specsc(syn_spectrum, freqcomb)
-            io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)
-    
-
-        syn_spectrum_avgsc = synmaps2average(filename)
-        io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "synavg-"+ filename)
 
     # weights = specsc2weights(syn_spectrum_avg, False)
     # io.save_weights(weights, spec_path, "syn/"+"SYNweights"+filename)

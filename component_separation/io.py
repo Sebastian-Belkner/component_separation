@@ -60,8 +60,8 @@ def make_filenamestring(cf):
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 
 #%% Collect maps
-@log_on_start(INFO, "Starting to load data")
-@log_on_end(DEBUG, "Data loaded successfully: '{result}' ")
+@log_on_start(INFO, "Starting to load pla maps")
+@log_on_end(DEBUG, "Data loaded successfully")
 def load_plamap(pa: Dict) -> List[Dict]:
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
@@ -154,11 +154,11 @@ def load_plamap(pa: Dict) -> List[Dict]:
         pmask_d = None
     else:
         pmasks = [_read(pmask_path, a) for a in pmask_filename]
-        pmask = {FREQ: functools.reduce(_multi, pmasks[FREQ])
+        pmask = {FREQ: functools.reduce(_multi, [a[FREQ] for a in pmasks])
                     for FREQ in PLANCKMAPFREQ
                     if FREQ not in freqfilter
                 }
-        pmask_d = {FREQ: hp.pixelfunc.ud_grade(pmask, nside_out=nside[0])
+        pmask_d = {FREQ: hp.pixelfunc.ud_grade(pmask[FREQ], nside_out=nside[0])
                     for FREQ in PLANCKMAPFREQ
                     if FREQ not in freqfilter
                 }
@@ -249,8 +249,8 @@ def load_weights_smica(path_name):
     return np.loadtxt(path_name).reshape(2,7,4001)
 
 
-@log_on_start(INFO, "Trying to load weights {path_name}")
-@log_on_end(DEBUG, "{result} loaded")
+@log_on_start(INFO, "Starting to load weights from {path_name}")
+@log_on_end(DEBUG, "Weights loaded successfully")
 def load_weights(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
     if path_name == None:
         fending = ".npy"
@@ -264,8 +264,8 @@ def load_weights(path_name: str, indir_root: str = None, indir_rel: str = None, 
         return None
 
 
-@log_on_start(INFO, "Trying to load synmap {path_name}")
-@log_on_end(DEBUG, "{result} loaded")
+@log_on_start(INFO, "Starting to load synmap from {path_name}")
+@log_on_end(DEBUG, "Synmap loaded successfully")
 def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
     if path_name == None:
         fending = ".npy"
@@ -279,8 +279,8 @@ def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, i
         return None
 
 
-@log_on_start(INFO, "Trying to load spectrum {path_name}")
-@log_on_end(DEBUG, "{result} loaded")
+@log_on_start(INFO, "Trying to load spectrum from {path_name}")
+@log_on_end(DEBUG, "Spectrum loaded successfully")
 def load_spectrum(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
     if path_name == None:
         fending = ".npy"
@@ -294,8 +294,8 @@ def load_spectrum(path_name: str, indir_root: str = None, indir_rel: str = None,
         return None
         
 
-@log_on_start(INFO, "Starting to grab data from frequency channels {freqcomb}")
-@log_on_end(DEBUG, "Beamfunction(s) loaded successfully: '{result}' ")
+@log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb}")
+@log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
 def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
     """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
@@ -378,12 +378,12 @@ def save_weights(data: Dict[str, Dict], path: str, filename: str = 'default'):
     np.save(path+"weights/"+filename, data)
 
 
-@log_on_start(INFO, "Saving spectrum to {filename}")
+@log_on_start(INFO, "Saving spectrum to {path}{filename}")
 @log_on_end(DEBUG, "Spectrum saved successfully to {filename}")
 def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default'):
     if os.path.exists(path+filename):
         os.remove(path+filename)
-    np.save(path+"mask/"+filename, data)
+    np.save(path+"spectrum/"+filename, data)
 
 
 @log_on_start(INFO, "Saving mask to {path_name}")
