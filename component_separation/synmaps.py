@@ -79,3 +79,6 @@ if __name__ == '__main__':
 
         syn_spectrum_avgsc = synmaps2average(filename)
         io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "synavg-"+ filename)
+        
+    # weights = specsc2weights(syn_spectrum_avg, False)
+    # io.save_weights(weights, spec_path, "syn/"+"SYNweights"+filename)

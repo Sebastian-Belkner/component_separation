@@ -33,6 +33,7 @@ import numpy as np
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
+import component_separation.preproces as prep
 from component_separation.cs_util import Planckf, Plancks
 
 
@@ -97,15 +98,7 @@ def map2spec(maps, freqcomb):
 
 
 def spec2specsc(spectrum, freqcomb):
-    # df = pw.create_df(spectrum, cf["pa"]["offdiag"], freqfilter, specfilter)
-    spec_sc = pw.apply_scale(spectrum, llp1=llp1)
-    spec_sc = spectrum
-    if bf:
-        beamf = io.load_beamf(freqcomb=freqcomb)
-        spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
-    else:
-        spec_scbf = spec_sc
-    return spec_scbf
+
 
 
 def specsc2weights(spectrum, offdiag=True):
@@ -151,6 +144,25 @@ def spec_weight2weighted_spec(spectrum, weights):
     return spec
 
 
+def preprocess_map(data):
+    data = prep.replace_undefnan(data)
+    data = prep.subtract_mean(data)
+    data = prep.remove_brightsaturate(data)
+    data = prep.remove_dipole(data)
+    return data
+
+
+def preprocess_spectrum(data, freqcomb)
+    spec_sc = pw.apply_scale(spectrum, llp1=llp1)
+    spec_sc = spectrum
+    if bf:
+        beamf = io.load_beamf(freqcomb=freqcomb)
+        spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
+    else:
+        spec_scbf = spec_sc
+    return spec_scbf
+
+
 if __name__ == '__main__':
     set_logger(DEBUG)
     freqcomb =  [
@@ -168,7 +180,10 @@ if __name__ == '__main__':
             data = pw.tcmb2trj(io.load_plamap(cf['pa']))
         else:
             data = io.load_plamap(cf['pa'])
-        spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
+
+        # data_prep = preprocess_map(data)
+
+        spectrum = map2spec(data, freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
     else:
         path_name = spec_path + 'spectrum/unscaled' + filename
@@ -176,21 +191,11 @@ if __name__ == '__main__':
     if spectrum is None:
         print("couldn't find spectrum with given specifications at {}. Exiting..".format(path_name))
         sys.exit()
-        # spectrum = map2spec(io.load_plamap(cf['pa']), freqcomb)
-        # io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
 
-    # weights = specsc2weights(spectrum, cf["pa"]["offdiag"])
-    # io.save_weights(weights, spec_path, 'weights_unscaled'+filename)
-
-    spectrum_scaled = spec2specsc(spectrum, freqcomb)
+    spectrum_scaled = preprocess_spectrum(spectrum, freqcomb)
     io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
     weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
     io.save_weights(weights, spec_path, 'weights'+filename)
 
     # weighted_spec = spec_weight2weighted_spec(spectrum, weights)
-
-
-
-    # weights = specsc2weights(syn_spectrum_avg, False)
-    # io.save_weights(weights, spec_path, "syn/"+"SYNweights"+filename)

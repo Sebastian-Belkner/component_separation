@@ -390,30 +390,6 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
     return data
 
 
-@log_on_start(INFO, "Generating mask using hitscount map {data}")
-@log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
-def get_mask_hitshist(hitsmap, tresh_low, tresh_up):
-    """Generates a map mask based on the hits-count of the planck scanning strategy. It uses the histogram of the hitscount to derive a sky-area, which
-    has the same noise level.
-
-    Args:
-        hitsmap (np.ndarray): [description]
-        tresh_low: float): the lower limit of the noise variance. E.g. :math:`tresh_low=0` returns the complete map,
-                            whereas :math:`upper_noise=0.5` returns the areas which have noise levels up to 50% of the minimum
-                            noise level.
-        tresh_up (float): the upper limit of the noise variance. E.g. :math:`tresh_up=1` returns the complete map,
-                            whereas :math:`tresh_up=0.5` returns the areas which have noise levels up to 50% of the maximum
-                            noise level.
-    """
-    mask = dict()
-    for FREQ, mp in hitsmap.items():
-        hist, bin_edges = np.histogram(hitsmap, range=(tresh_low, tresh_up))
-        noise_low = bin_edges[0] + (bin_edges[-1] - bin_edges[0]) * tresh_low
-        noise_up = bin_edges[0] + (bin_edges[-1] - bin_edges[0]) * tresh_up
-        mask.update({FREQ: np.where((hitsmap<=noise_up)&(hitsmap>=noise_low), True, False)})
-    return mask
-
-
 
 #%% Apply 1e12*l(l+1)/2pi
 @log_on_start(INFO, "Starting to convert temperature scale to K_RJ")

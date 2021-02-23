@@ -59,6 +59,7 @@ def make_filenamestring(cf):
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 
+
 #%% Collect maps
 @log_on_start(INFO, "Starting to load pla maps")
 @log_on_end(DEBUG, "Data loaded successfully")
@@ -135,6 +136,7 @@ def load_plamap(pa: Dict) -> List[Dict]:
                     .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
                     .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
                     .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
+                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")
                 )
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
@@ -212,14 +214,13 @@ def load_truthspectrum(abspath=""):
 def load_hitsmaps(pa: Dict):
     freqdset = pa['freqdset'] # NPIPE or DX12
     freqfilter = pa["freqfilter"]
+    nside = pa["nside"]
 
     indir_path = cf[mch]['indir']
 
     freq_path = cf[mch][freqdset]['path']
 
     freq_filename = cf[mch][freqdset]['filename']
-
-    nside = cf['pa']["nside"]
 
     ### Build paths and filenames from config information
     mappath = {
@@ -232,15 +233,15 @@ def load_hitsmaps(pa: Dict):
                     .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
                     .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
                     .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
+                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")
                 )
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
 
     hitsmap = {
-        FREQ: {
-            hp.read_map(mappath[FREQ], field=3)
-            }for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter
+        FREQ: hp.read_map(mappath[FREQ], field=3)
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
         }
     return hitsmap
 

@@ -19,8 +19,8 @@ import platform
 import sys
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
-
 import matplotlib.pyplot as plt
+
 import numpy as np
 import seaborn as sns
 
@@ -60,17 +60,47 @@ specfilter = cf['pa']["specfilter"]
 # %%
 import healpy as hp
 from astropy.io import fits
-hdul = fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits")
+hdul = fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_100-field_2048_R3.01_full.fits")
 
 # %%
-hdul[31].header
-
-
-# %%
-hp.read_map("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/beamf/BeamWF_LFI/LFI_RIMO_R3.31.fits", field=0)
+hdul[1].header
 
 
 # %%
+hitsmap = hp.read_map("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_143-field_2048_R3.01_full.fits", field=2)
+
+
+
+# %%
+hp.mollview(hitsmap, norm= 'hist')
+print(np.min(hitsmap), np.max(hitsmap))
+
+
+# %%
+hitsmask = np.load('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/tmp/mask/hitscount/DX12-freq_143-0.0to0.1-split_Full.hitshist.npy')
+print(hitsmask[hitsmask==True])
+hp.mollview(hitsmask, norm= 'hist')
+
+# %%
+
+print(len(hitsmap))
+
+# %%
+
+# hist, bin_edges = np.histogram(hitsmap, bins=100)
+# plt.hist(hitsmap, bins = 100)
+mean = np.mean(hitsmap)
+std = np.std(hitsmap)
+print(mean, std)
+plt.hist(np.where(np.abs(hitsmap)>mean+20*std, 0.0, hitsmap), bins = 100, alpha=0.5)
+# plt.plot(mean+40*std, 1e8, lw=5, color="red")
+plt.yscale('log')
+print(hitsmap[hitsmap==np.nan])
+# %%
+print(np.mean(hitsmap))
+
+# %%
+
 plt.plot(np.sqrt(hdul[28].data.field(0)))
 plt.plot(np.sqrt(hdul[29].data.field(0)))
 plt.plot(np.sqrt(hdul[30].data.field(0)))

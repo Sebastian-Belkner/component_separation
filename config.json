@@ -99,7 +99,7 @@
         },
     "DX12":{
             "path": "map/frequency/",
-            "filename": "{LorH}_SkyMap_{freq}-field_{nside}_R3.00_full.fits"
+            "filename": "{LorH}_SkyMap_{freq}-field_{nside}_R3.{00/1}_full.fits"
         },
     "lens":{
         "tmask":{
