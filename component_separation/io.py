@@ -84,6 +84,7 @@ def load_plamap(pa: Dict) -> List[Dict]:
     freqdset = pa['freqdset'] # NPIPE or DX12
     freqfilter = pa["freqfilter"]
     specfilter = pa["specfilter"]
+    nside = pa["nside"]
     tresh_low, tresh_up = 0.0, 0.1
 
     indir_path = cf[mch]['indir']
@@ -103,8 +104,6 @@ def load_plamap(pa: Dict) -> List[Dict]:
         pmask_filename = cf[mch][mskset]['pmask']['filename']
 
     freq_filename = cf[mch][freqdset]['filename']
-
-    nside = cf['pa']["nside"]
 
     def _read(mask_path, mask_filename):
         return {FREQ: hp.read_map(

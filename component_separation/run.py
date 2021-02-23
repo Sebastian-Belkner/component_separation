@@ -33,7 +33,7 @@ import numpy as np
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
-import component_separation.preproces as prep
+import component_separation.preprocess as prep
 from component_separation.cs_util import Planckf, Plancks
 
 
@@ -97,10 +97,6 @@ def map2spec(maps, freqcomb):
     return spectrum
 
 
-def spec2specsc(spectrum, freqcomb):
-
-
-
 def specsc2weights(spectrum, offdiag=True):
     cov = pw.build_covmatrices(spectrum, offdiag, lmax, freqfilter, specfilter)
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
@@ -152,7 +148,7 @@ def preprocess_map(data):
     return data
 
 
-def preprocess_spectrum(data, freqcomb)
+def preprocess_spectrum(data, freqcomb):
     spec_sc = pw.apply_scale(spectrum, llp1=llp1)
     spec_sc = spectrum
     if bf:
