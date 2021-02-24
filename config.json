@@ -1,7 +1,7 @@
 {
 "pa":{
     "new_spectrum": true,
-    "Tscale": "K_CMB",
+    "Tscale": "K_RJ",
     "mskset": "smica",
     "offdiag": true,
     "freqdset": "DX12",
@@ -16,7 +16,9 @@
         "030",
         "044",
         "070",
-        "100",
+        "143",
+        "217",
+        "353",
         "545",
         "857"
     ],

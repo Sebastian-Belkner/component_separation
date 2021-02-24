@@ -50,7 +50,7 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 
 import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks, Planckr
-import component_separation.spherelib.python.spherelib.astro as slhpastro
+
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
@@ -75,65 +75,6 @@ def _crosscomb(option, f1, f2):
         else:
             return int(f1) == int(f2)
 
-@log_on_start(INFO, "Starting to replace UNSEEN pixels for 100Ghz map")
-@log_on_end(DEBUG, "UNSEEN pixels replaced successfully: '{result}' ")
-def hphack(tqumap: List[Dict]) -> List[Dict]:
-    """Replaces UNSEEN pixels in the polarisation maps (Q, U) with 0.0. This is a quickfix for healpy `_sphtools.pyx`,
-    as it throws errors when processing maps with UNSEEN pixels. reason being, one statement is ambigious: `if np.array([True, True])`.
-
-    Args:
-        tqumap (Dict): Data as coming from `pw.get_data()`
-
-    Returns:
-        Dict: The corrected data
-    """
-    UNSEEN = -1.6375e30
-    UNSEEN_tol = 1.e-7 * 1.6375e30
-    def count_bad(m):
-        i = 0
-        nbad = 0
-        size = m.size
-        for i in range(m.size):
-            if np.abs(m[i] - UNSEEN) < UNSEEN_tol:
-                nbad += 1
-        return nbad
-
-    def mkmask(m):
-        nbad = 0
-        size = m.size
-        i = 0
-        # first, count number of bad pixels, to see if allocating a mask is needed
-        nbad = count_bad(m)
-        mask = np.ndarray(shape=(1,), dtype=np.int8)
-        #cdef np.ndarray[double, ndim=1] m_
-        if nbad == 0:
-            return False
-        else:
-            mask = np.zeros(size, dtype = np.int8)
-            #m_ = m
-            for i in range(size):
-                if np.abs(m[i] - UNSEEN) < UNSEEN_tol:
-                    mask[i] = 1
-        mask.dtype = bool
-        return mask
-    
-    if '100' in tqumap[0].keys():
-        # only fixing q and u maps
-        if len(tqumap)==2:
-            maps = [tqumap[0]["100"]['map'], tqumap[1]["100"]['map']]
-        else:
-            maps = [tqumap[1]["100"]['map'], tqumap[2]["100"]['map']]
-        maps_c = [np.ascontiguousarray(m, dtype=np.float64) for m in maps]
-
-        masks = [np.array([False]) if count_bad(m) == 0 else mkmask(m) for m in maps_c]
-        for idx, (m, mask) in enumerate(zip(maps_c, masks)):
-            if mask.any():
-                m[mask] = 0.0
-            if len(tqumap)==2:
-                tqumap[idx]["100"]['map'] = m
-            else:
-                tqumap[idx+1]["100"]['map'] = m
-    return tqumap
 
 #%% Calculate spectrum
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
@@ -387,30 +328,6 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
                 # print(data[freqc][specID])
             else:
                 print("Nothing has been scaled.")
-    return data
-
-
-#%% Apply 1e12*l(l+1)/2pi
-@log_on_start(INFO, "Starting to convert temperature scale to K_RJ")
-@log_on_end(DEBUG, "Data converted successfully: '{result}' ")
-def tcmb2trj(data: List[Dict]) -> List[Dict]:
-    """Converts maps (which are presumably in K_CMB) to K_RJ scale.
-
-    Args:
-        data (Dict): Maps in K_CMB scale
-
-    Returns:
-        Dict: Converted maps in K_RJ scale
-    """
-    print('start')
-    for idx, planckmap in enumerate(data):
-        print(idx)
-        for freq, val in planckmap.items():
-            print("freq: ", freq)
-            factor = slhpastro.convfact(freq=int(freq)*1e9, fr=r'K_CMB',to=r'K_RJ')
-            print("factor: ", factor)
-            data[idx][freq]["map"] *= factor
-    print('end')
     return data
 
 

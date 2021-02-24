@@ -1,98 +1,104 @@
 {
-    "pa": {
-        "mskset": "smica",
-        "Tscale": "K_CMB",
-        "offdiag": true,
-        "freqdset": "DX12",
-        "lmax": 3000,
-        "lmax_mask": 6000,
-        "freqdatsplit": "",
-        "freqfilter": [
-            "545",
-            "857"
-        ],
-        "specfilter": [
-            "TB",
-            "EB",
-            "ET",
-            "BT",
-            "BE"
-        ]
-    },
-    "plot": {
-        "spectrum": {
-            "do_plot": true,
-            "indir_root": "data/tmp/spectrum/",
-            "indir_rel": "",
-            "outdir_root": "vis/spectrum/",
-            "outdir_rel": "",
-            "in_desc": "scaled",
-            "out_desc": "",
+"pa": {
+    "mskset": "smica",
+    "Tscale": "K_RJ",
+    "offdiag": true,
+    "freqdset": "DX12",
+    "lmax": 3000,
+    "lmax_mask": 6000,
+    "freqdatsplit": "",
+    "freqfilter": [
+        "030",
+        "044",
+        "070",
+        "143",
+        "217",
+        "353",
+        "545",
+        "857"
+    ],
+    "specfilter": [
+        "TB",
+        "EB",
+        "ET",
+        "BT",
+        "BE"
+    ]
+},
+"plot": {
+    "spectrum": {
+        "do_plot": true,
+        "indir_root": "data/tmp/spectrum/",
+        "indir_rel": "",
+        "outdir_root": "vis/spectrum/",
+        "outdir_rel": "",
+        "in_desc": "scaled",
+        "out_desc": "",
 
-            "style": {
-                "grid": {
-        
-                },
-                "subplot": {
-                    "xlim": null,
-                    "ylim": null
-                }
+        "style": {
+            "grid": {
+    
+            },
+            "subplot": {
+                "xlim": null,
+                "ylim": null
             }
-        },
-        "spectrum_bias": {
-            "do_plot": false,
-            "indir_root": "data/tmp/spectrum/",
-            "indir_rel": "",
-            "indir_root_syn": "data/tmp/spectrum/",
-            "indir_rel_syn": "syn/",
-            "outdir_root": "vis/spectrum/",
-            "outdir_rel": "bias/",
-            "in_desc": "scaled",
-            "in_desc_syn": "scaled-synavg-",
-            "out_desc": "scaled-synavg-",
-            "style": {
-                "grid": {
-        
-                },
-                "subplot": {
-                    "xlim": null,
-                    "ylim": null
-                }
-            }
-        },
-        "weights_bias": {
-            "do_plot": false,
-            "indir_root": "data/tmp/weights/",
-            "indir_rel": "",
-            "outdir_root": "vis/weights/",
-            "outdir_rel": "",
-            "in_desc": "weights",
-            "out_desc": ""
-        },
-        "weights": {
-            "do_plot": true,
-            "indir_root": "data/tmp/weights/",
-            "indir_rel": "",
-            "outdir_root": "vis/weights/",
-            "outdir_rel": "",
-            "in_desc": "weights",
-            "out_desc": ""
-        },
-        "beamf": {
-            "do_plot": false,
-            "outdir_root": "vis/beamf/",
-            "outdir_rel": "",
-            "out_desc": ""
-        },
-        "maps": {
-            "do_plot": false,
-            "type": "syn",
-            "indir_root": "data/tmp/map/",
-            "indir_rel": "syn/",
-            "outdir_root": "vis/map/",
-            "outdir_rel": "syn/",
-            "in_desc": "0_synmaps",
-            "out_desc": "0_synmaps"
         }
+    },
+    "spectrum_bias": {
+        "do_plot": false,
+        "indir_root": "data/tmp/spectrum/",
+        "indir_rel": "",
+        "indir_root_syn": "data/tmp/spectrum/",
+        "indir_rel_syn": "syn/",
+        "outdir_root": "vis/spectrum/",
+        "outdir_rel": "bias/",
+        "in_desc": "scaled",
+        "in_desc_syn": "scaled-synavg-",
+        "out_desc": "scaled-synavg-",
+        "style": {
+            "grid": {
+    
+            },
+            "subplot": {
+                "xlim": null,
+                "ylim": null
+            }
+        }
+    },
+    "weights_bias": {
+        "do_plot": false,
+        "indir_root": "data/tmp/weights/",
+        "indir_rel": "",
+        "outdir_root": "vis/weights/",
+        "outdir_rel": "",
+        "in_desc": "weights",
+        "out_desc": ""
+    },
+    "weights": {
+        "do_plot": false,
+        "indir_root": "data/tmp/weights/",
+        "indir_rel": "",
+        "outdir_root": "vis/weights/",
+        "outdir_rel": "",
+        "in_desc": "weights",
+        "out_desc": ""
+    },
+    "beamf": {
+        "do_plot": false,
+        "outdir_root": "vis/beamf/",
+        "outdir_rel": "",
+        "out_desc": ""
+    },
+    "maps": {
+        "do_plot": false,
+        "type": "syn",
+        "indir_root": "data/tmp/map/",
+        "indir_rel": "syn/",
+        "outdir_root": "vis/map/",
+        "outdir_rel": "syn/",
+        "in_desc": "0_synmaps",
+        "out_desc": "0_synmaps"
     }
+}
 }

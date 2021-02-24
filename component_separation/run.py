@@ -82,16 +82,11 @@ def spec2synmap(spectrum, freqcomb):
 
 
 def map2spec(maps, freqcomb):
-    if maps[0] == None:
-        maps = maps[1:]
-    elif maps[1] == None:
-        maps = [maps[0]]
-    maps_hpcorrected = pw.hphack(maps)
     # tqumap_hpcorrected = tqumap
     if len(maps) == 3:
-        spectrum = pw.tqupowerspec(maps_hpcorrected, lmax, lmax_mask, freqcomb, specfilter)
+        spectrum = pw.tqupowerspec(maps, lmax, lmax_mask, freqcomb, specfilter)
     elif len(maps) == 2:
-        spectrum = pw.qupowerspec(maps_hpcorrected, lmax, lmax_mask, freqcomb, specfilter)
+        spectrum = pw.qupowerspec(maps, lmax, lmax_mask, freqcomb, specfilter)
     elif len(maps) == 1:
         print("Only TT spectrum caluclation requested. This is currently not supported.")
     return spectrum
@@ -141,16 +136,25 @@ def spec_weight2weighted_spec(spectrum, weights):
 
 
 def preprocess_map(data):
-    data = prep.replace_undefnan(data)
-    data = prep.subtract_mean(data)
-    data = prep.remove_brightsaturate(data)
-    data = prep.remove_dipole(data)
+    if data[0] == None:
+        data = data[1:]
+    elif data[1] == None:
+        data = [data[0]]
+    data = prep.remove_unseen(data)
+    data_prep = [None, None, None]
+    if cf['pa']['Tscale'] == "K_RJ":
+        data_prep = prep.tcmb2trj(data)
+    for idx, IQU in enumerate(data_prep):
+        for key, val in IQU.items():
+            data_prep[idx][key]["map"] = prep.replace_undefnan(data_prep[idx][key]["map"])
+            data_prep[idx][key]["map"] = prep.subtract_mean(data_prep[idx][key]["map"])
+            data_prep[idx][key]["map"] = prep.remove_brightsaturate(data_prep[idx][key]["map"])
+            data_prep[idx][key]["map"] = prep.remove_dipole(data_prep[idx][key]["map"])
     return data
 
 
-def preprocess_spectrum(data, freqcomb):
+def postprocess_spectrum(data, freqcomb):
     spec_sc = pw.apply_scale(spectrum, llp1=llp1)
-    spec_sc = spectrum
     if bf:
         beamf = io.load_beamf(freqcomb=freqcomb)
         spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
@@ -172,14 +176,8 @@ if __name__ == '__main__':
     filename = io.make_filenamestring(cf)
 
     if cf['pa']['new_spectrum']:
-        if cf['pa']['Tscale'] == "K_RJ":
-            data = pw.tcmb2trj(io.load_plamap(cf['pa']))
-        else:
-            data = io.load_plamap(cf['pa'])
-
-        data_prep = preprocess_map(data)
-        print('preprocessing DONE')
-        print(40*"$")
+        data = io.load_plamap(cf['pa'])
+        data = preprocess_map(data)
         spectrum = map2spec(data, freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
     else:
@@ -189,7 +187,7 @@ if __name__ == '__main__':
         print("couldn't find spectrum with given specifications at {}. Exiting..".format(path_name))
         sys.exit()
 
-    spectrum_scaled = preprocess_spectrum(spectrum, freqcomb)
+    spectrum_scaled = postprocess_spectrum(spectrum, freqcomb)
     io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
     weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])

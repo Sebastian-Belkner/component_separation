@@ -212,7 +212,7 @@ def plot_beamwindowfunction(beamf, aa, bb, ab, field1, field2, p):
     return plt
 
 
-def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
+def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple = (1e-3,1e6), truthfile = None, truth_label: str = None) -> None:
     """Plotting
 
     Args:
@@ -247,7 +247,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, truthfile = N
 
     plt.title(title_string)
     plt.xlim((10,4000))
-    plt.ylim((1e-3,1e6))
+    plt.ylim(ylim)
     plt.xscale("log", nonpositive='clip')
     plt.yscale("log", nonpositive='clip')
     for freqc, val in data.items():

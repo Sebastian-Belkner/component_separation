@@ -298,6 +298,17 @@ def plot_weights_bias(fname):
 
 
 def plot_spectrum(fname):
+    ylim = {
+        "TT": (1e2, 1e5),
+        "EE": (1e-3, 1e6),
+        "BB": (1e-5, 1e5),
+        "TE": (1e-2, 1e4),
+        "TB": (-1e-3, 1e3),
+        "EB": (-1e-3, 1e3),
+        "ET": (1e-2, 1e5),
+        "BT": (-1e-3, 1e3),
+        "BE": (-1e-3, 1e3)
+    }
     dc = dcf["plot"]["spectrum"]
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     spectrum = io.load_spectrum(inpath_name, fname)
@@ -317,12 +328,17 @@ def plot_spectrum(fname):
             spectrum_trth = spectrum_truth["Planck-"+specc]
         else:
             spectrum_trth = None
+
+        if specc == "EE":
+            print(data["100-100"])
         mp = cplt.plot_powspec_binned(
             data,
             lmax,
             title_string = title_string,
+            ylim = ylim[specc],
             truthfile = spectrum_trth,
             truth_label = "Planck-"+specc
+            
             )
         outpath_name = \
             dc["outdir_root"] + \
