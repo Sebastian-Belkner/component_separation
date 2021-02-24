@@ -429,7 +429,7 @@ if __name__ == '__main__':
         plot_spectrum_bias(fname = fname)
 
     if dcf["plot"]["weights_bias"]["do_plot"]:
-        print("plotting weights")
+        print("plotting weights bias")
         plot_weights_bias(fname = fname)
 
     plot_weighted_spectrum(fname)

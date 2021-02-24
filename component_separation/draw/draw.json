@@ -61,7 +61,7 @@
         }
     },
     "weights_bias": {
-        "do_plot": false,
+        "do_plot": true,
         "indir_root": "data/tmp/weights/",
         "indir_rel": "",
         "outdir_root": "vis/weights/",
