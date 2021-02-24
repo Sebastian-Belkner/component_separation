@@ -85,7 +85,6 @@ def load_plamap(pa: Dict) -> List[Dict]:
     freqfilter = pa["freqfilter"]
     specfilter = pa["specfilter"]
     nside = pa["nside"]
-    tresh_low, tresh_up = 0.0, 0.1
 
     indir_path = cf[mch]['indir']
     freq_path = cf[mch][freqdset]['path']
@@ -106,6 +105,7 @@ def load_plamap(pa: Dict) -> List[Dict]:
     freq_filename = cf[mch][freqdset]['filename']
 
     def _read(mask_path, mask_filename):
+        tresh_low, tresh_up = 0.0, 0.1
         return {FREQ: hp.read_map(
                 '{path}{mask_path}{mask_filename}'
                 .format(
@@ -210,12 +210,12 @@ def load_truthspectrum(abspath=""):
         index_col=0)
 
 
-def load_hitsmaps(pa: Dict):
+def load_hitsvar(pa: Dict, field=7, abs_path=""):
     freqdset = pa['freqdset'] # NPIPE or DX12
     freqfilter = pa["freqfilter"]
     nside = pa["nside"]
 
-    indir_path = cf[mch]['indir']
+    indir_path = abs_path+cf[mch]['indir']
 
     freq_path = cf[mch][freqdset]['path']
 
@@ -238,7 +238,7 @@ def load_hitsmaps(pa: Dict):
                 if FREQ not in freqfilter}
 
     hitsmap = {
-        FREQ: hp.read_map(mappath[FREQ], field=3)
+        FREQ: hp.read_map(mappath[FREQ], field=field)
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter
         }

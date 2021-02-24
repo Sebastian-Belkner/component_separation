@@ -4,10 +4,6 @@ interactive.py: script for calling draw.component_separation using jupyter
 """
 
 __author__ = "S. Belkner"
-
-# %% interactive header
-import matplotlib.pyplot as plt
-
 # %% run header
 import json
 from matplotlib import lines
@@ -20,9 +16,12 @@ import sys
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 import matplotlib.pyplot as plt
+import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 import numpy as np
+import component_separation.io as io
 import seaborn as sns
+import component_separation.masking as msk
 
 import healpy as hp
 from astropy.io import fits
@@ -57,56 +56,62 @@ spec_path = cf[mch]['outdir']
 indir_path = cf[mch]['indir']
 specfilter = cf['pa']["specfilter"]
 
-# %%
-import healpy as hp
-from astropy.io import fits
-hdul = fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_100-field_2048_R3.01_full.fits")
-
-# %%
-hdul[1].header
-
-
-# %%
-hitsmap = hp.read_map("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_143-field_2048_R3.01_full.fits", field=2)
-
-
-
-# %%
-hp.mollview(hitsmap, norm= 'hist')
-print(np.min(hitsmap), np.max(hitsmap))
-
-
-# %%
-hitsmask = np.load('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/tmp/mask/hitscount/DX12-freq_143-0.0to0.1-split_Full.hitshist.npy')
-print(hitsmask[hitsmask==True])
-hp.mollview(hitsmask, norm= 'hist')
 
 # %%
 
-print(len(hitsmap))
+freqdset = cf['pa']['freqdset'] # DX12 or NERSC
+hitsvar = io.load_hitsvar(cf["pa"], 3, "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/")
+0
 
 # %%
+print(np.min(hitsvar["143"]))
+#%%
+# build
+tresh_low, tresh_up = 0.05, 1.0
+masks = msk.hitsvar2mask(hitsvar, tresh_low, tresh_up)
 
-# hist, bin_edges = np.histogram(hitsmap, bins=100)
-# plt.hist(hitsmap, bins = 100)
-mean = np.mean(hitsmap)
-std = np.std(hitsmap)
+# %%
+# hitsmask = np.load('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/tmp/mask/hitsvar/DX12-freq_143-0.0to0.5-split_Full.hitshist.npy')
+mean = np.mean(masks["143"])
+std = np.std(masks["143"])
+print(len(masks["143"][masks["143"]==True]))
+# hp.mollview(hitsmask, norm= 'hist')
+# hp.mollview(np.where(np.abs(hitsmask)>mean+20*std, 0.0, hitsmask))
+hp.mollview(masks["143"])
+
+
+# %%
+print("K_CMB to K_RJ conversion factors")
+print()
+print("Instrument  Factor")
+print(30*"-")
+for channel in Planckf:
+    print("{}         {}".format(channel.value, slhpastro.convfact(freq=int(channel.value)*1e9, fr=r'K_CMB',to=r'K_RJ')))
+
+
+# %%
+mean = np.mean(hitsvar["143"])
+std = np.std(hitsvar["143"])
 print(mean, std)
-plt.hist(np.where(np.abs(hitsmap)>mean+20*std, 0.0, hitsmap), bins = 100, alpha=0.5)
+plt.hist(np.where(np.abs(hitsvar["143"])>mean+20*std, 0.0, hitsvar["143"]), bins = 100, alpha=0.5)
 # plt.plot(mean+40*std, 1e8, lw=5, color="red")
 plt.yscale('log')
-print(hitsmap[hitsmap==np.nan])
-# %%
-print(np.mean(hitsmap))
+plt.show()
+
 
 # %%
-
 plt.plot(np.sqrt(hdul[28].data.field(0)))
 plt.plot(np.sqrt(hdul[29].data.field(0)))
 plt.plot(np.sqrt(hdul[30].data.field(0)))
 plt.plot(np.sqrt(np.sqrt(hdul[28].data.field(0))*np.sqrt(hdul[29].data.field(0))))
 plt.grid()
 
+
+hdul = fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_100-field_2048_R3.01_full.fits")
+hitsmap = hp.read_map("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_143-field_2048_R3.01_full.fits", field=4)
+
+# %%
+hdul[1].header
 # %%
 hdul = fits.open(
     "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/LFI_SkyMap_030-field_1024_R3.00_full.fits")

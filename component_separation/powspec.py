@@ -390,7 +390,6 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
     return data
 
 
-
 #%% Apply 1e12*l(l+1)/2pi
 @log_on_start(INFO, "Starting to convert temperature scale to K_RJ")
 @log_on_end(DEBUG, "Data converted successfully: '{result}' ")
@@ -403,10 +402,15 @@ def tcmb2trj(data: List[Dict]) -> List[Dict]:
     Returns:
         Dict: Converted maps in K_RJ scale
     """
+    print('start')
     for idx, planckmap in enumerate(data):
+        print(idx)
         for freq, val in planckmap.items():
+            print("freq: ", freq)
             factor = slhpastro.convfact(freq=int(freq)*1e9, fr=r'K_CMB',to=r'K_RJ')
+            print("factor: ", factor)
             data[idx][freq]["map"] *= factor
+    print('end')
     return data
 
 

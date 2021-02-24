@@ -13,7 +13,8 @@ from component_separation.cs_util import Planckf, Plancks, Planckr
 
 
 def replace_undefnan(data):
-    data = np.where(data==np.nan | data==np.inf  | data==-np.inf, 0.0, data)
+    return np.where(data==np.nan, 0.0, data)
+    #  | data==np.inf  | data==-np.inf
 
 
 def remove_brightsaturate(data):

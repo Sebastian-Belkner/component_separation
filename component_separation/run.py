@@ -177,8 +177,9 @@ if __name__ == '__main__':
         else:
             data = io.load_plamap(cf['pa'])
 
-        # data_prep = preprocess_map(data)
-
+        data_prep = preprocess_map(data)
+        print('preprocessing DONE')
+        print(40*"$")
         spectrum = map2spec(data, freqcomb)
         io.save_spectrum(spectrum, spec_path, 'unscaled'+filename)
     else:

@@ -1,7 +1,7 @@
 {
     "pa": {
         "mskset": "smica",
-        "Tscale": "K_RJ",
+        "Tscale": "K_CMB",
         "offdiag": true,
         "freqdset": "DX12",
         "lmax": 3000,
