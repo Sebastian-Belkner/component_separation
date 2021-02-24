@@ -109,7 +109,11 @@ def tcmb2trj(data: List[Dict]) -> List[Dict]:
 
 
 def replace_undefnan(data):
-    return np.where(data==np.nan, 0.0, data)
+    treshold = 1e20
+    buff = np.where(data==np.nan, 0.0, data)
+    buff = np.where(buff < -treshold, 0.0, buff)
+    buff = np.where(buff > treshold, 0.0, buff)
+    return buff
 
 
 def remove_brightsaturate(data):

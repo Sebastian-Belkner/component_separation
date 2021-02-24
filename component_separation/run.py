@@ -136,11 +136,11 @@ def spec_weight2weighted_spec(spectrum, weights):
 
 
 def preprocess_map(data):
-    if data[0] == None:
-        data = data[1:]
-    elif data[1] == None:
-        data = [data[0]]
-    data = prep.remove_unseen(data)
+    # if data[0] == None:
+    #     data = data[1:]
+    # elif data[1] == None:
+    #     data = [data[0]]
+    # data = prep.remove_unseen(data)
     data_prep = [None, None, None]
     if cf['pa']['Tscale'] == "K_RJ":
         data_prep = prep.tcmb2trj(data)
@@ -164,6 +164,10 @@ def postprocess_spectrum(data, freqcomb):
 
 
 if __name__ == '__main__':
+    print(40*"$")
+    print("Starting run with the following settings:")
+    print(cf['pa'])
+    print(40*"$")
     set_logger(DEBUG)
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)
