@@ -22,7 +22,8 @@ import numpy as np
 import seaborn as sns
 from component_separation.cs_util import Planckf, Plancks
 from component_separation.draw import plot as cplt
-
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 
 with open('config.json', "r") as f:
     cf = json.load(f)
@@ -174,8 +175,6 @@ def plot_beamwindowfunctions():
 
 
 def plot_spectrum_bias(fname):
-    import matplotlib.gridspec as gridspec
-    import matplotlib.pyplot as plt
     dc = dcf["plot"]["spectrum_bias"]
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     inpath_name_syn = dc["indir_root_syn"]+dc["indir_rel_syn"]+dc["in_desc_syn"]+fname
@@ -241,8 +240,6 @@ def plot_spectrum_bias(fname):
 
 
 def plot_weights_bias(fname):
-    import matplotlib.gridspec as gridspec
-    import matplotlib.pyplot as plt
     dc = dcf["plot"]["weights_bias"]
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     inpath_name_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/ext/smica_propagation/weights_EB_smica_R3.00.txt"

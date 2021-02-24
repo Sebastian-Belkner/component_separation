@@ -96,15 +96,10 @@ def tcmb2trj(data: List[Dict]) -> List[Dict]:
     Returns:
         Dict: Converted maps in K_RJ scale
     """
-    print('start')
     for idx, planckmap in enumerate(data):
-        print(idx)
         for freq, val in planckmap.items():
-            print("freq: ", freq)
             factor = slhpastro.convfact(freq=int(freq)*1e9, fr=r'K_CMB',to=r'K_RJ')
-            print("factor: ", factor)
             data[idx][freq]["map"] *= factor
-    print('end')
     return data
 
 
@@ -121,8 +116,6 @@ def remove_brightsaturate(data):
 
 
 def subtract_mean(data):
-    print(np.mean(data))
-    print(np.min(data), np.max(data))
     return data-np.mean(data)
 
 
@@ -135,7 +128,6 @@ def remove_dipole(data):
     Returns:
         [type]: [description]
     """
-    print(hp.remove_dipole(data, fitval=False))
     ret = hp.remove_dipole(data, fitval=False)
     return ret
 
@@ -143,4 +135,4 @@ def remove_dipole(data):
 @deprecated
 def remove_monopole(data):
     "DEPRECATED"
-    return hp.remove_monopole(data, fitval=True)
+    return hp.remove_monopole(data, fitval=False)

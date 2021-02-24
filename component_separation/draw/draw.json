@@ -8,12 +8,6 @@
     "lmax_mask": 6000,
     "freqdatsplit": "",
     "freqfilter": [
-        "030",
-        "044",
-        "070",
-        "143",
-        "217",
-        "353",
         "545",
         "857"
     ],
@@ -76,7 +70,7 @@
         "out_desc": ""
     },
     "weights": {
-        "do_plot": false,
+        "do_plot": true,
         "indir_root": "data/tmp/weights/",
         "indir_rel": "",
         "outdir_root": "vis/weights/",

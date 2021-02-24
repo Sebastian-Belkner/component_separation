@@ -144,6 +144,8 @@ def preprocess_map(data):
     data_prep = [None, None, None]
     if cf['pa']['Tscale'] == "K_RJ":
         data_prep = prep.tcmb2trj(data)
+    else:
+         data_prep = data
     for idx, IQU in enumerate(data_prep):
         for key, val in IQU.items():
             data_prep[idx][key]["map"] = prep.replace_undefnan(data_prep[idx][key]["map"])
