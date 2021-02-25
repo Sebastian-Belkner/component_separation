@@ -1,6 +1,6 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "Tscale": "K_RJ",
     "mskset": "smica",
     "offdiag": true,

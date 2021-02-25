@@ -380,7 +380,7 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
 #%% Build covariance matrices
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "T_RJ") -> Dict[str, np.ndarray]:
+def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_RJ") -> Dict[str, np.ndarray]:
     """Calculates the covariance matrices from the data
 
     Args:
@@ -411,18 +411,15 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
                                 ispec+=1
                                 if int(FREQ)<100 or int(FREQ2)<100:
                                     b  = np.array([np.nan for n in range(2049)])
-                                    a = np.concatenate((data[FREQ+'-'+FREQ2][spec][:min(lmax+1, len(b))], b[:max(0, lmax+1-len(b))]))
-                                    cov[spec][ifreq][ifreq2] = a 
-                                    cov[spec][ifreq2][ifreq] = a
+                                    a = np.concatenate((data[FREQ+'-'+FREQ2][spec][:min(lmax+1, len(b))], b[:max(0, lmax+1-len(b))])) 
                                 else:
                                     a = data[FREQ+'-'+FREQ2][spec]
+                                if Tscale == "K_RJ":
+                                    cov[spec][ifreq][ifreq2] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
+                                    cov[spec][ifreq2][ifreq] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
+                                else:
                                     cov[spec][ifreq][ifreq2] = a
                                     cov[spec][ifreq2][ifreq] = a
-
-                                if Tscale == "T_RJ":
-                                    cov[spec][ifreq][ifreq2] *= prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
-                                    cov[spec][ifreq2][ifreq] *= prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
-
     return cov
 
 
@@ -487,7 +484,7 @@ def calculate_analytic_minimalcov(C_lS: np.ndarray, C_lF: np.ndarray, C_lN: np.n
 # %% Calculate weightings and store in df
 @log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
 @log_on_end(DEBUG, "channel weights calculated successfully: '{result}' ")
-def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "T_RJ") -> Dict[str, DataFrame]:
+def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_RJ") -> Dict[str, DataFrame]:
     """Calculates weightings of the respective Frequency channels
 
     Args:
@@ -499,11 +496,10 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     Returns:
         Dict[str, DataFrame]: The weightings of the respective Frequency channels
     """
-    if Tscale == "T_RJ":
+    if Tscale == "K_RJ":
         elaw = np.array([prep.tcmb2trj_sc(FREQ) for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter])
     else:
         elaw = np.ones(len([dum for dum in PLANCKMAPFREQ if dum not in freqfilter]))
-
 
     weighting_LFI = {
         spec:
@@ -531,7 +527,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     res = dict()
     if lmax>2049:
         PLANCKMAPFREQfiltered = np.array([p.value for p in list(Planckf) if p.value not in freqfilter])
-        elaw[PLANCKMAPFREQfiltered>="100"]
+        elaw = elaw[PLANCKMAPFREQfiltered>="100"]
         weighting_HFI = {
             spec:
                 np.array([
@@ -539,6 +535,8 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
                 if cov[spec][l] is not None else np.array([np.nan for n in range(3)])
                 for l in range(2049, lmax)])
             for spec in PLANCKSPECTRUM if spec not in specfilter}
+
+
         weights_HFI = {spec:
             pd.DataFrame(
                 data = weighting_HFI[spec],

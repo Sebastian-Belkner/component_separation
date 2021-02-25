@@ -687,7 +687,7 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
             )
         plt.title(title_string)
         plt.xlim((100,4000))
-        plt.ylim((-0.7,3.0))
+        plt.ylim((-1.0,3.0))
     ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
     ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
     plt.grid(which='both', axis='x')

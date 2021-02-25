@@ -1,9 +1,9 @@
 {
 "pa": {
-    "mskset": "lens",
+    "mskset": "smica",
     "Tscale": "K_RJ",
     "offdiag": true,
-    "freqdset": "NPIPE",
+    "freqdset": "DX12",
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
@@ -66,8 +66,8 @@
         "indir_rel": "",
         "outdir_root": "vis/weights/",
         "outdir_rel": "",
-        "in_desc": "weights",
-        "out_desc": ""
+        "in_desc": "weightsK_RJ",
+        "out_desc": "K_RJ"
     },
     "weights": {
         "do_plot": true,
@@ -75,8 +75,8 @@
         "indir_rel": "",
         "outdir_root": "vis/weights/",
         "outdir_rel": "",
-        "in_desc": "weights",
-        "out_desc": ""
+        "in_desc": "weightsK_RJ",
+        "out_desc": "K_RJ"
     },
     "beamf": {
         "do_plot": false,
