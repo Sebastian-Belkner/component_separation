@@ -1,10 +1,10 @@
 {
 "pa":{
-    "new_spectrum": false,
+    "new_spectrum": true,
     "Tscale": "K_RJ",
-    "mskset": "lens",
+    "mskset": "smica",
     "offdiag": true,
-    "freqdset": "NPIPE",
+    "freqdset": "DX12",
     "llp1": true,
     "bf": true,
     "lmax": 3000,

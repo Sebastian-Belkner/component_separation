@@ -47,14 +47,12 @@ def make_filenamestring(cf):
     lmax_mask = cf['pa']["lmax_mask"]
     freqfilter = cf['pa']["freqfilter"]
     specfilter = cf['pa']["specfilter"]
-    tscale = cf['pa']["Tscale"]
     
-    return '{freqdset}-msk_{mskset}-lmax_{lmax}-lmaxmsk_{lmax_mask}-{Tscale}_tscale-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+    return '{freqdset}-msk_{mskset}-lmax_{lmax}-lmaxmsk_{lmax_mask}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
         freqdset = freqdset,
         mskset = mskset,
         lmax = lmax,
         lmax_mask = lmax_mask,
-        Tscale = tscale,
         spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
         freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])

@@ -58,7 +58,14 @@ specfilter = cf['pa']["specfilter"]
 
 
 # %%
+freqfilter =  ["030", "143", "545","857"]
+import component_separation.preprocess as prep
+PLANCKMAPFREQ = np.array([p.value for p in list(Planckf)])
+PLANCKMAPFREQfiltered = np.array([p.value for p in list(Planckf) if p.value not in freqfilter])
+elaw = np.array([prep.tcmb2trj_sc(FREQ) for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter])
 
+elaw[PLANCKMAPFREQfiltered>="100"]
+# %%
 freqdset = cf['pa']['freqdset'] # DX12 or NERSC
 hitsvar = io.load_hitsvar(cf["pa"], 3, "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/")
 0

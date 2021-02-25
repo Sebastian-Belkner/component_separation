@@ -93,10 +93,10 @@ def map2spec(maps, freqcomb):
     return spectrum
 
 
-def specsc2weights(spectrum, offdiag=True):
-    cov = pw.build_covmatrices(spectrum, lmax, freqfilter, specfilter)
+def specsc2weights(spectrum, Tscale):
+    cov = pw.build_covmatrices(spectrum, lmax, freqfilter, specfilter, Tscale)
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
-    weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
+    weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter, Tscale)
     return weights
 
 
@@ -142,11 +142,7 @@ def preprocess_map(data):
     # elif data[1] == None:
     #     data = [data[0]]
     # data = prep.remove_unseen(data)
-    data_prep = [None, None, None]
-    if cf['pa']['Tscale'] == "K_RJ":
-        data_prep = prep.tcmb2trj(data)
-    else:
-         data_prep = data
+    data_prep = data
     for idx, IQU in enumerate(data_prep):
         for key, val in IQU.items():
             data_prep[idx][key]["map"] = prep.replace_undefnan(data_prep[idx][key]["map"])
@@ -197,7 +193,7 @@ if __name__ == '__main__':
     spectrum_scaled = postprocess_spectrum(spectrum, freqcomb)
     io.save_spectrum(spectrum_scaled, spec_path, 'scaled'+filename)
 
-    weights = specsc2weights(spectrum_scaled, cf["pa"]["offdiag"])
-    io.save_weights(weights, spec_path, 'weights'+filename)
+    weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
+    io.save_weights(weights, spec_path, 'weights'+cf['pa']["Tscale"]+filename)
 
     # weighted_spec = spec_weight2weighted_spec(spectrum, weights)
