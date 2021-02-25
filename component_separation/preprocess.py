@@ -103,6 +103,20 @@ def tcmb2trj(data: List[Dict]) -> List[Dict]:
     return data
 
 
+def tcmb2trj_sc(freq) -> List[Dict]:
+    """Converts maps (which are presumably in K_CMB) to K_RJ scale.
+
+    Args:
+        data (Dict): Maps in K_CMB scale
+
+    Returns:
+        Dict: Converted maps in K_RJ scale
+    """
+
+    factor = slhpastro.convfact(freq=int(freq)*1e9, fr=r'K_CMB',to=r'K_RJ')
+    return factor
+
+
 def replace_undefnan(data):
     treshold = 1e20
     buff = np.where(data==np.nan, 0.0, data)

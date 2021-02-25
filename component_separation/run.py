@@ -25,6 +25,7 @@ import sys
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
+
 import matplotlib.pyplot as plt
 
 from functools import reduce
@@ -93,7 +94,7 @@ def map2spec(maps, freqcomb):
 
 
 def specsc2weights(spectrum, offdiag=True):
-    cov = pw.build_covmatrices(spectrum, offdiag, lmax, freqfilter, specfilter)
+    cov = pw.build_covmatrices(spectrum, lmax, freqfilter, specfilter)
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter)
     return weights

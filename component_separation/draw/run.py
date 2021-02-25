@@ -371,7 +371,7 @@ def plot_weighted_spectrum(fname):
 
     spectrum_truth = io.load_truthspectrum()
 
-    cov = pw.build_covmatrices(spectrum, offdiag=True, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+    cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
     icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
 
     spec_data_wweighted = _weightspec(icov_l, spec_data)
@@ -432,4 +432,4 @@ if __name__ == '__main__':
         print("plotting weights bias")
         plot_weights_bias(fname = fname)
 
-    plot_weighted_spectrum(fname)
+    # plot_weighted_spectrum(fname)

@@ -1,9 +1,9 @@
 {
 "pa": {
-    "mskset": "lens",
-    "Tscale": "K_RJ",
+    "mskset": "smica",
+    "Tscale": "K_CMB",
     "offdiag": true,
-    "freqdset": "NPIPE",
+    "freqdset": "DX12",
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",

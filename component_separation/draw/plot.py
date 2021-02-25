@@ -253,6 +253,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     for freqc, val in data.items():
         idx_max+=len(freqc)
         freqs = freqc.split("-")
+        # if "353" in freqs:
         if freqs[0]  == freqs[1]:
             binmean, binerr = std_dev_binned(data[freqc])
             binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
@@ -686,7 +687,7 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
             )
         plt.title(title_string)
         plt.xlim((100,4000))
-        plt.ylim((-0.7,1.0))
+        plt.ylim((-0.7,3.0))
     ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
     ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
     plt.grid(which='both', axis='x')

@@ -50,7 +50,7 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 
 import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks, Planckr
-
+import component_separation.preprocess as prep
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
@@ -383,7 +383,7 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
 #%% Build covariance matrices
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(data: Dict, offdiag: str, lmax: int, freqfilter: List[str], specfilter: List[str]) -> Dict[str, np.ndarray]:
+def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str]) -> Dict[str, np.ndarray]:
     """Calculates the covariance matrices from the data
 
     Args:
@@ -407,7 +407,7 @@ def build_covmatrices(data: Dict, offdiag: str, lmax: int, freqfilter: List[str]
             for FREQ2 in PLANCKMAPFREQ:
                 if FREQ2 not in freqfilter:
                     ifreq2+=1
-                    if _crosscomb(offdiag, FREQ, FREQ2):
+                    if _crosscomb(True, FREQ, FREQ2):
                         ispec=-1
                         for spec in PLANCKSPECTRUM:
                             if spec not in specfilter:
@@ -415,12 +415,12 @@ def build_covmatrices(data: Dict, offdiag: str, lmax: int, freqfilter: List[str]
                                 if int(FREQ)<100 or int(FREQ2)<100:
                                     b  = np.array([np.nan for n in range(2049)])
                                     a = np.concatenate((data[FREQ+'-'+FREQ2][spec][:min(lmax+1, len(b))], b[:max(0, lmax+1-len(b))]))
-                                    cov[spec][ifreq][ifreq2] = a
-                                    cov[spec][ifreq2][ifreq] = a
+                                    cov[spec][ifreq][ifreq2] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
+                                    cov[spec][ifreq2][ifreq] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
                                 else:
                                     a = data[FREQ+'-'+FREQ2][spec]
-                                    cov[spec][ifreq][ifreq2] = a
-                                    cov[spec][ifreq2][ifreq] = a
+                                    cov[spec][ifreq][ifreq2] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
+                                    cov[spec][ifreq2][ifreq] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
     return cov
 
 
@@ -497,12 +497,12 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     Returns:
         Dict[str, DataFrame]: The weightings of the respective Frequency channels
     """
-    elaw = np.ones(len([dum for dum in PLANCKMAPFREQ if dum not in freqfilter]))
+    elaw = np.array([prep.tcmb2trj_sc(FREQ) for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter])
 
     weighting_LFI = {
         spec:
             np.array([
-        (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
+        (cov[spec][l] @ elaw[len(elaw)-len(cov[spec][l]):]) / (elaw.T[len(elaw)-len(cov[spec][l]):] @ cov[spec][l] @ elaw[len(elaw)-len(cov[spec][l]):])
             if cov[spec][l] is not None else np.array([np.nan for n in range(len(elaw))])
             for l in range(min(lmax,2049))])
         for spec in PLANCKSPECTRUM if spec not in specfilter}
@@ -526,7 +526,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
         weighting_HFI = {
             spec:
                 np.array([
-            (cov[spec][l] @ elaw[:len(cov[spec][l])]) / (elaw.T[:len(cov[spec][l])] @ cov[spec][l] @ elaw[:len(cov[spec][l])])
+            (cov[spec][l] @ elaw[len(elaw)-len(cov[spec][l]):]) / (elaw.T[len(elaw)-len(cov[spec][l]):] @ cov[spec][l] @ elaw[len(elaw)-len(cov[spec][l]):])
                 if cov[spec][l] is not None else np.array([np.nan for n in range(3)])
                 for l in range(2049, lmax)])
             for spec in PLANCKSPECTRUM if spec not in specfilter}
