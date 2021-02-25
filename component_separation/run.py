@@ -156,7 +156,7 @@ def preprocess_map(data):
 
 
 def postprocess_spectrum(data, freqcomb):
-    spec_sc = pw.apply_scale(spectrum, llp1=llp1)
+    spec_sc = pw.apply_scale(data, llp1=llp1)
     if bf:
         beamf = io.load_beamf(freqcomb=freqcomb)
         spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)

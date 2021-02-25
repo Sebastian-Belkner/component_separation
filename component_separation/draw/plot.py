@@ -223,7 +223,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     # koi = next(iter(data.keys()))
     # specs = list(data[koi].keys())
 
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -294,7 +294,7 @@ def plot_powspec_binned_bokeh(data: Dict, lmax: Dict, title_string: str, truthfi
     # koi = next(iter(data.keys()))
     # specs = list(data[koi].keys())
 
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -386,7 +386,7 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
 
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -439,7 +439,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     """
 
     base = 2
-    nbins=50
+    nbins=250
     bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
     bl = bins[:-1]
     br = bins[1:]
@@ -513,7 +513,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     """
 
     lmax = cf['pa']['lmax']
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -584,7 +584,7 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
 
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 50)
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -635,7 +635,7 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
     import matplotlib.ticker as mticker
-    nbins=50
+    nbins=250
     # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
     base = 2
     bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
@@ -686,7 +686,7 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
             )
         plt.title(title_string)
         plt.xlim((100,4000))
-        plt.ylim((-0.2,1.0))
+        plt.ylim((-0.7,1.0))
     ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
     ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
     plt.grid(which='both', axis='x')
@@ -694,6 +694,7 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
     plt.legend()
     plt.get
     return plt
+
 
 def plot_map(data: Dict, title_string: str = ''):
     """Plotting
