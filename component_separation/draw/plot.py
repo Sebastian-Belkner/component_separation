@@ -550,16 +550,16 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     for freqc, val in data1.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
             mean, std, _ = std_dev_binned(data1[freqc])
-            plt.errorbar(
-                (_[1:] + _[:-1])/2,
-                mean,
-                yerr=std,
-                label=freqc,
-                capsize=3,
-                elinewidth=2,
-                fmt='x',
-                color=color[idx],
-                alpha=0.9)
+            # plt.errorbar(
+            #     (_[1:] + _[:-1])/2,
+            #     mean,
+            #     yerr=std,
+            #     label=freqc,
+            #     capsize=3,
+            #     elinewidth=2,
+            #     fmt='x',
+            #     color=color[idx],
+            #     alpha=0.9)
             mean, std, _ = std_dev_binned(data2[idx])
             plt.errorbar(
                 (_[1:] + _[:-1])/2,

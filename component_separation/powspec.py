@@ -415,12 +415,12 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
                                 if int(FREQ)<100 or int(FREQ2)<100:
                                     b  = np.array([np.nan for n in range(2049)])
                                     a = np.concatenate((data[FREQ+'-'+FREQ2][spec][:min(lmax+1, len(b))], b[:max(0, lmax+1-len(b))]))
-                                    cov[spec][ifreq][ifreq2] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
-                                    cov[spec][ifreq2][ifreq] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
+                                    cov[spec][ifreq][ifreq2] = a #* prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
+                                    cov[spec][ifreq2][ifreq] = a #* prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
                                 else:
                                     a = data[FREQ+'-'+FREQ2][spec]
-                                    cov[spec][ifreq][ifreq2] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
-                                    cov[spec][ifreq2][ifreq] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
+                                    cov[spec][ifreq][ifreq2] = a #* prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
+                                    cov[spec][ifreq2][ifreq] = a #* prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
     return cov
 
 
