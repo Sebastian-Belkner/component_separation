@@ -113,8 +113,13 @@ def plot_weights(fname):
 
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter:
+            fig, ax = plt.subplots(figsize=(8,6))
+            base=2
+            plt.xlabel("Multipole l")
+            plt.ylabel("noiseleveldiff")
+            plt.xscale("log", base=base)
             title_string = "{} weigthts - {}".format(spec, plotsubtitle)
-            mp = cplt.plot_weights_binned(
+            mp = cplt.plot_weights_binned(plt,
                 weights[spec],
                 lmax = dcf['pa']['lmax'],
                 title_string = title_string,
@@ -252,6 +257,7 @@ def plot_weights_bias(fname):
         mskset = mskset,
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    np.set_printoptions(threshold=sys.maxsize)
     
     diff_weights = dict()
     for specc, va in weights.items():
@@ -348,6 +354,7 @@ def plot_spectrum(fname):
             mp = mp,
             path_name = outpath_name)    
 
+
 def plot_weighted_spectrum(fname):
     def _weightspec(icov_l, spectrum):
         import copy
@@ -403,6 +410,150 @@ def plot_weighted_spectrum(fname):
             path_name = outpath_name)
 
 
+def plot_noise_comparison():
+    import matplotlib.ticker as mticker
+    dc = dcf["plot"]["noise_comparison"]
+
+    dcf["pa"]["mskset"] = "lens"
+    dcf["pa"]["freqdset"] = "NPIPE"
+    fname = io.make_filenamestring(dcf)
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    weights_NPIPE = io.load_weights(inpath_name, fname)
+
+    dcf["pa"]["mskset"] = "smica"
+    dcf["pa"]["freqdset"] = "DX12"
+    fname = io.make_filenamestring(dcf)
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    weights_DX12 = io.load_weights(inpath_name, fname)
+
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = split)
+
+    noiselevels = {
+        "NPIPE":{
+            "EE": {
+                '030': 0.9*9*1e-3,
+                '044': 0.9*9*1e-3,
+                '070': 0.9*9*1e-3,
+                '100': 0.9*2*1e-4,
+                '143': 0.9*2*1e-4,
+                '217': 0.9*3*1e-4,
+                '353': 0.9*7*1e-3
+            }
+        },
+        "DX12":{
+            "EE": {
+                '030': 9*1e-3,
+                '044': 9*1e-3,
+                '070': 9*1e-3,
+                '100': 2*1e-4,
+                '143': 2*1e-4,
+                '217': 3*1e-4,
+                '353': 7*1e-3
+            }
+        }
+    }
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            if spec=="EE":
+                # print(weights_NPIPE[spec])
+                helper = np.array([np.nan_to_num(weights_NPIPE[spec]["channel @"+freq+"GHz"]) * noiselevels["NPIPE"][spec][freq]
+                    for freq in PLANCKMAPFREQ
+                    if freq not in freqfilter])
+                noise_NPIPE = np.sum(np.abs(helper), axis=0)/np.sqrt(7)
+
+                helper = np.array([np.nan_to_num(weights_DX12[spec]["channel @"+freq+"GHz"]) * noiselevels["DX12"][spec][freq]
+                    for freq in PLANCKMAPFREQ
+                    if freq not in freqfilter])
+                noise_DX12 = np.sum(np.abs(helper), axis=0)/np.sqrt(7)
+
+
+    for spec in PLANCKSPECTRUM:
+        if spec not in specfilter:
+            if spec=="EE":
+                title_string = "{} noise - {}".format(spec, plotsubtitle)
+                fig, ax = plt.subplots(figsize=(8,6))
+                base=2
+                plt.xlabel("Multipole l")
+                plt.ylabel("noiseleveldiff")
+                plt.xscale("log", base=base)
+
+                mp = cplt.plot_noiselevel_binned(plt,
+                    noise_NPIPE,
+                    lmax = dcf['pa']['lmax'],
+                    title_string = title_string,
+                    alpha=0.5,
+                    legendstr = ' NPIPE',
+                    ls="--"
+                    )
+
+                mp = cplt.plot_noiselevel_binned(plt,
+                    noise_DX12,
+                    lmax = dcf['pa']['lmax'],
+                    title_string = title_string,
+                    alpha=0.5,
+                    legendstr = ' DX12',
+                    ls="--"
+                    )
+                mp = cplt.plot_noiselevel_binned(plt,
+                    (noise_NPIPE-noise_DX12)/noise_NPIPE,
+                    lmax = dcf['pa']['lmax'],
+                    title_string = title_string,
+                    alpha=1.0,
+                    legendstr = ' DX12npiperel',
+                    ls="--"
+                    )
+
+                outpath_name = \
+                    dc["outdir_root"] + \
+                    spec+"_noisecomparison/" + \
+                    spec+"_noisecomparison" + "-" + \
+                    dc["out_desc"] +"-" + \
+                    fname + ".jpg"   
+                print(outpath_name)     
+
+                io.save_figure(
+                    mp = mp,
+                    path_name = outpath_name)
+
+            # fig, ax = plt.subplots(figsize=(8,6))
+            # title_string = "{} weigthts - {}".format(spec, plotsubtitle)
+            # mp = cplt.plot_weights_binned(plt,
+            #     weights_NPIPE[spec],
+            #     lmax = dcf['pa']['lmax'],
+            #     title_string = title_string,
+            #     alpha=0.5,
+            #     legendstr = ' NPIPE',
+            #     ls="--"
+            #     )
+            # plt.gca().set_prop_cycle(None)
+            # mp = cplt.plot_weights_binned(plt,
+            #     weights_DX12[spec],
+            #     lmax = dcf['pa']['lmax'],
+            #     title_string = title_string,
+            #     alpha=0.9,
+            #     legendstr = ' DX12',
+            #     ls="-"
+            #     )
+
+            # ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
+            # ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
+
+            # outpath_name = \
+            #     dc["outdir_root"] + \
+            #     dc["outdir_rel"] + \
+            #     spec+"_weightcomparison/" + \
+            #     spec+"_weightcomparison" + "-" + \
+            #     dc["out_desc"] +"-" + \
+            #     fname + ".jpg"        
+
+            # io.save_figure(
+            #     mp = mp,
+            #     path_name = outpath_name)
+
+
 if __name__ == '__main__':
     set_logger(DEBUG)
     fname = io.make_filenamestring(dcf)
@@ -431,5 +582,9 @@ if __name__ == '__main__':
     if dcf["plot"]["weights_bias"]["do_plot"]:
         print("plotting weights bias")
         plot_weights_bias(fname = fname)
+
+    if dcf["plot"]["noise_comparison"]["do_plot"]:
+        print("plotting noise_comparison")
+        plot_noise_comparison()
 
     # plot_weighted_spectrum(fname)

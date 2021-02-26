@@ -512,9 +512,14 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
         data (Dict): powerspectra with spectrum and frequency-combinations in the columns
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-
+    base=2
+    plt.xlabel("Multipole l")
+    plt.xscale("log", base=base)
     lmax = cf['pa']['lmax']
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
+    nbins=250
+    # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
+    base = 2
+    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -542,25 +547,26 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.ylabel("Weights")
     plt.grid(which='both', axis='x')
     plt.grid(which='major', axis='y')
+
     idx=0
     idx_max = 10
     plt.title(title_string)
     plt.xlim((100,4000))
     plt.ylim((-0.1,1))
     for freqc, val in data1.items():
-        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        if "070" not in freqc and "030" not in freqc and "044" not in freqc:
             mean, std, _ = std_dev_binned(data1[freqc])
-            # plt.errorbar(
-            #     (_[1:] + _[:-1])/2,
-            #     mean,
-            #     yerr=std,
-            #     label=freqc,
-            #     capsize=3,
-            #     elinewidth=2,
-            #     fmt='x',
-            #     color=color[idx],
-            #     alpha=0.9)
-            mean, std, _ = std_dev_binned(data2[idx])
+            plt.errorbar(
+                (_[1:] + _[:-1])/2,
+                mean,
+                yerr=std,
+                label=freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='x',
+                color=color[idx],
+                alpha=0.9)
+            mean, std, _ = std_dev_binned(data2[3+idx])
             plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
@@ -585,7 +591,13 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
 
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
+    base=2
+    plt.xscale("log", base=base)
+    lmax = cf['pa']['lmax']
+    nbins=250
+    # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
+    base = 2
+    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
     bl = bins[:-1]
     br = bins[1:]
 
@@ -607,18 +619,18 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
-        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        if "070" not in freqc and "030" not in freqc and "044" not in freqc:
         # if "070" in freqc or "030" in freqc or "044" in freqc:
             idx_max+=len(freqc)
             binmean, binerr = std_dev_binned(data[freqc])
-            plt.errorbar(
+            plt.plot(
                 0.5 * bl + 0.5 * br,
                 binmean,
-                yerr=binerr,
+                # yerr=binerr,
                 label=freqc,
-                capsize=2,
-                elinewidth=1,
-                fmt='x',
+                # capsize=2,
+                # elinewidth=1,
+                # fmt='x',
                 # ls='-',
                 ms=4,
                 alpha=0.9,
@@ -628,7 +640,7 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     return plt
 
 
-def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
+def plot_weights_binned(plt, weights: pd.DataFrame, lmax: int, title_string: str, alpha=1.0, legendstr = "", ls='-'):
     """Plotting
     Args:
         df (Dict): Data to be plotted
@@ -661,10 +673,7 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
         std = np.sqrt(sy2/n - mean*mean)
         return mean, std, _
 
-    fig, ax = plt.subplots(figsize=(8,6))
-    plt.xlabel("Multipole l")
-    plt.ylabel("Weighting")
-    plt.xscale("log", base=base)
+
 
     for name, data in weights.items():
         # binmean, binerr = std_dev_binned(data)
@@ -681,15 +690,73 @@ def plot_weights_binned(weights: pd.DataFrame, lmax: int, title_string: str):
             (_[1:] + _[:-1])/2,
             mean,
             yerr=std,
-            label=name,
+            label=name+legendstr,
             capsize=2,
-            elinewidth=1
+            elinewidth=1,
+            alpha=alpha,
+            ls=ls
             )
         plt.title(title_string)
         plt.xlim((100,4000))
-        plt.ylim((-1.0,3.0))
-    ax.xaxis.set_minor_formatter(mticker.ScalarFormatter())
-    ax.xaxis.set_major_formatter(mticker.ScalarFormatter())
+        plt.ylim((-1.0,1.5))
+
+    plt.grid(which='both', axis='x')
+    plt.grid(which='major', axis='y')
+    plt.legend()
+    plt.get
+    return plt
+
+
+def plot_noiselevel_binned(plt, noise: pd.DataFrame, lmax: int, title_string: str, alpha=1.0, legendstr = "", ls='-'):
+    """Plotting
+    Args:
+        df (Dict): Data to be plotted
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    nbins=250
+    # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
+    base = 2
+    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
+    #np.arange(0, lmax+1, lmax/20)
+    bl = bins[:-1]
+    br = bins[1:]
+
+    def std_dev_binned(d):
+        val = np.nan_to_num(d)
+        n, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins)
+        sy, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val)
+        sy2, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val * val)
+        mean = sy / n
+        std = np.sqrt(sy2/n - mean*mean)
+        return mean, std, _
+
+
+
+       
+    mean, std, _ = std_dev_binned(noise)
+    plt.errorbar(
+        (_[1:] + _[:-1])/2,
+        mean,
+        yerr=std,
+        label="EE"+legendstr,
+        capsize=2,
+        elinewidth=1,
+        alpha=alpha,
+        ls=ls
+        )
+    plt.title(title_string)
+    plt.xlim((100,4000))
+    plt.ylim((-4.0,1.0))
+
     plt.grid(which='both', axis='x')
     plt.grid(which='major', axis='y')
     plt.legend()
