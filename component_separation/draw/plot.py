@@ -693,17 +693,31 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
             # plt.gca()._get_lines.prop_cycler
 
             mean, std, _ = std_dev_binned(data2[idx+3])
-            plt.errorbar(
-                (_[1:] + _[:-1])/2,
-                mean,
-                yerr=std,
-                label="smica "+ freqc,
-                capsize=3,
-                elinewidth=2,
-                # color = col,
-                fmt='x',
-                alpha=0.3,
-                color = CB_color_cycle[idx])
+            plt.annotate("test", xy=(-12, -12))
+            if idx == 0:
+                plt.plot(
+                    (_[1:] + _[:-1])/2,
+                    mean,
+                    # yerr=std,
+                    label="smica channels",
+                    # capsize=3,
+                    # elinewidth=2,
+                    # color = col,
+                    # fmt='x',
+                    alpha=0.8,
+                    color = 'black')
+            else:
+                plt.plot(
+                    (_[1:] + _[:-1])/2,
+                    mean,
+                    # yerr=std,
+                    # label="smica "+ freqc,
+                    # capsize=3,
+                    # elinewidth=2,
+                    # color = col,
+                    # fmt='x',
+                    alpha=0.8,
+                    color = 'black')
             idx+=1
             plt.legend()
     return plt
