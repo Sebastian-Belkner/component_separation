@@ -212,6 +212,121 @@ def plot_beamwindowfunction(beamf, aa, bb, ab, field1, field2, p):
     return plt
 
 
+def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,1e6), truthfile = None, truth_label: str = None):
+
+    """Plotting
+
+    Args:
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    # koi = next(iter(data.keys()))
+    # specs = list(data[koi].keys())
+    # bins = np.arange(0, lmax+1, lmax/200)
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
+    bl = bins[:-1]
+    br = bins[1:]
+
+
+
+    def std_dev_binned(d):
+        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
+        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))/np.sqrt(100)
+        return mean, err
+
+    
+    plt.figure(figsize=(8,6))
+    plt.xlabel("Multipole l")
+    plt.ylabel("Powerspectrum")
+
+    plt.grid(which='both', axis='x')
+    plt.grid(which='major', axis='y')
+    idx=0
+
+
+    plt.title(title_string)
+    plt.xlim((10,4000))
+    plt.ylim(0.001, 1)
+    plt.xscale("log", nonpositive='clip')
+    plt.yscale("linear", nonpositive='clip')
+
+
+
+    binmean, binerr = std_dev_binned(data1)
+    binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+    plt.errorbar(
+        0.5 * bl + 0.5 * br,
+        binmean,
+        yerr=(binerr_low, binerr),
+        # 0.5 * bl + 0.5 * br,
+        # binmean,
+        # yerr=binerr,
+        label='optimal NPIPE',
+        capsize=2,
+        elinewidth=1,
+        fmt='x',
+        # ls='-',
+        ms=4,
+        alpha=0.5
+        )
+
+
+    binmean, binerr = std_dev_binned(data2)
+    binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+    plt.errorbar(
+        0.5 * bl + 0.5 * br,
+        binmean,
+        yerr=(binerr_low, binerr),
+        # 0.5 * bl + 0.5 * br,
+        # binmean,
+        # yerr=binerr,
+        label='optimal DX12',
+        capsize=2,
+        elinewidth=1,
+        fmt='x',
+        # ls='-',
+        ms=4,
+        alpha=0.5
+        )
+    
+
+
+    binmean, binerr = std_dev_binned((data2-data1)/data2)
+    binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+    plt.errorbar(
+        0.5 * bl + 0.5 * br,
+        binmean,
+        yerr=binerr,#(binerr_low, binerr),
+        # 0.5 * bl + 0.5 * br,
+        # binmean,
+        # yerr=binerr,
+        label='difference',
+        capsize=2,
+        elinewidth=1,
+        fmt='x',
+        # ls='-',
+        ms=4
+        )
+
+    plt.plot(
+        0.5 * bl + 0.5 * br,
+        binmean,
+        color = 'green'
+        )
+
+
+    if truthfile is not None:
+        plt.plot(
+            truthfile,
+            label = truth_label,
+            ls='-', marker='.',
+            ms=0,
+            lw=3)
+    plt.legend()
+    return plt
+
+
 def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple = (1e-3,1e6), truthfile = None, truth_label: str = None) -> None:
     """Plotting
 
@@ -505,7 +620,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     return plt
 
 
-def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str, color: List) -> None:
+def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str) -> None:
     """Plotting
 
     Args:
@@ -549,14 +664,16 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.grid(which='major', axis='y')
 
     idx=0
-    idx_max = 10
+    idx_max = 4
+    cmap = plt.get_cmap('jet_r')
     plt.title(title_string)
     plt.xlim((100,4000))
     plt.ylim((-0.1,1))
     for freqc, val in data1.items():
         if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+            
             mean, std, _ = std_dev_binned(data1[freqc])
-            plt.errorbar(
+            base_line = plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
@@ -564,9 +681,13 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
-                color=color[idx],
+                # color = cmap(float(idx)/idx_max),
                 alpha=0.9)
-            mean, std, _ = std_dev_binned(data2[3+idx])
+            col = base_line[0].get_color()
+            # plt.gca().set_prop_cycle(None)
+            # plt.gca()._get_lines.prop_cycler
+
+            mean, std, _ = std_dev_binned(data2[idx+3])
             plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
@@ -574,15 +695,15 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 label="smica "+ freqc,
                 capsize=3,
                 elinewidth=2,
+                color = col,
                 fmt='x',
-                color=color[idx],
                 alpha=0.3)
             idx+=1
             plt.legend()
     return plt
 
 
-def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'default', plotfilename: str = 'default', color: List = None) -> None:
+def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'default', plotfilename: str = 'default') -> None:
     """Plotting
 
     Args:
@@ -590,8 +711,8 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-
     base=2
+    plt.gca().set_prop_cycle(None)
     plt.xscale("log", base=base)
     lmax = cf['pa']['lmax']
     nbins=250
@@ -615,7 +736,7 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.xlim((100,4000))
-    plt.ylim((-0.5,0.5))
+    plt.ylim((-0.1,0.1))
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
@@ -633,8 +754,7 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
                 # fmt='x',
                 # ls='-',
                 ms=4,
-                alpha=0.9,
-                color=color[idx]
+                alpha=0.9
                 )
             idx+=1
     return plt

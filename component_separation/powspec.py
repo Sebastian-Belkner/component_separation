@@ -75,8 +75,6 @@ def _crosscomb(option, f1, f2):
         else:
             return int(f1) == int(f2)
 
-
-#%% Calculate spectrum
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
 def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqcomb: List[str], specfilter: List[str]) -> Dict[str, Dict]:
@@ -130,8 +128,6 @@ def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqc
            })
     return spectrum
 
-
-#%% Calculate spectrum
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
 def qupowerspec(qumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqcomb: List[str], specfilter: List[str]) -> Dict[str, Dict]:
@@ -261,8 +257,6 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
     }
     return [tmap, qmap, umap]
 
-
-#%% Create df for no apparent reason
 @log_on_start(INFO, "Starting to create powerspectrum dataframe with {spectrum}")
 @log_on_end(DEBUG, "Dataframe created successfully: '{result}' ")
 def create_df(spectrum: Dict[str, Dict[str, List]], offdiag: bool, freqfilter: List[str], specfilter: List[str]) -> Dict:
@@ -293,8 +287,6 @@ def create_df(spectrum: Dict[str, Dict[str, List]], offdiag: bool, freqfilter: L
 
     return df
 
-
-#%% Apply 1e12*l(l+1)/2pi
 @log_on_start(INFO, "Starting to apply scaling onto data {data}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
 def apply_scale(data: Dict, llp1: bool = True) -> Dict:
@@ -314,20 +306,18 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
                 ll = lambda x: x*(x+1)*1e12/(2*np.pi)
                 sc = np.array([ll(idx) for idx in range(lmax)])
                 data[freqc][specID] *= sc
-                if int(freqc.split("-")[0]) < 100:
-                    data[freqc][specID] /= hp.pixwin(1024)[:lmax]
-                else:
-                    data[freqc][specID] /= hp.pixwin(2048)[:lmax]
-                if int(freqc.split("-")[1]) < 100:
-                    data[freqc][specID] /= hp.pixwin(1024)[:lmax]
-                else:
-                    data[freqc][specID] /= hp.pixwin(2048)[:lmax]
+                # if int(freqc.split("-")[0]) < 100:
+                #     data[freqc][specID] /= hp.pixwin(1024)[:lmax]
+                # else:
+                #     data[freqc][specID] /= hp.pixwin(2048)[:lmax]
+                # if int(freqc.split("-")[1]) < 100:
+                #     data[freqc][specID] /= hp.pixwin(1024)[:lmax]
+                # else:
+                #     data[freqc][specID] /= hp.pixwin(2048)[:lmax]
             else:
                 print("Nothing has been scaled.")
     return data
 
-
-#%% Apply Beamfunction
 @log_on_start(INFO, "Starting to apply Beamfunnction on dataframe with {data}")
 @log_on_end(DEBUG, "Beamfunction applied successfully: '{result}' ")
 def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str]) -> Dict:
@@ -376,11 +366,9 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
     return data
 
-
-#%% Build covariance matrices
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_RJ") -> Dict[str, np.ndarray]:
+def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_CMB") -> Dict[str, np.ndarray]:
     """Calculates the covariance matrices from the data
 
     Args:
@@ -422,8 +410,6 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
                                     cov[spec][ifreq2][ifreq] = a
     return cov
 
-
-#%% slice along l (3rd axis) and invert
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
 def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[str], specfilter: List[str]):
@@ -454,8 +440,6 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         }
     return cov_inv_l
 
-
-#%% slice along l (3rd axis) and invert
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
 def calculate_analytic_minimalcov(C_lS: np.ndarray, C_lF: np.ndarray, C_lN: np.ndarray) -> np.array:
@@ -480,11 +464,9 @@ def calculate_analytic_minimalcov(C_lS: np.ndarray, C_lF: np.ndarray, C_lN: np.n
                     for l in range(lmax)])
     return cov_minimal
 
-
-# %% Calculate weightings and store in df
 @log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
 @log_on_end(DEBUG, "channel weights calculated successfully: '{result}' ")
-def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_RJ") -> Dict[str, DataFrame]:
+def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_CMB") -> Dict[str, DataFrame]:
     """Calculates weightings of the respective Frequency channels
 
     Args:
@@ -564,6 +546,7 @@ def spec2alms(spectrum):
 
 def alms2almsxweight(alms, weights):
     return None
+
 
 def alms2cls(alms_w):
     return None

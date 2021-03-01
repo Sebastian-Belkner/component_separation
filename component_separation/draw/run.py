@@ -251,6 +251,25 @@ def plot_weights_bias(fname):
     lmax = dcf['pa']['lmax']
     weights = io.load_weights(inpath_name, fname)
     smica_weights = io.load_weights_smica(inpath_name_smica)[0,:,:lmax]
+    import healpy as hp
+    beam = [
+        hp.gauss_beam(val, 2999, pol = True)[:,1]
+        for val in [
+            0.00930842,
+            0.00785398,
+            0.00378155,
+            0.002807071,
+            0.002106031,
+            0.00145444,
+            0.00140499,
+        ]
+    ]
+    beam5 = hp.gauss_beam(0.00145444, 2999, pol = True)[:,1]
+
+    for idx, weight in enumerate(smica_weights):
+        # if idx>2:
+            weight *= beam[idx]
+            weight /= beam5
     # ["030", "044", "070", "100", "143", "217","353", "030", "044", "070", "100", "143", "217", "353"]
     
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
@@ -268,7 +287,6 @@ def plot_weights_bias(fname):
 
     for specc, diff_data in diff_weights.items():
         if specc == "EE":
-            color = ['red', 'green', 'blue', 'yellow', 'black', 'orange', 'purple']
             title_string = "Weights - " + plotsubtitle
 
             plt.figure(figsize=(8,6))
@@ -278,15 +296,13 @@ def plot_weights_bias(fname):
                 weights[specc],
                 smica_weights,
                 lmax,
-                title_string = title_string,
-                color = color)
+                title_string = title_string)
             
             ax2 = mp.subplot(gs[1])
             mp = cplt.plot_weights_diff_binned(
                 mp,
                 diff_weights[specc],
-                lmax,
-                color = color)
+                lmax)
                 
             outpath_name = \
                 dc["outdir_root"] + \
@@ -365,9 +381,6 @@ def plot_weighted_spectrum(fname):
             retspec[specc].update({'optimal-optimal': [1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum]})
         return retspec
 
-    dc = dcf["plot"]["weights"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    weights = io.load_weights(inpath_name, fname)
 
     dc = dcf["plot"]["spectrum"]
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
@@ -381,33 +394,71 @@ def plot_weighted_spectrum(fname):
     cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
     icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
 
-    spec_data_wweighted = _weightspec(icov_l, spec_data)
+    spec_data_wweighted_NPIPE = _weightspec(icov_l, spec_data)
 
-    for specc, data in spec_data_wweighted.items():
-        title_string = "{} spectrum - {}".format(specc, "optimal spectrum included")
-        if "Planck-"+specc in spectrum_truth.columns:
-            spectrum_trth = spectrum_truth["Planck-"+specc]
-        else:
-            spectrum_trth = None
 
-        mp = cplt.plot_powspec_binned(
-            data,
-            lmax,
-            title_string = title_string,
-            truthfile = spectrum_trth,
-            truth_label = "Planck-"+specc
-            )
 
-        outpath_name = \
-            dc["outdir_root"] + \
-            dc["outdir_rel"] + \
-            specc+"_spectrum/" + \
-            specc+"_spectrum" + "-" + \
-            "withoptimal" + "-" + \
-            fname + ".jpg"
-        io.save_figure(
-            mp = mp,
-            path_name = outpath_name)
+    dcf["pa"]["freqdset"] = "DX12"
+    dcf["pa"]["mskset"] = "smica"
+    fname = io.make_filenamestring(dcf)
+
+    dc = dcf["plot"]["spectrum"]
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    spectrum = io.load_spectrum(inpath_name, fname)
+    lmax = dcf['pa']['lmax']
+
+    spec_data = _reorder_spectrum_dict(spectrum)
+
+    spectrum_truth = io.load_truthspectrum()
+
+    cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+    icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+
+    spec_data_wweighted_DX12 = _weightspec(icov_l, spec_data)
+
+    # for specc, data in spec_data_wweighted_NPIPE.items():
+    #     title_string = "{} spectrum - {}".format(specc, "optimal spectrum included")
+    #     if "Planck-"+specc in spectrum_truth.columns:
+    #         spectrum_trth = spectrum_truth["Planck-"+specc]
+    #     else:
+    #         spectrum_trth = None
+
+    #     mp = cplt.plot_powspec_binned(
+    #         data,
+    #         lmax,
+    #         title_string = title_string,
+    #         truthfile = spectrum_trth,
+    #         truth_label = "Planck-"+specc
+    #         )
+
+    #     outpath_name = \
+    #         dc["outdir_root"] + \
+    #         dc["outdir_rel"] + \
+    #         specc+"_spectrum/" + \
+    #         specc+"_spectrum" + "-" + \
+    #         "withoptimal" + "-" + \
+    #         fname + ".jpg"
+    #     io.save_figure(
+    #         mp = mp,
+    #         path_name = outpath_name)
+
+    mp = cplt.plot_diff_binned(
+        np.array(spec_data_wweighted_NPIPE["EE"]['optimal-optimal']),
+        np.array(spec_data_wweighted_DX12["EE"]['optimal-optimal']),
+        lmax=3000,
+        title_string = "improvement"
+    )
+    outpath_name = \
+        dc["outdir_root"] + \
+        dc["outdir_rel"] + \
+        "EE_spectrum/" + \
+        "EE_spectrum" + "-" + \
+        "improvement" + "-" + \
+        fname + ".jpg"
+    io.save_figure(
+        mp = mp,
+        path_name = outpath_name)
+        
 
 
 def plot_noise_comparison():
