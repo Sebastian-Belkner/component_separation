@@ -8,6 +8,7 @@ __author__ = "S. Belkner"
 import json
 import logging
 import itertools
+import matplotlib
 import logging.handlers
 import os
 import platform
@@ -292,17 +293,30 @@ def plot_weights_bias(fname):
             plt.figure(figsize=(8,6))
             gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
             ax1 = plt.subplot(gs[0])
+
             mp = cplt.plot_compare_weights_binned(plt,
                 weights[specc],
                 smica_weights,
                 lmax,
                 title_string = title_string)
             
+            # ax1.xaxis.set_major_locator(plt.MultipleLocator(np.log(2)))
+            # ax1.get_xaxis().get_major_formatter().labelOnlyBase = False
+            plt.gca().set_xticks([25, 100, 400, 900, 1600, 2500, 3600])
+            plt.gca().set_xticklabels(["25", "100", "400", "900", "1600", "2500", "3600"])
+            plt.gca().get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+            # plt.xlim((20,4000))
+
             ax2 = mp.subplot(gs[1])
             mp = cplt.plot_weights_diff_binned(
                 mp,
                 diff_weights[specc],
                 lmax)
+
+            plt.gca().set_xticks([25, 100, 400, 900, 1600, 2500, 3600])
+            plt.gca().set_xticklabels(["25", "100", "400", "900", "1600", "2500", "3600"])
+            plt.gca().get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+            plt.xlim((20,4000))
                 
             outpath_name = \
                 dc["outdir_root"] + \
@@ -348,8 +362,6 @@ def plot_spectrum(fname):
         else:
             spectrum_trth = None
 
-        if specc == "EE":
-            print(data["100-100"])
         mp = cplt.plot_powspec_binned(
             data,
             lmax,
@@ -371,17 +383,21 @@ def plot_spectrum(fname):
             path_name = outpath_name)    
 
 
-def plot_weighted_spectrum(fname):
+def plot_compare_optimalspectrum(fname):
     def _weightspec(icov_l, spectrum):
         import copy
-        retspec = copy.deepcopy(spectrum)
+        # retspec = copy.deepcopy(spectrum)
         for specc, data in spectrum.items():
-            icovsum = [np.sum(icov_l[specc][l]) for l in range(lmax)]
-                # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
-            retspec[specc].update({'optimal-optimal': [1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum]})
+            if specc == "EE":
+                icovsum = np.array([np.sum(icov_l[specc][l]) for l in range(lmax)])
+                    # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
+                retspec = {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
         return retspec
 
 
+    dcf["pa"]["freqdset"] = "NPIPE"
+    dcf["pa"]["mskset"] = "lens"
+    fname = io.make_filenamestring(dcf)
     dc = dcf["plot"]["spectrum"]
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     spectrum = io.load_spectrum(inpath_name, fname)
@@ -389,13 +405,10 @@ def plot_weighted_spectrum(fname):
 
     spec_data = _reorder_spectrum_dict(spectrum)
 
-    spectrum_truth = io.load_truthspectrum()
-
     cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
     icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
 
     spec_data_wweighted_NPIPE = _weightspec(icov_l, spec_data)
-
 
 
     dcf["pa"]["freqdset"] = "DX12"
@@ -408,6 +421,7 @@ def plot_weighted_spectrum(fname):
     lmax = dcf['pa']['lmax']
 
     spec_data = _reorder_spectrum_dict(spectrum)
+
 
     spectrum_truth = io.load_truthspectrum()
 
@@ -441,13 +455,42 @@ def plot_weighted_spectrum(fname):
     #     io.save_figure(
     #         mp = mp,
     #         path_name = outpath_name)
+    specc = "EE"
+    if "Planck-"+specc in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+specc]
 
-    mp = cplt.plot_diff_binned(
-        np.array(spec_data_wweighted_NPIPE["EE"]['optimal-optimal']),
-        np.array(spec_data_wweighted_DX12["EE"]['optimal-optimal']),
+    plt.figure(figsize=(8,6))
+    gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+    ax1 = plt.subplot(gs[0])
+    mp = cplt.plot_compare_powspec_binned(
+        plt,
+        spec_data_wweighted_NPIPE["EE"],
+        spec_data_wweighted_DX12["EE"],
         lmax=3000,
-        title_string = "improvement"
+        title_string = "improvement",
+        truthfile = spectrum_trth,
+        truth_label = "Planck " + specc
     )
+    # ax1.set_xticks(np.arange([0,3000,500]))
+    # ax1.set_xticks([0,200,1000,2000])
+    import matplotlib
+    ax1.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    diff_spec = dict()
+    for specc, va in spec_data_wweighted_NPIPE.items():
+        if specc == "EE":
+            if specc not in spec_data_wweighted_NPIPE.keys():
+                diff_spec.update({specc: {}})
+            diff_spec[specc] = {
+                "optimal-optimal": 
+                (spec_data_wweighted_DX12[specc]["optimal-optimal"] - spec_data_wweighted_NPIPE[specc]["optimal-optimal"])/spec_data_wweighted_DX12[specc]["optimal-optimal"]}
+
+    ax2 = mp.subplot(gs[1])
+    # ax1.set_xticks([100*n for n in range(30)])
+    mp = cplt.plot_powspec_diff_binned(plt,
+        diff_spec["EE"],
+        lmax=3000
+    )
+    ax2.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
     outpath_name = \
         dc["outdir_root"] + \
         dc["outdir_rel"] + \
@@ -459,7 +502,6 @@ def plot_weighted_spectrum(fname):
         mp = mp,
         path_name = outpath_name)
         
-
 
 def plot_noise_comparison():
     import matplotlib.ticker as mticker
@@ -638,4 +680,4 @@ if __name__ == '__main__':
         print("plotting noise_comparison")
         plot_noise_comparison()
 
-    # plot_weighted_spectrum(fname)
+    # plot_compare_optimalspectrum(fname)

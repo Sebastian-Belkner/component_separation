@@ -11,6 +11,7 @@ import os.path
 import platform
 import sys
 from logging import DEBUG, ERROR, INFO
+import matplotlib
 from typing import Dict, List, Optional, Tuple
 
 import healpy as hp
@@ -22,7 +23,7 @@ from astropy.io import fits
 from component_separation.cs_util import Planckf, Planckr, Plancks
 from logdecorator import log_on_end, log_on_error, log_on_start
 from scipy import stats
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
@@ -501,15 +502,32 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
+    CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
     bl = bins[:-1]
     br = bins[1:]
 
     def std_dev_binned(d):
-        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))/np.sqrt(5)
-        return mean, err
+        if type(d) != np.ndarray:
+            val = np.nan_to_num(d.to_numpy())[:lmax]
+        else:
+            val = np.nan_to_num(d)[:lmax]
+        n, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins)
+        sy, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val)
+        sy2, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val * val)
+        mean = sy / n
+        std = np.sqrt(sy2/n - mean*mean)
+        return mean, std, _
 
     plt.xscale("log", nonpositive='clip')
     plt.yscale("linear")
@@ -521,18 +539,18 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.xlim((10,4000))
-    plt.ylim((-0.1,0.1))
+    plt.ylim((0,0.7))
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
         # if "070" in freqc or "030" in freqc or "044" in freqc:
             idx_max+=len(freqc)
-            binmean, binerr = std_dev_binned(data[freqc])
+            mean, std, _ = std_dev_binned(data[freqc])
             plt.errorbar(
-                0.5 * bl + 0.5 * br,
-                binmean,
-                yerr=binerr,
+                (_[1:] + _[:-1])/2,
+                mean,
+                yerr=std,
                 label=freqc,
                 capsize=2,
                 elinewidth=1,
@@ -540,13 +558,13 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
                 # ls='-',
                 ms=4,
                 alpha=0.9,
-                color=color[idx]
+                color=CB_color_cycle[idx]
                 )
             idx+=1
     return plt
 
 
-def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str, truthfile: str, truth_label: str, color: List, plotfilename: str = 'default') -> None:
+def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str, truthfile: str, truth_label: str, plotfilename: str = 'default') -> None:
     """Plotting
 
     Args:
@@ -554,14 +572,21 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
 
+    CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
+
     base = 2
-    nbins=250
+    nbins=150
     bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
     bl = bins[:-1]
     br = bins[1:]
 
     def std_dev_binned(d):
-        val = np.nan_to_num(d.to_numpy())
+        if type(d) != np.ndarray:
+            val = np.nan_to_num(d.to_numpy())[:lmax]
+        else:
+            val = np.nan_to_num(d)[:lmax]
         n, _ = np.histogram(
             np.linspace(0,lmax,lmax),
             bins=bins)
@@ -584,10 +609,10 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.grid(which='both', axis='x')
     plt.grid(which='major', axis='y')
     idx=0
-    idx_max = len(next(iter(data2.keys())))
     plt.title(title_string)
     plt.xlim((10,4000))
-    plt.ylim((1e-3,1e5))
+    plt.ylim((1e-2,1e3))
+
     for freqc, val in data2.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
             mean, std, _ = std_dev_binned(data1[freqc])
@@ -595,27 +620,27 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
-                label=freqc,
+                label="Optimal NPIPE spectrum",# + freqc,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
-                color=color[idx],
+                color=CB_color_cycle[idx],
                 alpha=0.9)
             mean, std, _ = std_dev_binned(data2[freqc])
             plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
-                label="syn "+ freqc,
+                label="Optimal DX12 spectrum",# + freqc,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
-                color=color[idx],
-                alpha=0.3)
+                color=CB_color_cycle[idx+1],
+                alpha=0.6)
             idx+=1
 
     if truthfile is not None:
-        plt.plot(truthfile, label = truth_label)
+        plt.plot(truthfile, label = truth_label, color = 'black')
     plt.legend()
     return plt
 
@@ -627,22 +652,26 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
         data (Dict): powerspectra with spectrum and frequency-combinations in the columns
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    base=2
-    plt.xlabel("Multipole l")
-    plt.xscale("log", base=base)
-    lmax = cf['pa']['lmax']
-    nbins=250
-    # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
-    base = 2
-    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
-    bl = bins[:-1]
-    br = bins[1:]
-
+    
     CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
                   '#f781bf', '#a65628', '#984ea3',
                   '#999999', '#e41a1c', '#dede00']
 
-    def std_dev_binned(d):
+    base = 2
+    plt.xscale("log", base=base)
+    lmax = 3000
+    nbins=75
+    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
+    plt.ylabel("Weights")
+    plt.grid(which='both', axis='x')
+    plt.grid(which='major', axis='y')
+
+    idx=0
+    plt.title(title_string)
+    plt.ylim((-0.1,1))
+    plt.xlim((20, 4000))
+
+    def std_dev_binned(d, bins):
         if type(d) == np.ndarray:
             val = d
         else:
@@ -662,21 +691,15 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
         std = np.sqrt(sy2/n - mean*mean)
         return mean, std, _
 
-    # plt.xlabel("Multipole l")
-    plt.ylabel("Weights")
-    plt.grid(which='both', axis='x')
-    plt.grid(which='major', axis='y')
 
-    idx=0
-    idx_max = 4
-    cmap = plt.get_cmap('jet_r')
-    plt.title(title_string)
-    plt.xlim((100,4000))
-    plt.ylim((-0.1,1))
+
+
+    # plt.xlabel("Multipole l")
+    
+
     for freqc, val in data1.items():
         if "070" not in freqc and "030" not in freqc and "044" not in freqc:
-            
-            mean, std, _ = std_dev_binned(data1[freqc])
+            mean, std, _ = std_dev_binned(data1[freqc], bins)
             base_line = plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
@@ -685,41 +708,26 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
-                # color = cmap(float(idx)/idx_max),
                 alpha=0.9,
                 color = CB_color_cycle[idx])
-            # base_line[0].get_color()
-            # plt.gca().set_prop_cycle(None)
-            # plt.gca()._get_lines.prop_cycler
 
-            mean, std, _ = std_dev_binned(data2[idx+3])
-            plt.annotate("test", xy=(-12, -12))
+            mean, std, _ = std_dev_binned(data2[idx+3], bins)
             if idx == 0:
                 plt.plot(
                     (_[1:] + _[:-1])/2,
                     mean,
-                    # yerr=std,
                     label="smica channels",
-                    # capsize=3,
-                    # elinewidth=2,
-                    # color = col,
-                    # fmt='x',
                     alpha=0.8,
                     color = 'black')
             else:
                 plt.plot(
                     (_[1:] + _[:-1])/2,
                     mean,
-                    # yerr=std,
-                    # label="smica "+ freqc,
-                    # capsize=3,
-                    # elinewidth=2,
-                    # color = col,
-                    # fmt='x',
                     alpha=0.8,
                     color = 'black')
             idx+=1
-            plt.legend()
+
+
     return plt
 
 
@@ -735,10 +743,10 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
                   '#f781bf', '#a65628', '#984ea3',
                   '#999999', '#e41a1c', '#dede00']
-    plt.gca().set_prop_cycle(None)
+    # plt.gca().set_prop_cycle(None)
     plt.xscale("log", base=base)
     lmax = cf['pa']['lmax']
-    nbins=250
+    nbins=75
     # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
     base = 2
     bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
