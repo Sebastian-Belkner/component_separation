@@ -638,6 +638,10 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     bl = bins[:-1]
     br = bins[1:]
 
+    CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
+
     def std_dev_binned(d):
         if type(d) == np.ndarray:
             val = d
@@ -682,8 +686,9 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 elinewidth=2,
                 fmt='x',
                 # color = cmap(float(idx)/idx_max),
-                alpha=0.9)
-            col = base_line[0].get_color()
+                alpha=0.9,
+                color = CB_color_cycle[idx])
+            # base_line[0].get_color()
             # plt.gca().set_prop_cycle(None)
             # plt.gca()._get_lines.prop_cycler
 
@@ -695,9 +700,10 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 label="smica "+ freqc,
                 capsize=3,
                 elinewidth=2,
-                color = col,
+                # color = col,
                 fmt='x',
-                alpha=0.3)
+                alpha=0.3,
+                color = CB_color_cycle[idx])
             idx+=1
             plt.legend()
     return plt
@@ -712,6 +718,9 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
     base=2
+    CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
     plt.gca().set_prop_cycle(None)
     plt.xscale("log", base=base)
     lmax = cf['pa']['lmax']
@@ -754,7 +763,8 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
                 # fmt='x',
                 # ls='-',
                 ms=4,
-                alpha=0.9
+                alpha=0.9,
+                color = CB_color_cycle[idx]
                 )
             idx+=1
     return plt
