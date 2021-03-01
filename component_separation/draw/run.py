@@ -411,7 +411,7 @@ def plot_compare_optimalspectrum(fname):
     spec_data_wweighted_NPIPE = _weightspec(icov_l, spec_data)
 
 
-    dcf["pa"]["freqdset"] = "DX12"
+    dcf["pa"]["freqdset"] = "NPIPE"
     dcf["pa"]["mskset"] = "smica"
     fname = io.make_filenamestring(dcf)
 
@@ -496,7 +496,7 @@ def plot_compare_optimalspectrum(fname):
         dc["outdir_rel"] + \
         "EE_spectrum/" + \
         "EE_spectrum" + "-" + \
-        "improvement" + "-" + \
+        "improvement-smica-lens" + "-" + \
         fname + ".jpg"
     io.save_figure(
         mp = mp,
@@ -680,4 +680,4 @@ if __name__ == '__main__':
         print("plotting noise_comparison")
         plot_noise_comparison()
 
-    # plot_compare_optimalspectrum(fname)
+    plot_compare_optimalspectrum(fname)

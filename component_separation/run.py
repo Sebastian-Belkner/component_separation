@@ -44,7 +44,7 @@ with open('config.json', "r") as f:
 LOGFILE = 'data/tmp/messages.log'
 logger = logging.getLogger("")
 handler = logging.handlers.RotatingFileHandler(
-        LOGFILE, maxBytes=(1048576*5), backupCount=7
+        LOGFILE, maxBytes=(1048576*5), backupCount=0
 )
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
