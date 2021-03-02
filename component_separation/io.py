@@ -7,24 +7,27 @@ __author__ = "S. Belkner"
 
 # '/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx
 
+import functools
+import json
+import os
+import os.path
+import platform
+import sys
+from logging import DEBUG, ERROR, INFO
+from typing import Dict, List, Optional, Tuple
+
+import healpy as hp
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
-from logging import DEBUG, ERROR, INFO
-import os
-import sys
-import matplotlib.pyplot as plt
-import pandas as pd
-import functools
-import os.path
-import numpy as np
-from typing import Dict, List, Optional, Tuple
-from component_separation.cs_util import Planckf, Plancks, Planckr
-import healpy as hp
 from scipy import stats
-import json
-import platform
+
 import component_separation
-compath = os.path.dirname(component_separation.__file__)[:-21]
+from component_separation.cs_util import Planckf, Planckr, Plancks
+
+
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
@@ -36,11 +39,20 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
+compath = os.path.dirname(component_separation.__file__)[:-21]
 with open('{}/config.json'.format(compath), "r") as f:
     cf = json.load(f)
 
 
 def make_filenamestring(cf):
+    """Helper function for generating unique filenames given te current configuration
+
+    Args:
+        cf (Dict): Configuration file - in general conf.json from root directory
+
+    Returns:
+        str: unique filename which may be used for spectra, weights, maps, etc..
+    """    
     mskset = cf['pa']['mskset'] # smica or lens
     freqdset = cf['pa']['freqdset'] # DX12 or NERSC
     lmax = cf['pa']["lmax"]
@@ -277,7 +289,7 @@ def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, i
         return None
 
 
-@log_on_start(INFO, "Trying to load spectrum from {path_name}")
+@log_on_start(INFO, "Starting to load spectrum from {path_name}")
 @log_on_end(DEBUG, "Spectrum loaded successfully")
 def load_spectrum(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
     if path_name == None:
@@ -363,38 +375,19 @@ def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
     return beamf
 
 
-# %%
-def save_map(data: Dict[str, Dict], path: str, filename: str = 'default'):
-    if os.path.exists(path+filename):
-        os.remove(path+filename)
-    np.save(path+"map/"+filename, data)
-
-
-def save_weights(data: Dict[str, Dict], path: str, filename: str = 'default'):
-    if os.path.exists(path+filename):
-        os.remove(path+filename)
-    np.save(path+"weights/"+filename, data)
-
-
-@log_on_start(INFO, "Saving spectrum to {path}{filename}")
-@log_on_end(DEBUG, "Spectrum saved successfully to {filename}")
-def save_spectrum(data: Dict[str, Dict], path: str, filename: str = 'default'):
-    if os.path.exists(path+filename):
-        os.remove(path+filename)
-    np.save(path+"spectrum/"+filename, data)
-
-
-@log_on_start(INFO, "Saving mask to {path_name}")
-@log_on_end(DEBUG, "Mask saved successfully to {path_name}")
-def save_mask(data: Dict[str, Dict], path_name: str):
+@log_on_start(INFO, "Saving to {path_name}")
+@log_on_end(DEBUG, "Data saved successfully to {path_name}")
+def save_data(data: Dict[str, Dict], path_name: str, filename: str = 'default'):
     if os.path.exists(path_name):
         os.remove(path_name)
     np.save(path_name, data)
 
 
+@log_on_start(INFO, "Saving to {path_name}")
+@log_on_end(DEBUG, "Data saved successfully to {path_name}")
 def save_figure(mp, path_name: str, outdir_root: str = None, outdir_rel: str = None, out_desc: str = None, fname: str = None):
     if path_name == None:
         fending = ".jpg"
         path_name = outdir_root+outdir_rel+out_desc+fname+fending
     mp.savefig(path_name, dpi=144)
-    plt.close()
+    mp.close()

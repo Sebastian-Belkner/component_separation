@@ -246,45 +246,61 @@ def plot_spectrum_bias(fname):
 
 
 def plot_weights_bias(fname):
-    dc = dcf["plot"]["weights_bias"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    inpath_name_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/ext/smica_propagation/weights_EB_smica_R3.00.txt"
     lmax = dcf['pa']['lmax']
-    weights = io.load_weights(inpath_name, fname)
-    smica_weights = io.load_weights_smica(inpath_name_smica)[0,:,:lmax]
-    import healpy as hp
-    beam = [
-        hp.gauss_beam(val, 2999, pol = True)[:,1]
-        for val in [
-            0.00930842,
-            0.00785398,
-            0.00378155,
-            0.002807071,
-            0.002106031,
-            0.00145444,
-            0.00140499,
-        ]
-    ]
-    beam5 = hp.gauss_beam(0.00145444, 2999, pol = True)[:,1]
 
-    for idx, weight in enumerate(smica_weights):
-        # if idx>2:
-            weight *= beam[idx]
-            weight /= beam5
+
+    # inpath_name_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/ext/smica_propagation/weights_EB_smica_R3.00.txt"
+    # smica_weights = io.load_weights_smica(inpath_name_smica)[0,:,:lmax]
+    # import healpy as hp
+    # beam = [
+    #     hp.gauss_beam(val, 2999, pol = True)[:,1]
+    #     for val in [
+    #         0.00930842,
+    #         0.00785398,
+    #         0.00378155,
+    #         0.002807071,
+    #         0.002106031,
+    #         0.00145444,
+    #         0.00140499,
+    #     ]
+    # ]
+    # beam5 = hp.gauss_beam(0.00145444, 2999, pol = True)[:,1]
+
+    # for idx, weight in enumerate(smica_weights):
+    #     # if idx>2:
+    #         weight *= beam[idx]
+    #         weight /= beam5
+
+
+    dc = dcf["plot"]["weights_bias"]
+
+    dcf["pa"]["mskset"] = "lens"
+    dcf["pa"]["freqdset"] = "NPIPE"
+    fname = io.make_filenamestring(dcf)
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    weights1 = io.load_weights(inpath_name, fname)
+
+    dcf["pa"]["mskset"] = "smica"
+    dcf["pa"]["freqdset"] = "NPIPE"
+    fname = io.make_filenamestring(dcf)
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    weights2 = io.load_weights(inpath_name, fname)
+    
+
     # ["030", "044", "070", "100", "143", "217","353", "030", "044", "070", "100", "143", "217", "353"]
     
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = mskset,
+        mskset = "smica and lens",
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    np.set_printoptions(threshold=sys.maxsize)
     
     diff_weights = dict()
-    for specc, va in weights.items():
+    for specc, va in weights1.items():
         if specc == "EE":
             if specc not in diff_weights.keys():
                 diff_weights.update({specc: {}})
-            diff_weights[specc] = (weights[specc] - smica_weights.T)/weights[specc]
+            # diff_weights[specc] = (weights[specc] - smica_weights.T)/weights[specc]
+                diff_weights[specc] = (weights1[specc] - weights2[specc] )/weights1[specc]
 
     for specc, diff_data in diff_weights.items():
         if specc == "EE":
@@ -295,8 +311,10 @@ def plot_weights_bias(fname):
             ax1 = plt.subplot(gs[0])
 
             mp = cplt.plot_compare_weights_binned(plt,
-                weights[specc],
-                smica_weights,
+                # weights[specc],
+                # smica_weights,
+                weights1[specc],
+                weights2[specc],
                 lmax,
                 title_string = title_string)
             
@@ -322,7 +340,7 @@ def plot_weights_bias(fname):
                 dc["outdir_root"] + \
                 dc["outdir_rel"] + \
                 specc+"_weights/" + \
-                specc+"_weightsbias" + "-" + \
+                specc+"_weightsbias-smica-lens" + "-" + \
                 dc["out_desc"] + "-" + \
                 fname + ".jpg"
             io.save_figure(
@@ -384,11 +402,12 @@ def plot_spectrum(fname):
 
 
 def plot_compare_optimalspectrum(fname):
+    spec_pick = "BB"
     def _weightspec(icov_l, spectrum):
         import copy
         # retspec = copy.deepcopy(spectrum)
         for specc, data in spectrum.items():
-            if specc == "EE":
+            if specc == spec_pick:
                 icovsum = np.array([np.sum(icov_l[specc][l]) for l in range(lmax)])
                     # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
                 retspec = {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
@@ -455,21 +474,20 @@ def plot_compare_optimalspectrum(fname):
     #     io.save_figure(
     #         mp = mp,
     #         path_name = outpath_name)
-    specc = "EE"
-    if "Planck-"+specc in spectrum_truth.columns:
-            spectrum_trth = spectrum_truth["Planck-"+specc]
+    if "Planck-"+spec_pick in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+spec_pick]
 
     plt.figure(figsize=(8,6))
     gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
     ax1 = plt.subplot(gs[0])
     mp = cplt.plot_compare_powspec_binned(
         plt,
-        spec_data_wweighted_NPIPE["EE"],
-        spec_data_wweighted_DX12["EE"],
+        spec_data_wweighted_NPIPE[spec_pick],
+        spec_data_wweighted_DX12[spec_pick],
         lmax=3000,
         title_string = "improvement",
         truthfile = spectrum_trth,
-        truth_label = "Planck " + specc
+        truth_label = "Planck " + spec_pick
     )
     # ax1.set_xticks(np.arange([0,3000,500]))
     # ax1.set_xticks([0,200,1000,2000])
@@ -477,7 +495,7 @@ def plot_compare_optimalspectrum(fname):
     ax1.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
     diff_spec = dict()
     for specc, va in spec_data_wweighted_NPIPE.items():
-        if specc == "EE":
+        if specc == spec_pick:
             if specc not in spec_data_wweighted_NPIPE.keys():
                 diff_spec.update({specc: {}})
             diff_spec[specc] = {
@@ -487,17 +505,17 @@ def plot_compare_optimalspectrum(fname):
     ax2 = mp.subplot(gs[1])
     # ax1.set_xticks([100*n for n in range(30)])
     mp = cplt.plot_powspec_diff_binned(plt,
-        diff_spec["EE"],
+        diff_spec[spec_pick],
         lmax=3000
     )
     ax2.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
     outpath_name = \
         dc["outdir_root"] + \
         dc["outdir_rel"] + \
-        "EE_spectrum/" + \
-        "EE_spectrum" + "-" + \
-        "improvement-smica-lens" + "-" + \
-        fname + ".jpg"
+        spec_pick+"_spectrum/" + \
+        spec_pick+"_spectrum" + "-" + \
+        "improvement-NPIPE_smica-NPIPE_lens" + "-" + \
+        fname[16:38] + ".jpg"
     io.save_figure(
         mp = mp,
         path_name = outpath_name)
@@ -680,4 +698,4 @@ if __name__ == '__main__':
         print("plotting noise_comparison")
         plot_noise_comparison()
 
-    plot_compare_optimalspectrum(fname)
+    # plot_compare_optimalspectrum(fname)

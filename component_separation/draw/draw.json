@@ -3,7 +3,7 @@
     "mskset": "smica",
     "Tscale": "K_CMB",
     "offdiag": true,
-    "freqdset": "DX12",
+    "freqdset": "NPIPE",
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
@@ -61,7 +61,7 @@
         }
     },
     "weights_bias": {
-        "do_plot": false,
+        "do_plot": true,
         "indir_root": "data/tmp/weights/",
         "indir_rel": "",
         "outdir_root": "vis/weights/",
@@ -70,7 +70,7 @@
         "out_desc": "K_CMB"
     },
     "weights": {
-        "do_plot": false,
+        "do_plot": true,
         "indir_root": "data/tmp/weights/",
         "indir_rel": "",
         "outdir_root": "vis/weights/",

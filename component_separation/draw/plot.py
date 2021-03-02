@@ -539,7 +539,7 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.xlim((10,4000))
-    plt.ylim((-0.05,0.2))
+    plt.ylim((-0.05,0.3))
     from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
     plt.gca().yaxis.set_minor_locator(AutoMinorLocator())
     plt.tick_params(which='both')
@@ -615,7 +615,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     idx=0
     plt.title(title_string)
     plt.xlim((10,4000))
-    plt.ylim((1e-2,1e3))
+    plt.ylim((1e-4,1e5))
 
     for freqc, val in data2.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
@@ -696,10 +696,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
         return mean, std, _
 
 
-
-
     # plt.xlabel("Multipole l")
-    
 
     for freqc, val in data1.items():
         if "070" not in freqc and "030" not in freqc and "044" not in freqc:
@@ -708,30 +705,45 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
-                label=freqc,
+                label="lens mask - "+ freqc,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
                 alpha=0.9,
                 color = CB_color_cycle[idx])
 
-            mean, std, _ = std_dev_binned(data2[idx+3], bins)
-            if idx == 0:
-                plt.plot(
-                    (_[1:] + _[:-1])/2,
-                    mean,
-                    label="smica channels",
-                    alpha=0.8,
-                    color = 'black')
-            else:
-                plt.plot(
-                    (_[1:] + _[:-1])/2,
-                    mean,
-                    alpha=0.8,
-                    color = 'black')
+            mean, std, _ = std_dev_binned(data2[freqc], bins)
+            base_line = plt.errorbar(
+                (_[1:] + _[:-1])/2,
+                mean,
+                # yerr=std,
+                # label=freqc,
+                capsize=3,
+                elinewidth=2,
+                fmt='x',
+                alpha=0.9,
+                color = "black")
             idx+=1
+    plt.errorbar(0,0,yerr=0, label="smica mask", capsize=3,
+                elinewidth=2,
+                fmt='x', color="black")
+    plt.legend()
 
-
+            # mean, std, _ = std_dev_binned(data2[idx+3], bins)
+            # mean, std, _ = std_dev_binned(data2[freqc], bins)
+            # if idx == 0:
+            #     plt.plot(
+            #         (_[1:] + _[:-1])/2,
+            #         mean,
+            #         label="smica channels",
+            #         alpha=0.8,
+            #         color = 'black')
+            # else:
+            #     plt.plot(
+            #         (_[1:] + _[:-1])/2,
+            #         mean,
+            #         alpha=0.8,
+            #         color = 'black')
     return plt
 
 

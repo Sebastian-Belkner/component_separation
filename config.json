@@ -133,6 +133,8 @@
             }
         },
     "outdir": "data/tmp/",
+    "outdir_spectrum": "data/tmp/spectrum/",
+    "outdir_weight": "data/tmp/weights/",
     "indir": "data/"
     }
 }

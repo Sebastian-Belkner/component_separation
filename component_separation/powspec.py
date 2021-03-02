@@ -306,14 +306,14 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
                 ll = lambda x: x*(x+1)*1e12/(2*np.pi)
                 sc = np.array([ll(idx) for idx in range(lmax)])
                 data[freqc][specID] *= sc
-                # if int(freqc.split("-")[0]) < 100:
-                #     data[freqc][specID] /= hp.pixwin(1024)[:lmax]
-                # else:
-                #     data[freqc][specID] /= hp.pixwin(2048)[:lmax]
-                # if int(freqc.split("-")[1]) < 100:
-                #     data[freqc][specID] /= hp.pixwin(1024)[:lmax]
-                # else:
-                #     data[freqc][specID] /= hp.pixwin(2048)[:lmax]
+                if int(freqc.split("-")[0]) < 100:
+                    data[freqc][specID] /= hp.pixwin(1024)[:lmax]
+                else:
+                    data[freqc][specID] /= hp.pixwin(2048)[:lmax]
+                if int(freqc.split("-")[1]) < 100:
+                    data[freqc][specID] /= hp.pixwin(1024)[:lmax]
+                else:
+                    data[freqc][specID] /= hp.pixwin(2048)[:lmax]
             else:
                 print("Nothing has been scaled.")
     return data

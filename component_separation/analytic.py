@@ -7,15 +7,6 @@ run.py: script for executing main functionality of component_separation
 __author__ = "S. Belkner"
 
 
-# TODO
-# pospace: is the second mask added correctly?
-# check mean from maps and subtract
-# check bright pixels
-# how does binning work? do i have to take 2l+1 into account as described in https://arxiv.org/pdf/0803.1814.pdf on page9?
-# monopole and dipole regression on apodized galmask (available in healpy ?) (healpy.pixelfunc.remove_dipole)
-# use jackknives to compute a noise estimate (half mission)
-# analytic expression for weight estimates
-
 import json
 import logging
 import logging.handlers
