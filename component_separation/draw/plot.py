@@ -539,8 +539,12 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.xlim((10,4000))
-    plt.ylim((0,0.7))
-    plt.grid(which='both', axis='y')
+    plt.ylim((-0.05,0.2))
+    from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+    plt.gca().yaxis.set_minor_locator(AutoMinorLocator())
+    plt.tick_params(which='both')
+
+    plt.grid(which='major', axis='y')
 
     for freqc, val in data.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
