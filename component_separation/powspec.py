@@ -440,29 +440,6 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
         }
     return cov_inv_l
 
-@log_on_start(INFO, "Starting to invert convariance matrix {cov}")
-@log_on_end(DEBUG, "Inversion successful: '{result}' ")
-def calculate_analytic_minimalcov(C_lS: np.ndarray, C_lF: np.ndarray, C_lN: np.ndarray) -> np.array:
-    """Returns the minimal covariance using inverse variance weighting, i.e. calculates
-    :math:`C^{\texttt{min}}_l = \frac{1}{\textbf{1}^\dagger (C_l^S + C_l^F + C_l^N)^{-1}\textbf{1}}`.
-
-    Args:
-        C_lS (np.ndarray): An array of auto- and cross-covariance matrices of the CMB for all instruments, its dimension is [Nspec,Nspec,lmax]
-        C_lF (np.ndarray): An array of auto- and cross-covariance matrices of the superposition of Foregrounds for all instruments, its dimension is [Nspec,Nspec,lmax]
-        C_lN (np.ndarray): An array of auto- and cross-covariance matrices of the Noise for all instruments, its dimension is [Nspec,Nspec,lmax]
-    """
-    def is_invertible(a, l):
-        truth = a.shape[0] == a.shape[1] and np.linalg.matrix_rank(a) == a.shape[0]
-        if not truth:
-            print('{} not invertible: {}'.format(l, a) )
-        return truth
-
-    elaw = np.ones(C_lS.shape[0])
-    cov_minimal = np.array([elaw.T @ np.linalg.inv(C_lS[:,:,l] + C_lF[:,:,:,l] + C_lN[:,:,l]) @ elaw
-                    if is_invertible(C_lS[:,:,l] + C_lF[:,:,l] + C_lN[:,:,l], l) 
-                    else None
-                    for l in range(lmax)])
-    return cov_minimal
 
 @log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
 @log_on_end(DEBUG, "channel weights calculated successfully: '{result}' ")
