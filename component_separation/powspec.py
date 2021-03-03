@@ -69,11 +69,13 @@ lmax_mask = 80
 def set_logger(loglevel=logging.INFO):
     logging.basicConfig(format='   %(levelname)s:      %(message)s', level=loglevel)
 
+
 def _crosscomb(option, f1, f2):
         if option:
             return int(f1) <= int(f2)
         else:
             return int(f1) == int(f2)
+
 
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
@@ -127,6 +129,7 @@ def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqc
                     }
            })
     return spectrum
+
 
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
@@ -257,6 +260,7 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
     }
     return [tmap, qmap, umap]
 
+
 @log_on_start(INFO, "Starting to create powerspectrum dataframe with {spectrum}")
 @log_on_end(DEBUG, "Dataframe created successfully: '{result}' ")
 def create_df(spectrum: Dict[str, Dict[str, List]], offdiag: bool, freqfilter: List[str], specfilter: List[str]) -> Dict:
@@ -286,6 +290,7 @@ def create_df(spectrum: Dict[str, Dict[str, List]], offdiag: bool, freqfilter: L
                 df[spec][fkey].index.name = 'multipole'
 
     return df
+
 
 @log_on_start(INFO, "Starting to apply scaling onto data {data}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
@@ -317,6 +322,7 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
             else:
                 print("Nothing has been scaled.")
     return data
+
 
 @log_on_start(INFO, "Starting to apply Beamfunnction on dataframe with {data}")
 @log_on_end(DEBUG, "Beamfunction applied successfully: '{result}' ")
@@ -366,6 +372,7 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
     return data
 
+
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
 def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_CMB") -> Dict[str, np.ndarray]:
@@ -409,6 +416,7 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
                                     cov[spec][ifreq][ifreq2] = a
                                     cov[spec][ifreq2][ifreq] = a
     return cov
+
 
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
