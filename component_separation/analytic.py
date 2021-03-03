@@ -40,6 +40,10 @@ def create_noisespectrum(arcmin, fwhm=np.array([2,10,27])):
     return _spec(rad)
 
 
+def gauss_beam(fwhm, lmax):
+    return (fwhm/(2.728))**2* 1/ hp.gauss_beam(fwhm, lmax=lmax, pol=True)
+
+
 def create_covmatrix(spectrum):
     # for starter, i assume its noise only
 
@@ -77,9 +81,25 @@ def calculate_minimalcov(C_lS: np.ndarray, C_lF: np.ndarray, C_lN: np.ndarray) -
     return cov_minimal
 
 
+n_cha = 3
+shape = (lmax, n_cha,n_cha)
+a = np.zeros(shape, float)
+C_lS = 1000*np.ones(shape, float)
+C_lF = np.zeros(shape, float)
+C_lN = np.zeros(shape, float)
+
+row, col = np.diag_indices(a[0,:,:].shape[0])
+
 # %% Noisemaps
 noiselevel = np.array([5,6,7])
-noise = create_noisespectrum(arcmin=noiselevel)
+ll = np.arange(1,lmax+2,1)
+
+noise = np.array(
+    [gauss_beam(noiselevel[0]*0.000290888, lmax)[:,1]*ll*(ll+1),
+    gauss_beam(noiselevel[1]*0.000290888, lmax)[:,1]*ll*(ll+1),
+    gauss_beam(noiselevel[2]*0.000290888, lmax)[:,1]*ll*(ll+1)])
+# noise = create_noisespectrum(arcmin=noiselevel)
+
 C_lN = create_covmatrix(noise)
 
 # noise_cl = create_covmatrix(50)
@@ -100,6 +120,7 @@ C_lS = np.zeros_like(C_lN, float)
 C_lF = np.zeros_like(C_lN, float)
 cov_min = calculate_minimalcov(C_lS, C_lF, C_lN)
 plt.plot(cov_min, label='minimal')
+plt.ylim((0,1e2))
 
 
 
@@ -117,19 +138,19 @@ plt.savefig('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separatio
 
 
 
+# %%
+gb = gauss_beam(noiselevel[0]*0.000290888, lmax)
+ll = np.arange(0,lmax+1,1)
+plt.plot(gb[:,1]* ll*(ll+1))
+
+
+
 
 
 
 
 # %% Covmin
-n_cha = 3
-shape = (lmax+1, n_cha,n_cha)
-a = np.zeros(shape, float)
-C_lS = 1000*np.ones(shape, float)
-C_lF = np.zeros(shape, float)
-C_lN = np.zeros(shape, float)
 
-row, col = np.diag_indices(a[0,:,:].shape[0])
 for l in range(lmax+1):
     # C_lS[row,col,l] = 400*np.array([1,1,1])*np.sin(l*np.pi*2/10)**2
     C_lF[l,row,col] = [

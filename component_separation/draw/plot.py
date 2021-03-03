@@ -699,51 +699,52 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     # plt.xlabel("Multipole l")
 
     for freqc, val in data1.items():
-        if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
             mean, std, _ = std_dev_binned(data1[freqc], bins)
             base_line = plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
-                label="lens mask - "+ freqc,
+                label="smica mask - "+ freqc,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
                 alpha=0.9,
                 color = CB_color_cycle[idx])
 
-            mean, std, _ = std_dev_binned(data2[freqc], bins)
-            base_line = plt.errorbar(
-                (_[1:] + _[:-1])/2,
-                mean,
-                # yerr=std,
-                # label=freqc,
-                capsize=3,
-                elinewidth=2,
-                fmt='x',
-                alpha=0.9,
-                color = "black")
+            # mean, std, _ = std_dev_binned(data2[freqc], bins)
+            # base_line = plt.errorbar(
+            #     (_[1:] + _[:-1])/2,
+            #     mean,
+            #     # yerr=std,
+            #     # label=freqc,
+            #     capsize=3,
+            #     elinewidth=2,
+            #     fmt='x',
+            #     alpha=0.9,
+            #     color = "black")
+
+            mean, std, _ = std_dev_binned(data2[idx], bins)
+            if idx == 0:
+                plt.plot(
+                    (_[1:] + _[:-1])/2,
+                    mean,
+                    label="smica channels",
+                    alpha=0.8,
+                    color = 'black')
+            else:
+                plt.plot(
+                    (_[1:] + _[:-1])/2,
+                    mean,
+                    alpha=0.8,
+                    color = 'black')
+
             idx+=1
     plt.errorbar(0,0,yerr=0, label="smica mask", capsize=3,
                 elinewidth=2,
                 fmt='x', color="black")
     plt.legend()
 
-            # mean, std, _ = std_dev_binned(data2[idx+3], bins)
-            # mean, std, _ = std_dev_binned(data2[freqc], bins)
-            # if idx == 0:
-            #     plt.plot(
-            #         (_[1:] + _[:-1])/2,
-            #         mean,
-            #         label="smica channels",
-            #         alpha=0.8,
-            #         color = 'black')
-            # else:
-            #     plt.plot(
-            #         (_[1:] + _[:-1])/2,
-            #         mean,
-            #         alpha=0.8,
-            #         color = 'black')
     return plt
 
 
@@ -783,11 +784,11 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.xlim((100,4000))
-    plt.ylim((-0.1,0.1))
+    plt.ylim((-0.2,0.2))
     plt.grid(which='both', axis='y')
 
     for freqc, val in data.items():
-        if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
         # if "070" in freqc or "030" in freqc or "044" in freqc:
             idx_max+=len(freqc)
             binmean, binerr = std_dev_binned(data[freqc])

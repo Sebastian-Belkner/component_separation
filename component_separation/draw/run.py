@@ -249,33 +249,33 @@ def plot_weights_bias(fname):
     lmax = dcf['pa']['lmax']
 
 
-    # inpath_name_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/ext/smica_propagation/weights_EB_smica_R3.00.txt"
-    # smica_weights = io.load_weights_smica(inpath_name_smica)[0,:,:lmax]
-    # import healpy as hp
-    # beam = [
-    #     hp.gauss_beam(val, 2999, pol = True)[:,1]
-    #     for val in [
-    #         0.00930842,
-    #         0.00785398,
-    #         0.00378155,
-    #         0.002807071,
-    #         0.002106031,
-    #         0.00145444,
-    #         0.00140499,
-    #     ]
-    # ]
-    # beam5 = hp.gauss_beam(0.00145444, 2999, pol = True)[:,1]
+    inpath_name_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/ext/smica_propagation/weights_EB_smica_R3.00.txt"
+    smica_weights = io.load_weights_smica(inpath_name_smica)[0,:,:lmax]
+    import healpy as hp
+    beam = [
+        hp.gauss_beam(val, 2999, pol = True)[:,1]
+        for val in [
+            0.00930842,
+            0.00785398,
+            0.00378155,
+            0.002807071,
+            0.002106031,
+            0.00145444,
+            0.00140499,
+        ]
+    ]
+    beam5 = hp.gauss_beam(0.00145444, 2999, pol = True)[:,1]
 
-    # for idx, weight in enumerate(smica_weights):
-    #     # if idx>2:
-    #         weight *= beam[idx]
-    #         weight /= beam5
+    for idx, weight in enumerate(smica_weights):
+        # if idx>2:
+            weight *= beam[idx]
+            weight /= beam5
 
 
     dc = dcf["plot"]["weights_bias"]
 
-    dcf["pa"]["mskset"] = "lens"
-    dcf["pa"]["freqdset"] = "NPIPE"
+    dcf["pa"]["mskset"] = "smica"
+    dcf["pa"]["freqdset"] = "DX12"
     fname = io.make_filenamestring(dcf)
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     weights1 = io.load_weights(inpath_name, fname)
@@ -290,7 +290,7 @@ def plot_weights_bias(fname):
     # ["030", "044", "070", "100", "143", "217","353", "030", "044", "070", "100", "143", "217", "353"]
     
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = "smica and lens",
+        mskset = "smica public weights vs DX12-smica weights",
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
@@ -311,10 +311,10 @@ def plot_weights_bias(fname):
             ax1 = plt.subplot(gs[0])
 
             mp = cplt.plot_compare_weights_binned(plt,
-                # weights[specc],
-                # smica_weights,
                 weights1[specc],
-                weights2[specc],
+                smica_weights,
+                # weights1[specc],
+                # weights2[specc],
                 lmax,
                 title_string = title_string)
             
@@ -340,7 +340,7 @@ def plot_weights_bias(fname):
                 dc["outdir_root"] + \
                 dc["outdir_rel"] + \
                 specc+"_weights/" + \
-                specc+"_weightsbias-smica-lens" + "-" + \
+                specc+"_weightsbias-smicapublic-smica" + "-" + \
                 dc["out_desc"] + "-" + \
                 fname + ".jpg"
             io.save_figure(
