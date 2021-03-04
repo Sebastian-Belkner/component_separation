@@ -1,7 +1,8 @@
 {
 "pa":{
-    "new_spectrum": true,
-    "mskset": "lens",
+    "new_spectrum": false,
+    "Tscale": "K_CMB",
+    "mskset": "smica",
     "offdiag": true,
     "freqdset": "NPIPE",
     "llp1": true,
@@ -9,7 +10,7 @@
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
-    "run_sim": true,
+    "run_sim": false,
     "num_sim": 5,
     "freqfilter": [
         "545",
@@ -98,7 +99,7 @@
         },
     "DX12":{
             "path": "map/frequency/",
-            "filename": "{LorH}_SkyMap_{freq}-field_{nside}_R3.00_full.fits"
+            "filename": "{LorH}_SkyMap_{freq}-field_{nside}_R3.{00/1}_full.fits"
         },
     "lens":{
         "tmask":{
@@ -125,7 +126,15 @@
                 ]
             }
         },
+    "hitshist":{
+        "mask":{
+            "path": "mask/hitshist/",
+            "filename": "{freqdset}-freq_{freq}-{tresh_low}to{tresh_up}-split_{split}.hitshist.npy"
+            }
+        },
     "outdir": "data/tmp/",
+    "outdir_spectrum": "data/tmp/spectrum/",
+    "outdir_weight": "data/tmp/weights/",
     "indir": "data/"
     }
 }
