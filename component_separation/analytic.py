@@ -144,11 +144,6 @@ ll = np.arange(0,lmax+1,1)
 plt.plot(gb[:,1]* ll*(ll+1))
 
 
-
-
-
-
-
 # %% Covmin
 
 for l in range(lmax+1):

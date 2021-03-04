@@ -280,7 +280,7 @@ def plot_weights_bias(fname):
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     weights1 = io.load_weights(inpath_name, fname)
 
-    dcf["pa"]["mskset"] = "smica"
+    dcf["pa"]["mskset"] = "lens"
     dcf["pa"]["freqdset"] = "NPIPE"
     fname = io.make_filenamestring(dcf)
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
@@ -290,7 +290,7 @@ def plot_weights_bias(fname):
     # ["030", "044", "070", "100", "143", "217","353", "030", "044", "070", "100", "143", "217", "353"]
     
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = "smica public weights vs DX12-smica weights",
+        mskset = "public smica weights vs DX12-smica",
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     

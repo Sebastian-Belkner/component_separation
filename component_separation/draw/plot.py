@@ -705,7 +705,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
-                label="smica mask - "+ freqc,
+                label="DX12-smica mask - "+ freqc,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
@@ -713,14 +713,14 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 color = CB_color_cycle[idx])
 
             # mean, std, _ = std_dev_binned(data2[freqc], bins)
-            # base_line = plt.errorbar(
+            # base_line = plt.plot(
             #     (_[1:] + _[:-1])/2,
             #     mean,
             #     # yerr=std,
             #     # label=freqc,
-            #     capsize=3,
-            #     elinewidth=2,
-            #     fmt='x',
+            #     # capsize=3,
+            #     # elinewidth=2,
+            #     # fmt='x',
             #     alpha=0.9,
             #     color = "black")
 
@@ -729,7 +729,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 plt.plot(
                     (_[1:] + _[:-1])/2,
                     mean,
-                    label="smica channels",
+                    label="smica public weights",
                     alpha=0.8,
                     color = 'black')
             else:
@@ -740,9 +740,9 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                     color = 'black')
 
             idx+=1
-    plt.errorbar(0,0,yerr=0, label="smica mask", capsize=3,
-                elinewidth=2,
-                fmt='x', color="black")
+    # plt.errorbar(0,0,yerr=0, label="smica public weights", capsize=3,
+    #             elinewidth=2,
+    #             fmt='x', color="black")
     plt.legend()
 
     return plt
