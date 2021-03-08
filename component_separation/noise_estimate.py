@@ -91,10 +91,15 @@ def postprocess_spectrum(data, freqcomb):
 
 
 def difference(data1, data2):
-    ret = [None, None, None]
+    ret = [dict(), dict(), dict()]
     for idx, IQU in enumerate(data1):
         for key, val in IQU.items():
-            ret[idx] = {key: data1[idx][key] - data2[idx][key]}
+            if key in ret[idx].keys():
+                ret[idx][key].update({"map": data1[idx][key]['map'] - data2[idx][key]['map']})
+            else:
+                ret[idx].update({key: {"map": data1[idx][key]['map'] - data2[idx][key]['map']}})
+            ret[idx][key].update({'mask': data1[idx][key]['mask']})
+    print(ret)
     return ret
 
 
