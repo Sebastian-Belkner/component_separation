@@ -146,6 +146,8 @@ def load_plamap(pa: Dict) -> List[Dict]:
                     .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
                     .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
                     .replace("{00/1}", "00" if int(FREQ)<100 else "01")
+                    .replace("{even/half1}", "even" if int(FREQ)>=100 else "half1")
+                    .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "half2")
                 )
             for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
