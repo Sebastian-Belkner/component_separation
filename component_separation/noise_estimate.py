@@ -99,7 +99,6 @@ def difference(data1, data2):
             else:
                 ret[idx].update({key: {"map": data1[idx][key]['map'] - data2[idx][key]['map']}})
             ret[idx][key].update({'mask': data1[idx][key]['mask']})
-    print(ret)
     return ret
 
 
