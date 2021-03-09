@@ -70,9 +70,18 @@ def make_filenamestring(cf):
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
 
 
+def load_data(path_name: str) -> Dict[str, Dict]:
+    if os.path.isfile(path_name):
+        data = np.load(path_name, allow_pickle=True)
+        return data
+    else:
+        print("no existing data at {}".format(path_name))
+        return None
+
+
 #%% Collect maps
 @log_on_start(INFO, "Starting to load pla maps")
-@log_on_end(DEBUG, "Data loaded successfully")
+@log_on_end(DEBUG, "pla maps loaded successfully")
 def load_plamap(pa: Dict) -> List[Dict]:
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
@@ -178,6 +187,15 @@ def load_plamap(pa: Dict) -> List[Dict]:
 
 
     ## Decide which maps to load 
+    def _load_data(path_name):
+        return load_data(path_name)
+
+    diff_data = {}
+    for FREQ in PLANCKMAPFREQ:
+        if FREQ not in freqfilter:
+            if mappath[FREQ].endswith('npy'):
+                diff_data.update({FREQ: _load_data(mappath[FREQ])})
+                
     flag = False
     for spec in PLANCKSPECTRUM:
         if spec not in specfilter and ("T" in spec):
@@ -186,7 +204,9 @@ def load_plamap(pa: Dict) -> List[Dict]:
     if flag and (tmask is not None):
         tmap = {
             FREQ: {
-                "map": hp.read_map(mappath[FREQ], field=0),
+                "map": hp.read_map(mappath[FREQ], field=0)
+                        if mappath[FREQ].endswith('fits')
+                        else diff_data[FREQ][0][FREQ]["map"],
                 "mask": tmask_d[FREQ] if int(FREQ)<100 else tmask[FREQ]
                 }for FREQ in PLANCKMAPFREQ
                     if FREQ not in freqfilter
@@ -199,14 +219,18 @@ def load_plamap(pa: Dict) -> List[Dict]:
 
     qmap = {
         FREQ: {
-            "map": hp.read_map(mappath[FREQ], field=1),
+            "map": hp.read_map(mappath[FREQ], field=1)
+                    if mappath[FREQ].endswith('fits')
+                    else diff_data[FREQ][1][FREQ]["map"],
             "mask": pmask_d[FREQ] if int(FREQ)<100 else pmask[FREQ]
             }for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter
     }
     umap = {
         FREQ: {
-            "map": hp.read_map(mappath[FREQ], field=2),
+            "map": hp.read_map(mappath[FREQ], field=2)
+                    if mappath[FREQ].endswith('fits')
+                    else diff_data[FREQ][2][FREQ]["map"],
             "mask": pmask_d[FREQ] if int(FREQ)<100 else pmask[FREQ]
             }for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter

@@ -347,7 +347,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
 
     def std_dev_binned(d):
         mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))
+        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))/100
         return mean, err
 
     
@@ -363,7 +363,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
 
     plt.title(title_string)
     plt.xlim((10,4000))
-    plt.ylim(ylim)
+    # plt.ylim(ylim)
     plt.xscale("log", nonpositive='clip')
     plt.yscale("log", nonpositive='clip')
     for freqc, val in data.items():

@@ -4,19 +4,15 @@
     "Tscale": "K_CMB",
     "mskset": "smica",
     "offdiag": true,
-    "freqdset": "DX12",
+    "freqdset": "DX12-diff",
     "llp1": true,
-    "bf": true,
+    "bf": false,
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
     "run_sim": false,
     "num_sim": 5,
     "freqfilter": [
-        "100",
-        "143",
-        "217",
-        "353",
         "545",
         "857"
     ],
@@ -113,6 +109,10 @@
         "path": "map/frequency/",
         "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-{odd/half2}ring.fits"
     },
+    "DX12-diff":{
+        "path": "map/frequency/",
+        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-evenoddhalfdifference_unscaled-preprocessed.fits.npy"
+    },
     "lens":{
         "tmask":{
             "path": "mask/",
@@ -147,6 +147,7 @@
     "outdir": "data/tmp/",
     "outdir_spectrum": "data/tmp/spectrum/",
     "outdir_weight": "data/tmp/weights/",
+    "outdir_map": "data/map/frequency/",
     "indir": "data/"
     }
 }

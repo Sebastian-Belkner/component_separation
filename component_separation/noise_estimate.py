@@ -44,7 +44,7 @@ bf = cf['pa']["bf"]
 num_sim = cf['pa']["num_sim"]
 
 spec_path = cf[mch]['outdir_spectrum']
-weight_path = cf[mch]['outdir_weight']
+map_path = cf[mch]['outdir_map']
 indir_path = cf[mch]['indir']
 
 lmax = cf['pa']["lmax"]
@@ -103,10 +103,10 @@ def difference(data1, data2):
 
 
 if __name__ == '__main__':
-    print(40*"$")
+    print(60*"$")
     print("Starting run with the following settings:")
     print(cf['pa'])
-    print(40*"$")
+    print(60*"$")
 
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)
@@ -117,18 +117,38 @@ if __name__ == '__main__':
     speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
 
     filename = io.make_filenamestring(cf)
-
-    cf['pa']["freqdset"] = "DX12-split1"
-    data_hm1 = io.load_plamap(cf['pa'])
-    cf['pa']["freqdset"] = "DX12-split2"
-    data_hm2 = io.load_plamap(cf['pa'])
-
-    data_diff = difference(data_hm1, data_hm2)
-
-    data_diff = preprocess_map(data_diff)
-
-    spectrum = map2spec(data_diff, freqcomb)
-    io.save_data(spectrum, spec_path+'unscaled-hm'+filename)
+    # data_diff = io.load_plamap(cf['pa'])
+    # spectrum = map2spec(data_diff, freqcomb)
+    # io.save_data(spectrum, spec_path+'unscaled-difference'+filename)
+    spectrum = io.load_spectrum(spec_path+'unscaled-difference'+filename)
 
     spectrum_scaled = postprocess_spectrum(spectrum, freqcomb)
-    io.save_data(spectrum_scaled, spec_path+'scaled-hm'+filename)
+    io.save_data(spectrum_scaled, spec_path+'scaled-difference'+filename)
+
+
+    # freqfilter =  [
+    #     '030',
+    #     '044',
+    #     '070',
+    #     '100',
+    #     '143',
+    #     '217',
+    #     '353',
+    #     '545',
+    #     '857',
+    # ]
+    # for FREQ in PLANCKMAPFREQ:
+    #     freqf = [f for f in freqfilter if f != FREQ]
+    #     cf['pa']["freqfilter"] = freqf
+    #     cf['pa']["freqdset"] = "DX12-split1"
+    #     data_hm1 = io.load_plamap(cf['pa'])
+    #     cf['pa']["freqdset"] = "DX12-split2"
+    #     data_hm2 = io.load_plamap(cf['pa'])
+    #     data_diff = difference(data_hm1, data_hm2)
+    #     data_diff = preprocess_map(data_diff)
+    #     filename = "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-evenoddhalfdifference_unscaled-preprocessed.fits"\
+    #         .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
+    #         .replace("{freq}", FREQ)\
+    #         .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
+    #         .replace("{00/1}", "00" if int(FREQ)<100 else "01")
+    #     io.save_data(data_diff, map_path+filename)

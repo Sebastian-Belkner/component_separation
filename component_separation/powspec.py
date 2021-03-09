@@ -308,7 +308,7 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
         for specID, val in spec.items():
             if llp1:
                 lmax = len(next(iter((next(iter(data.values()))).values())))
-                ll = lambda x: x*(x+1)*1e12/(2*np.pi)
+                ll = lambda x: 1e12#x*(x+1)*1e12/(2*np.pi)
                 sc = np.array([ll(idx) for idx in range(lmax)])
                 data[freqc][specID] *= sc
                 if int(freqc.split("-")[0]) < 100:
