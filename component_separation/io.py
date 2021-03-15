@@ -79,6 +79,58 @@ def load_data(path_name: str) -> Dict[str, Dict]:
         return None
 
 
+def load_plamap_new(pa: Dict):
+    """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
+    Map data in `PATH/map/`.
+    Args:
+        cf (Dict): Configuration as coming from conf.json
+        mch (str): ID of the machine the code is executed. Depending on the ID, a different set of configurations is used.
+        
+    Returns:
+        List[Dict]: Planck maps (data and masks) and some header information
+
+    Doctest:
+    >>> get_data(cf: Dict, mch: str) 
+    NotSureWhatToExpect
+    """
+
+    freqdset = pa['freqdset'] # NPIPE or DX12
+    freqfilter = pa["freqfilter"]
+    nside = pa["nside"]
+
+    freq_filename = cf[mch][freqdset]['filename']
+    
+    indir_path = cf[mch]['indir']
+    freq_path = cf[mch][freqdset]['path']
+
+    mappath = {
+        FREQ:'{path}{freq_path}{freq_filename}'
+            .format(
+                path = indir_path,
+                freq_path = freq_path,
+                freq_filename = freq_filename
+                    .replace("{freq}", FREQ)
+                    .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
+                    .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
+                    .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
+                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")
+                    .replace("{even/half1}", "even" if int(FREQ)>=100 else "half1")
+                    .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "half2")
+                )
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter}
+
+    maps = {
+        FREQ: hp.read_map(mappath[FREQ], field=(0,1,2))
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+    }
+    return maps
+
+
+def load_mask(pa: Dict):
+    pass
+
 #%% Collect maps
 @log_on_start(INFO, "Starting to load pla maps")
 @log_on_end(DEBUG, "pla maps loaded successfully")
@@ -100,6 +152,7 @@ def load_plamap(pa: Dict) -> List[Dict]:
     ### Grab all necessary parameters from config
 
     mskset = pa['mskset'] # smica or lens
+    lownoise_patch = pa['lownoise_patch']
     freqdset = pa['freqdset'] # NPIPE or DX12
     freqfilter = pa["freqfilter"]
     specfilter = pa["specfilter"]
@@ -143,6 +196,20 @@ def load_plamap(pa: Dict) -> List[Dict]:
     def _multi(a,b):
         return a*b
 
+    def _read_noisevarmask(FREQ):
+        f = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_{}-field_2048_R3.01_full.fits".format(FREQ)
+        boundary = None #such that it covers about 25% of pixels for all masks
+        boundary= {
+            "030": 2*1e-9,
+            "044": 2*1e-9,
+            "070": 2*1e-9,
+            "100": 2*1e-9,
+            "143": 2*1e-9,
+            "217": 2*1e-9,
+            "353": 2*1e-9
+        }
+        noise_level = hp.read_map(f, field=7)
+        noisevarmask = np.where(noise_level<boundary[FREQ],True, False)
     ### Build paths and filenames from config information
     mappath = {
         FREQ:'{path}{freq_path}{freq_filename}'
@@ -180,6 +247,10 @@ def load_plamap(pa: Dict) -> List[Dict]:
                     for FREQ in PLANCKMAPFREQ
                     if FREQ not in freqfilter
                 }
+        if lownoise_patch == True: #this is only for masking high noise variance area
+            for FREQ in PLANCKMAPFREQ:
+                if FREQ not in freqfilter:
+                    pmask[FREQ] = pmask[FREQ]*_read_noisevarmask(FREQ)
         pmask_d = {FREQ: hp.pixelfunc.ud_grade(pmask[FREQ], nside_out=nside[0])
                     for FREQ in PLANCKMAPFREQ
                     if FREQ not in freqfilter
@@ -417,3 +488,10 @@ def save_figure(mp, path_name: str, outdir_root: str = None, outdir_rel: str = N
         path_name = outdir_root+outdir_rel+out_desc+fname+fending
     mp.savefig(path_name, dpi=144)
     mp.close()
+
+
+@log_on_start(INFO, "Saving to {path_name}")
+@log_on_end(DEBUG, "Data saved successfully to {path_name}")
+def save_map(data: Dict[str, Dict], path_name: str):
+    hp.write_map(path_name, data, overwrite=True)
+    print("saved map to {}".format(path_name))

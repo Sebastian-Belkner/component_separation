@@ -53,33 +53,6 @@ freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
 
-def map2spec(maps, freqcomb):
-    # tqumap_hpcorrected = tqumap
-    if len(maps) == 3:
-        spectrum = pw.tqupowerspec(maps, lmax, lmax_mask, freqcomb, specfilter)
-    elif len(maps) == 2:
-        spectrum = pw.qupowerspec(maps, lmax, lmax_mask, freqcomb, specfilter)
-    elif len(maps) == 1:
-        print("Only TT spectrum caluclation requested. This is currently not supported.")
-    return spectrum
-
-
-def preprocess_map(data):
-    # if data[0] == None:
-    #     data = data[1:]
-    # elif data[1] == None:
-    #     data = [data[0]]
-    # data = prep.remove_unseen(data)
-    data_prep = data
-    for idx, IQU in enumerate(data_prep):
-        for key, val in IQU.items():
-            data_prep[idx][key]["map"] = prep.replace_undefnan(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.subtract_mean(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.remove_brightsaturate(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.remove_dipole(data_prep[idx][key]["map"])
-    return data
-
-
 def postprocess_spectrum(data, freqcomb):
     spec_sc = pw.apply_scale(data, llp1=llp1)
     if bf:
@@ -90,16 +63,25 @@ def postprocess_spectrum(data, freqcomb):
     return spec_scbf
 
 
-def difference(data1, data2):
-    ret = [dict(), dict(), dict()]
-    for idx, IQU in enumerate(data1):
-        for key, val in IQU.items():
-            if key in ret[idx].keys():
-                ret[idx][key].update({"map": data1[idx][key]['map'] - data2[idx][key]['map']})
-            else:
-                ret[idx].update({key: {"map": data1[idx][key]['map'] - data2[idx][key]['map']}})
-            ret[idx][key].update({'mask': data1[idx][key]['mask']})
-    return ret
+
+
+
+def map2spec(freqcomb, filename):
+    data_diff = io.load_plamap(cf['pa'])
+    if len(data_diff) == 3:
+        spectrum = pw.tqupowerspec(data_diff, lmax, lmax_mask, freqcomb, specfilter)
+    elif len(data_diff) == 2:
+        spectrum = pw.qupowerspec(data_diff, lmax, lmax_mask, freqcomb, specfilter)
+    elif len(data_diff) == 1:
+        print("Only TT spectrum caluclation requested. This is currently not supported.")
+    io.save_data(spectrum, spec_path+'unscaled'+filename)
+    return spectrum
+
+
+def spec2specsc(freqcomb, filename):
+    spectrum = io.load_spectrum(spec_path+'unscaled'+filename)
+    spectrum_scaled = postprocess_spectrum(spectrum, freqcomb)
+    io.save_data(spectrum_scaled, spec_path+'scaled'+filename)
 
 
 if __name__ == '__main__':
@@ -107,48 +89,16 @@ if __name__ == '__main__':
     print("Starting run with the following settings:")
     print(cf['pa'])
     print(60*"$")
-
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter
             for FREQ2 in PLANCKMAPFREQ
             if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
-    speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
-
     filename = io.make_filenamestring(cf)
-    # data_diff = io.load_plamap(cf['pa'])
-    # spectrum = map2spec(data_diff, freqcomb)
-    # io.save_data(spectrum, spec_path+'unscaled-difference'+filename)
-    spectrum = io.load_spectrum(spec_path+'unscaled-difference'+filename)
-
-    spectrum_scaled = postprocess_spectrum(spectrum, freqcomb)
-    io.save_data(spectrum_scaled, spec_path+'scaled-difference'+filename)
 
 
-    # freqfilter =  [
-    #     '030',
-    #     '044',
-    #     '070',
-    #     '100',
-    #     '143',
-    #     '217',
-    #     '353',
-    #     '545',
-    #     '857',
-    # ]
-    # for FREQ in PLANCKMAPFREQ:
-    #     freqf = [f for f in freqfilter if f != FREQ]
-    #     cf['pa']["freqfilter"] = freqf
-    #     cf['pa']["freqdset"] = "DX12-split1"
-    #     data_hm1 = io.load_plamap(cf['pa'])
-    #     cf['pa']["freqdset"] = "DX12-split2"
-    #     data_hm2 = io.load_plamap(cf['pa'])
-    #     data_diff = difference(data_hm1, data_hm2)
-    #     data_diff = preprocess_map(data_diff)
-    #     filename = "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-evenoddhalfdifference_unscaled-preprocessed.fits"\
-    #         .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
-    #         .replace("{freq}", FREQ)\
-    #         .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
-    #         .replace("{00/1}", "00" if int(FREQ)<100 else "01")
-    #     io.save_data(data_diff, map_path+filename)
+    
+    # map2spec(freqcomb, filename)
+
+    spec2specsc(freqcomb, filename)

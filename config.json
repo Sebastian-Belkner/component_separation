@@ -6,12 +6,13 @@
     "offdiag": true,
     "freqdset": "DX12-diff",
     "llp1": true,
-    "bf": false,
+    "bf": true,
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
     "run_sim": false,
     "num_sim": 5,
+    "lownoise_patch": false,
     "freqfilter": [
         "545",
         "857"

@@ -402,7 +402,7 @@ def plot_spectrum(fname):
 
 
 def plot_compare_optimalspectrum(fname):
-    spec_pick = "BB"
+    spec_pick = "EE"
     def _weightspec(icov_l, spectrum):
         import copy
         # retspec = copy.deepcopy(spectrum)
@@ -717,6 +717,68 @@ def plot_noise(fname):
             path_name = outpath_name)    
 
 
+def plot_spec_nonoise():
+    dc = dcf["plot"]["spec_w/noise"]
+    ylim = {
+        "TT": (1e2, 1e5),
+        "EE": (1e-3, 1e6),
+        "BB": (1e-5, 1e5),
+        "TE": (1e-2, 1e4),
+        "TB": (-1e-3, 1e3),
+        "EB": (-1e-3, 1e3),
+        "ET": (1e-2, 1e5),
+        "BT": (-1e-3, 1e3),
+        "BE": (-1e-3, 1e3)
+    }
+
+    fname1 = io.make_filenamestring(dcf)
+    inpath_name1 = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname1
+    spectrum = io.load_spectrum(inpath_name1, fname)
+
+    dcf['pa']['freqdset'] = 'DX12-diff'
+    fname2 = io.make_filenamestring(dcf)
+    inpath_name2 = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname2
+    noise = io.load_spectrum(inpath_name2, fname2)
+
+    for freqc, val in spectrum.items():
+        for specc, va in spectrum[freqc].items():
+            if specc not in spectrum.keys():
+                spectrum[freqc][specc] = spectrum[freqc][specc] - noise[freqc][specc]
+
+    spec_data = _reorder_spectrum_dict(spectrum)
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = split)
+
+    spectrum_truth = io.load_truthspectrum()
+    for specc, data in spec_data.items():
+        title_string = "{} spectrum - {}".format(specc, plotsubtitle)
+        if "Planck-"+specc in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+specc]
+        else:
+            spectrum_trth = None
+
+        mp = cplt.plot_powspec_binned(
+            data,
+            lmax,
+            title_string = title_string,
+            ylim = ylim[specc],
+            truthfile = spectrum_trth,
+            truth_label = "Planck-"+specc
+            
+            )
+        outpath_name = \
+            dc["outdir_root"] + \
+            dc["outdir_rel"] + \
+            specc+"_spectrum/" + \
+            specc+"_spectrum" + "-" + \
+            dc["out_desc"] + "-" + \
+            fname + ".jpg"
+        io.save_figure(
+            mp = mp,
+            path_name = outpath_name)    
+
 if __name__ == '__main__':
     set_logger(DEBUG)
     fname = io.make_filenamestring(dcf)
@@ -753,5 +815,9 @@ if __name__ == '__main__':
     if dcf["plot"]["noise_comparison"]["do_plot"]:
         print("plotting noise_comparison")
         plot_noise_comparison()
+
+    if dcf["plot"]["spec_w/noise"]["do_plot"]:
+        print("plotting spectrum with noise subtracted")
+        plot_spec_nonoise()
 
     # plot_compare_optimalspectrum(fname)

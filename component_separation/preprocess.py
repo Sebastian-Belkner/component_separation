@@ -126,11 +126,14 @@ def replace_undefnan(data):
 
 
 def remove_brightsaturate(data):
-    return np.where(np.abs(data)>np.mean(data)+20*np.std(data), 0.0, data)
+    ret = np.zeros_like(data)
+    for n in range(data.shape[0]):
+        ret[n,:] = np.where(np.abs(data[n,:])>np.mean(data[n,:])+20*np.std(data[n,:]), 0.0, data[n,:])
+    return ret
 
 
 def subtract_mean(data):
-    return data-np.mean(data)
+    return (data.T-np.mean(data, axis=1)).T
 
 
 def remove_dipole(data):
@@ -142,7 +145,9 @@ def remove_dipole(data):
     Returns:
         [type]: [description]
     """
-    ret = hp.remove_dipole(data, fitval=False)
+    ret = np.zeros_like(data)
+    for n in range(data.shape[0]):
+        ret[n,:] = hp.remove_dipole(data[n,:], fitval=False)
     return ret
 
 
