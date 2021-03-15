@@ -63,9 +63,6 @@ def postprocess_spectrum(data, freqcomb):
     return spec_scbf
 
 
-
-
-
 def map2spec(freqcomb, filename):
     data_diff = io.load_plamap(cf['pa'])
     if len(data_diff) == 3:

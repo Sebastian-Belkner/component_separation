@@ -64,6 +64,88 @@ freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
 
+def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_template=None, afix=None, qmin=0, async=None, logger=None, qmax=None, no_starting_point=False):
+    """ Fit the model to empirical covariance.
+    
+    """
+    cg_maxiter = 1
+    cg_eps = 1e-20
+    Q = len(nmodes)
+    if qmax is None:
+        qmax = Q
+    nmap = stats.shape[0]
+    cmb,gal,noise = model._complist
+
+    # find a starting point
+    acmb = model.get_comp_by_name("cmb").mixmat()
+    afix = 1-cmb._mixmat.get_mask() #0:free 1:fixed
+    cmbcq = np.squeeze(model.get_comp_by_name("cmb").powspec())
+    cfix = 1-cmb._powspec.get_mask() #0:free 1:fixed
+    polar = True if acmb.shape[1]==2 else False
+    if not is_mixmat_fixed(model) and not no_starting_point:
+        model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=qmax)
+        cmb.set_mixmat(acmb, fixed=afix)
+        if async is not None:
+            agfix = 1-gal._mixmat.get_mask()
+            ag = gal.mixmat()
+            agfix[:,-2:] = 1
+            ag[0:nmap/2,-2] = async
+            ag[nmap/2:,-1]  = async
+            gal.set_mixmat(ag, fixed=agfix)
+            
+    model.quasi_newton(stats, nmodes)
+    cmb.set_powspec (cmbcq, fixed=cfix)
+    model.close_form(stats)
+    cmb.set_powspec (cmbcq, fixed=cfix)
+    mm = model.mismatch(stats, nmodes, exact=True)
+    mmG = model.mismatch(stats, nmodes, exact=True)
+
+    # start CG/close form
+    for i in range(maxiter):
+        # fit mixing matrix
+        gal.fix_powspec("all")
+        cmbfix = "all" if polar else cfix 
+        cmb.fix_powspec(cmbfix)
+        model.conjugate_gradient (stats, nmodes,maxiter=cg_maxiter, avextol=cg_eps)
+        if 0:#logger is not None:
+            np.set_printoptions(precision=5)
+            logger.info(str(cmb.mixmat()/acmb))
+        # fit power spectra
+        gal.fix_powspec("null")
+        if mmG!=model.mismatch(stats, nmodes, exact=True):
+            cmbfix = cfix if polar else "all" 
+            cmb.fix_powspec(cmbfix)
+        if i==maxiter/2 and not noise_fix: # fit also noise at some point
+            Nt = noise.powspec()
+            noise = smica.NoiseDiag(nmap, Q, name='noise')
+            model = smica.Model([cmb, gal, noise])
+            if noise_template is not None:
+                noise.set_powspec(Nt, fixed=noise_template)
+            else:
+                noise.set_powspec(Nt)
+            cmb.set_powspec (cmbcq)
+        model.close_form(stats)
+
+        # compute new mismatch 
+        mm2 = model.mismatch(stats, nmodes, exact=True)
+        mm2G = model.mismatch(stats, nmodes)
+        gain = np.real(mmG-mm2G)
+        if gain==0 and i>maxiter/2.0:
+            break
+        strtoprint = "iter= % 4i mismatch = %10.5f  gain= %7.5f " % (i, np.real(mm2), gain)
+        if logger is not None:
+            logger.info(strtoprint)
+        else:
+            print strtoprint
+        mm = mm2
+        mmG = mm2G
+
+    cmb.fix_powspec(cfix)
+    gal.fix_powspec("null")
+    return model
+
+
+
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
     logging.StreamHandler(sys.stdout)
