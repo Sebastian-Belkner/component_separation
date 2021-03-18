@@ -19,6 +19,7 @@ import component_separation.io as io
 
 import component_separation.powspec as pw
 import healpy as hp
+import numpy.ma as ma
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -95,6 +96,18 @@ def calculate_minimalcov(C_lN: np.ndarray, C_lS: np.ndarray = 0, C_lF: np.ndarra
     cov_minimal = (elaw @ np.linalg.inv(C_lS + C_lF + C_lN) @ elaw)
     return 1/cov_minimal
 
+def calculate_minimalcov2(C_l) -> np.array:
+    """Returns the minimal covariance using inverse variance weighting, i.e. calculates
+    :math:`C^{\texttt{min}}_l = \frac{1}{\textbf{1}^\dagger (C_l^S + C_l^F + C_l^N)^{-1}\textbf{1}}`.
+
+    Args:
+        C_lS (np.ndarray): An array of auto- and cross-covariance matrices of the CMB for all instruments, its dimension is [Nspec,Nspec,lmax]
+        C_lF (np.ndarray): An array of auto- and cross-covariance matrices of the superposition of Foregrounds for all instruments, its dimension is [Nspec,Nspec,lmax]
+        C_lN (np.ndarray): An array of auto- and cross-covariance matrices of the Noise for all instruments, its dimension is [Nspec,Nspec,lmax]
+    """
+    elaw = np.ones(C_l.shape[1])
+    cov_minimal = (elaw @ np.linalg.inv(C_l) @ elaw)
+    return 1/cov_minimal
 
 def load_empiric_noise_aac_covmatrix():
     """loads auto and cross (aac) covariance matrix from diff planck maps
@@ -146,9 +159,10 @@ C_lF = np.zeros_like(C_lN["EE"].T, float)
 
 
 # %% plot noise+signal
+plt.figure(figsize=(8,6))
 for n in range(C_lN["EE"].shape[1]):
     plt.plot(C_lN["EE"].T[:,n,n] + C_lS[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
-plt.title("Noisespectra")
+plt.title("Noise + signal spectra")
 plt.xscale('log')
 plt.yscale('log')
 plt.xlim((10,lmax))
@@ -157,14 +171,101 @@ plt.ylim((0,1e7))
 plt.show()
 
 
+# %%
+C_lN1 = C_lN["EE"].T[2:] * 1./3.
+C_lN2 = C_lN["EE"].T[2:] * 2./3.
+C_lN3 = C_lN["EE"].T[2:]
+C_p1 = C_lS[2:] + C_lF[2:] + C_lN1
+C_p2 = C_lS[2:] + C_lF[2:] + C_lN2
+C_p3 = C_lS[2:] + C_lF[2:] + C_lN3
+cov_min_1 = np.nan_to_num(calculate_minimalcov(C_lN1, C_lS[2:], C_lF[2:]))
+cov_min_2 = np.nan_to_num(calculate_minimalcov(C_lN2, C_lS[2:], C_lF[2:]))
+cov_min_3 = np.nan_to_num(calculate_minimalcov(C_lN3, C_lS[2:], C_lF[2:]))
+
+C_full = np.zeros((lmax-1,2,2), float)
+C_full[:,0,0] = cov_min_1
+C_full[:,1,1] = cov_min_2
+C_full[:,1,0] = C_lS[2:,0,0]
+C_full[:,0,1] = C_lS[2:,0,0]
+
+
+# %% Idea 1: patched cov_{min}_l = sum_i weights_il * C_{full}_l, with weights_il = cov(c,c)^{-1}1/(1^Tcov(c,c)^{-1}1)
+weights_1 = np.zeros((C_full.shape[0], C_full.shape[1]))
+for l in range(C_full.shape[0]):
+    try:
+        # np.linalg.inv()
+        weights_1[l] = calculate_weights(np.linalg.inv(np.cov(C_full[l,:,:])))
+    except:
+        pass
+opt_1 = np.array([weights_1[l] @ np.array([cov_min_1, cov_min_2])[:,l] for l in range(lmax-1)])
+opt_1ma = ma.masked_array(opt_1, mask=np.where(opt_1<=0, True, False))
+
+
+# %% Idea 2: cov_{min} =  calculate_minimalcov(cov(Cp1_l, Cp2_l))
+opt_2 = np.zeros((C_full.shape[0]))
+for l in range(C_full.shape[0]):
+    try:
+        opt_2[l] = np.nan_to_num(
+            calculate_minimalcov2(C_full[l,:,:]))
+    except:
+        pass
+opt_2ma = ma.masked_array(opt_2, mask=np.where(opt_2<=0, True, False))
+
+# %% Idea 3: use var(c) = 2*C_l^2/(nmodes*f_sky) as weights
+weights_3 = np.zeros((C_full.shape[0], C_full.shape[1]))
+for l in range(C_full.shape[0]):
+    try:
+        # np.linalg.inv()
+        weights_3[l] = calculate_weights(
+            np.linalg.inv(
+                2* C_full[l,:,:] @ C_full[l,:,:])/(2*(l+1)*np.array([0.25,0.75])))
+    except:
+        pass
+opt_3 = np.array([weights_3[l] @ np.array([cov_min_1, cov_min_2])[:,l] for l in range(lmax-1)])
+opt_3ma = ma.masked_array(opt_3, mask=np.where(opt_3<=0, True, False))
+
+
+# %% Idea 4: calculate_minimalcov(2*C_l^2/(nmodes*f_sky))
+
+opt_4 = np.zeros((C_full.shape[0]))
+for l in range(C_full.shape[0]):
+    try:
+        opt_4[l] = np.nan_to_num(
+            calculate_minimalcov2(
+                ((2* C_full[l] @ C_full[l])/(2*(l+1))*np.array([0.25,0.75])),
+               ))
+    except:
+        pass
+opt_4ma = ma.masked_array(opt_4, mask=np.where(opt_4<=0, True, False))
+
+
+# %% plot the combinations
+plt.figure(figsize=(10,8))
+plt.plot(opt_1ma, label = 'Idea1, weights*powerspectra', alpha=0.5, lw=3)
+plt.plot(opt_2ma, label='Idea2, minimalcov(minimalpowerspectra)', alpha=0.5, ls='--', lw=3)
+plt.plot(opt_3ma, label='Idea3, 2*C_l^2/(nmodes*f_sky) as weights', alpha=0.5, lw=3)
+plt.plot(opt_4ma, label='Idea4, minimalcov(2*C_l^2/(nmodes*f_sky))', alpha=0.5, ls='-.', lw=3)
+plt.plot(spectrum_trth, label="Planck EE spectrum")
+# plt.plot(cov_min_patched, label = 'patched 4/5 + 1/5 noise', alpha=0.5)
+plt.plot(cov_min_1, label = "low noise patch", lw=1)
+plt.plot(cov_min_2, label = "high noise patch", lw=1)
+plt.plot(cov_min_3, label = "all noise", lw=1)
+plt.xscale('log')
+plt.yscale('log')
+# plt.plot(C_p1[:,5,5])
+# plt.plot(C_p2[:,5,5]
+# plt.ylim((1e1,1e2))
+plt.xlim((6e2,2e3))
+plt.legend()
+
+
+
+# %%
+plt.plot(opt_4ma)
+
 # %% calculate minimal powerspectrum
 cov_min = calculate_minimalcov(C_lN["EE"].T[2:], C_lS[2:], C_lF[2:])
-cov_min_k = calculate_minimalcov(C_lN["EE"].T[2:]/2., C_lS[2:], C_lF[2:])
-
-
-C_p1 = C_lS[2:] + C_lF[2:] + C_lN["EE"].T[2:]/2.
-C_p2 = C_lS[2:] + C_lF[2:] + C_lN["EE"].T[2:]/2.
-
+cov_min_k = calculate_minimalcov(C_lN["EE"].T[2:]/5., C_lS[2:], C_lF[2:])
 cov_min_s = calculate_minimalcov(C_lS[2:], C_lF[2:], C_lN["EE"].T[2:]*0.000001)
 
 # C_full = np.concatenate((
@@ -180,10 +281,12 @@ cov_min_patched = calculate_minimalcov(C_full)
 # %%
 
 cov_min_patched = calculate_minimalcov(C_full)
+# plt.figure(figsize=(8,6))
 plt.plot(cov_min, label='full noise')
 plt.plot(cov_min_s, label= 'signal only', alpha=0.5)
-plt.plot(cov_min_k, label='1/2 noise', alpha=0.5)
-plt.plot(cov_min_patched, label = 'patched 1/2 + 1/2 noise', alpha=0.5)
+plt.plot(cov_min_k, label='1/5 noise', alpha=0.5)
+plt.plot(spectrum_trth, label= 'Planck EE-spectrum')
+plt.plot(cov_min_patched, label = 'patched 4/5 + 1/5 noise', alpha=0.5)
 plt.legend()
 plt.xscale('log')
 plt.yscale('log')
@@ -191,11 +294,21 @@ plt.xlabel('multipole')
 plt.ylabel('powerspectrum')
 plt.xlim((10,lmax))
 plt.legend()
-plt.ylim((0,1e7))
+# plt.ylim((1e-1,1e3))
 plt.show()
 
 
 # plt.plot(((cov_min_s-cov_min)/(cov_min_s-cov_min_k))[50:])
+
+# %%
+raw = np.nan_to_num(C_lN["EE"].T[2:] + C_lS[2:] + C_lF[2:])
+cosvar = 2*(raw * raw)[:,5,5]*[1/(2*l+1) for l in range(1, 3000)]
+print(cosvar.shape)
+plt.plot(cosvar)
+plt.plot(raw[:,5,5])
+plt.xscale('log')
+plt.yscale('log')
+
 # %%
 f = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_217-field_2048_R3.01_full.fits"
 import healpy as hp

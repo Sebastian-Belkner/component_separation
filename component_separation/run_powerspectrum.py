@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 """
-run.py: script for executing main functionality of component_separation
+run_powerspectrum.py: script for executing main functionality of component_separation
 
 """
 

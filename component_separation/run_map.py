@@ -102,6 +102,9 @@ if __name__ == '__main__':
     empiric_noisemap = True
 
     if empiric_noisemap:
+        """This routine loads the even-odd planck maps, takes the half-difference and
+        saves it as a new map. 
+        """
         for FREQ in PLANCKMAPFREQ[:-2]:
             data_diff = create_difference_map(FREQ)
             filename = "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"\
