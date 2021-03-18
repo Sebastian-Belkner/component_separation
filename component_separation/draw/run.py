@@ -348,6 +348,59 @@ def plot_weights_bias(fname):
                 path_name = outpath_name)
 
 
+def plot_spectrum_new(fname):
+    ylim = {
+        "TT": (1e2, 1e5),
+        "EE": (1e-3, 1e6),
+        "BB": (1e-5, 1e5),
+        "TE": (1e-2, 1e4),
+        "TB": (-1e-3, 1e3),
+        "EB": (-1e-3, 1e3),
+        "ET": (1e-2, 1e5),
+        "BT": (-1e-3, 1e3),
+        "BE": (-1e-3, 1e3)
+    }
+    dc = dcf["plot"]["spectrum"]
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    spectrum = io.load_spectrum(inpath_name, fname)
+    lmax = dcf['pa']['lmax']
+
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = split)
+   
+    spec_data = _reorder_spectrum_dict(spectrum)
+
+    spectrum_truth = io.load_truthspectrum()
+    for specc, data in spec_data.items():
+        title_string = "{} spectrum - {}".format(specc, plotsubtitle)
+        if "Planck-"+specc in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+specc]
+        else:
+            spectrum_trth = None
+
+        mp = cplt.plot_powspec_binned(
+            data,
+            lmax,
+            title_string = title_string,
+            ylim = ylim[specc],
+            truthfile = spectrum_trth,
+            truth_label = "Planck-"+specc
+            
+            )
+        outpath_name = \
+            dc["outdir_root"] + \
+            dc["outdir_rel"] + \
+            specc+"_spectrum/" + \
+            specc+"_spectrum" + "-" + \
+            dc["out_desc"] + "-" + \
+            fname + ".jpg"
+        io.save_figure(
+            mp = mp,
+            path_name = outpath_name)    
+
+
 def plot_spectrum(fname):
     ylim = {
         "TT": (1e2, 1e5),
@@ -797,7 +850,7 @@ if __name__ == '__main__':
         plot_weights(fname = fname)
     
     if dcf["plot"]["noise"]["do_plot"]:
-        print("plotting spectrum")
+        print("plotting noise")
         plot_noise(fname = fname)
 
     if dcf["plot"]["spectrum"]["do_plot"]:

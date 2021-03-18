@@ -2,7 +2,7 @@
 "pa":{
     "new_spectrum": false,
     "Tscale": "K_CMB",
-    "mskset": "mask-lpatch-smica",
+    "mskset": "mask-spatch-smica",
     "offdiag": true,
     "freqdset": "DX12",
     "llp1": true,
@@ -141,11 +141,11 @@
         },
     "mask-spatch-smica":{
         "tmask":{
-            "path": "tmp/mask/",
+            "path": "tmp/mask/frequency/",
             "filename": "HFI_SkyMask_217_2048_R3.01_full_smica_tmask_spatch.fits"
             },
         "pmask":{
-            "path": "tmp/mask/",
+            "path": "tmp/mask/frequency/",
             "filename": [
                 "HFI_SkyMask_217_2048_R3.01_full_smica_pmask_spatch.fits"
                 ]
@@ -153,11 +153,11 @@
         },
     "mask-lpatch-smica":{
         "tmask":{
-            "path": "tmp/mask/",
+            "path": "tmp/mask/frequency/",
             "filename": "HFI_SkyMask_217_2048_R3.01_full_smica_tmask_lpatch.fits"
             },
         "pmask":{
-            "path": "tmp/mask/",
+            "path": "tmp/mask/frequency/",
             "filename": [
                 "HFI_SkyMask_217_2048_R3.01_full_smica_pmask_lpatch.fits"
                 ]

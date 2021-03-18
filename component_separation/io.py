@@ -176,15 +176,13 @@ def load_one_mask_forallfreq(pa: Dict):
     maskset = cf['pa']['mskset']
     freqfilter = cf['pa']["freqfilter"]
     def _read(mask_path, mask_filename):
-        return {FREQ: hp.read_map(
+        return hp.read_map(
             '{path}{mask_path}{mask_filename}'
             .format(
                 path = indir_path,
                 mask_path = mask_path,
                 mask_filename = mask_filename))
-                for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter
-            }
+
     def _multi(a,b):
         return a*b
     pmask_path = cf[mch][maskset]['pmask']["path"]
@@ -389,41 +387,6 @@ def load_truthspectrum(abspath=""):
         index_col=0)
 
 
-def load_hitsvar(pa: Dict, field=7, abs_path=""):
-    freqdset = pa['freqdset'] # NPIPE or DX12
-    freqfilter = pa["freqfilter"]
-    nside = pa["nside"]
-
-    indir_path = abs_path+cf[mch]['indir']
-
-    freq_path = cf[mch][freqdset]['path']
-
-    freq_filename = cf[mch][freqdset]['filename']
-
-    ### Build paths and filenames from config information
-    mappath = {
-        FREQ:'{path}{freq_path}{freq_filename}'
-            .format(
-                path = indir_path,
-                freq_path = freq_path,
-                freq_filename = freq_filename
-                    .replace("{freq}", FREQ)
-                    .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
-                    .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
-                    .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
-                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")
-                )
-            for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter}
-
-    hitsmap = {
-        FREQ: hp.read_map(mappath[FREQ], field=field)
-            for FREQ in PLANCKMAPFREQ
-            if FREQ not in freqfilter
-        }
-    return hitsmap
-
-
 def load_weights_smica(path_name):
     return np.loadtxt(path_name).reshape(2,7,4001)
 
@@ -567,3 +530,10 @@ def save_figure(mp, path_name: str, outdir_root: str = None, outdir_rel: str = N
 def save_map(data: Dict[str, Dict], path_name: str):
     hp.write_map(path_name, data, overwrite=True)
     print("saved map to {}".format(path_name))
+
+
+@log_on_start(INFO, "Saving to {path_name}")
+@log_on_end(DEBUG, "Data saved successfully to {path_name}")
+def save_spectrum(data: Dict[str, Dict], path_name: str):
+    hp.write_cl(path_name, data, overwrite=True)
+    print("saved spectrum to {}".format(path_name))

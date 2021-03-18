@@ -16,7 +16,6 @@ import component_separation.spherelib.python.spherelib.astro as slhpastro
 def preprocess_all(data):
     data_prep = data
     for freq, val in data.items():
-        print(data_prep[freq].shape)
         data_prep[freq] = replace_undefnan(data_prep[freq])
         data_prep[freq] = subtract_mean(data_prep[freq])
         data_prep[freq] = remove_brightsaturate(data_prep[freq])
