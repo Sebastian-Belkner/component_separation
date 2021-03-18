@@ -20,6 +20,9 @@ from typing import Dict, List, Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
+import healpy as hp
+import functools
+
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
@@ -42,9 +45,10 @@ llp1 = cf['pa']["llp1"]
 bf = cf['pa']["bf"]
 
 num_sim = cf['pa']["num_sim"]
-
+freqfilter = cf['pa']["freqfilter"]
 spec_path = cf[mch]['outdir_spectrum']
 map_path = cf[mch]['outdir_map']
+mask_path = cf[mch]['outdir_mask']
 indir_path = cf[mch]['indir']
 
 lmax = cf['pa']["lmax"]
@@ -68,25 +72,6 @@ def create_difference_map(FREQ):
         for freq, val in data1.items():
             ret.update({freq: (data1[freq] - data2[freq])/2.})
         return ret
-    freqfilter =  [
-        '030',
-        '044',
-        '070',
-        '100',
-        '143',
-        '217',
-        '353',
-        '545',
-        '857',
-    ]
-    freqf = [f for f in freqfilter if f != FREQ]
-    cf['pa']["freqfilter"] = freqf
-    print(freqf)
-    cf['pa']["freqdset"] = "DX12-split1"
-    data_hm1 = io.load_plamap_new(cf['pa'])
-    cf['pa']["freqdset"] = "DX12-split2"
-    data_hm2 = io.load_plamap_new(cf['pa'])
-
     ret_data = _difference(data_hm1, data_hm2)
     ret_data = preprocess_map(ret_data)
 
@@ -99,14 +84,33 @@ if __name__ == '__main__':
     print(cf['pa'])
     print(60*"$")
 
-    empiric_noisemap = True
+    empiric_noisemap = False
+    make_mask = True
 
     if empiric_noisemap:
         """This routine loads the even-odd planck maps, takes the half-difference and
         saves it as a new map. 
         """
+        freqfilter =  [
+                '030',
+                '044',
+                '070',
+                '100',
+                '143',
+                '217',
+                '353',
+                '545',
+                '857',
+            ]
         for FREQ in PLANCKMAPFREQ[:-2]:
-            data_diff = create_difference_map(FREQ)
+            freqf = [f for f in freqfilter if f != FREQ]
+            cf['pa']["freqfilter"] = freqf
+            print(freqf)
+            cf['pa']["freqdset"] = "DX12-split1"
+            data_hm1 = io.load_plamap_new(cf['pa'], field=(0,1,2))
+            cf['pa']["freqdset"] = "DX12-split2"
+            data_hm2 = io.load_plamap_new(cf['pa'], field=(0,1,2))
+            data_diff = create_difference_map(data_hm1, data_hm2)
             filename = "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"\
                 .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
                 .replace("{freq}", FREQ)\
@@ -114,3 +118,85 @@ if __name__ == '__main__':
                 .replace("{00/1}", "00" if int(FREQ)<100 else "01")
             io.save_map(data_diff[FREQ], map_path+filename)
             del data_diff
+
+    if make_mask:
+        """This routine generates masks based on the standard SMICA or lensing masks and
+            the noise variance due to the scanning strategy from planck
+        """
+
+        freqfilter =  [
+                '030',
+                '044',
+                '070',
+                '100',
+                '143',
+                '217',
+                '353',
+                '545',
+                '857',
+            ]
+        def _read(mask_path, mask_filename):
+            return {FREQ: hp.read_map(
+                    '{path}{mask_path}{mask_filename}'
+                    .format(
+                        path = indir_path,
+                        mask_path = mask_path,
+                        mask_filename = mask_filename))
+                        for FREQ in PLANCKMAPFREQ
+                        if FREQ not in freqfilter
+                    }
+        def _multi(a,b):
+            return a*b
+
+        treshold = 2*1e-9
+        
+        indir_path = cf[mch]['indir']
+        maskbase = cf['pa']['mskset']
+        freqdset = cf["pa"]['freqdset']
+        pmask_path = cf[mch][maskbase]['pmask']["path"]
+        pmask_filename = cf[mch][maskbase]['pmask']['filename']
+       
+        for FREQ in PLANCKMAPFREQ[:-2]:
+            pmasks = [
+                _read(pmask_path, a)
+                for a in pmask_filename]
+            pmask = {
+                FREQ: functools.reduce(
+                    _multi,
+                    [a[FREQ] for a in pmasks])
+                        for FREQ in PLANCKMAPFREQ
+                        if FREQ not in freqfilter}
+            noise_level = io.load_plamap_new(cf["pa"], field=7)
+            freqf = [f for f in freqfilter if f != FREQ]
+            cf['pa']["freqfilter"] = freqf
+            noisevarmask = np.where(noise_level[FREQ]<treshold,True, False)
+            comb_mask =  pmask[FREQ] * noisevarmask
+            comb_mask_negated = pmask[FREQ] * ~noisevarmask
+            print("Frequence:", FREQ)
+            print("Mean noise,   sky coverage")
+            print(30*"_")
+            print(
+                np.mean(noise_level[FREQ]), "1" ,"\n",
+                np.mean(
+                    noise_level[FREQ] * pmask[FREQ]),
+                    np.sum(pmask[FREQ]/len(pmask[FREQ])), "\n",
+                np.mean(
+                    noise_level[FREQ] * pmask[FREQ] * noisevarmask),
+                    np.sum((pmask[FREQ]*noisevarmask)/len(pmask[FREQ])), "\n"
+            )
+
+            filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_smallpatch.fits"\
+                    .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
+                    .replace("{freq}", FREQ)\
+                    .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
+                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
+                    .replace("{maskbase}", maskbase)
+            io.save_map(comb_mask, mask_path+filename)
+
+            filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_largepatch.fits"\
+                    .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
+                    .replace("{freq}", FREQ)\
+                    .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
+                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
+                    .replace("{maskbase}", maskbase)
+            io.save_map(comb_mask_negated, mask_path+filename)

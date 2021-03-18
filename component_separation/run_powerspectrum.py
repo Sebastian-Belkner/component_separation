@@ -129,22 +129,6 @@ def spec_weight2weighted_spec(spectrum, weights):
     return spec
 
 
-def preprocess_map(data):
-    # if data[0] == None:
-    #     data = data[1:]
-    # elif data[1] == None:
-    #     data = [data[0]]
-    # data = prep.remove_unseen(data)
-    data_prep = data
-    for idx, IQU in enumerate(data_prep):
-        for key, val in IQU.items():
-            data_prep[idx][key]["map"] = prep.replace_undefnan(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.subtract_mean(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.remove_brightsaturate(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.remove_dipole(data_prep[idx][key]["map"])
-    return data
-
-
 def postprocess_spectrum(data, freqcomb):
     spec_sc = pw.apply_scale(data, llp1=llp1)
     if bf:
@@ -154,6 +138,8 @@ def postprocess_spectrum(data, freqcomb):
         spec_scbf = spec_sc
     return spec_scbf
 
+def mapmask2maskedarray(data):
+    pass
 
 if __name__ == '__main__':
     print(40*"$")
@@ -174,8 +160,11 @@ if __name__ == '__main__':
     filename = io.make_filenamestring(cf)
 
     if cf['pa']['new_spectrum']:
-        data = io.load_plamap(cf['pa'])
+        data = io.load_plamap_new(cf['pa'], field=(0,1,2))
         data = preprocess_map(data)
+        mask = io.load_mask()
+        data = mapmask2maskedarray()
+
         spectrum = map2spec(data, freqcomb)
         io.save_data(spectrum, spec_path+'unscaled'+filename)
     else:

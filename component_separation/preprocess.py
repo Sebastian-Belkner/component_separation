@@ -13,6 +13,16 @@ from component_separation.cs_util import Planckf, Plancks, Planckr
 import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 
+def preprocess_all(data):
+    data_prep = data
+    for freq, val in data.items():
+        print(data_prep[freq].shape)
+        data_prep[freq] = replace_undefnan(data_prep[freq])
+        data_prep[freq] = subtract_mean(data_prep[freq])
+        data_prep[freq] = remove_brightsaturate(data_prep[freq])
+        data_prep[freq] = remove_dipole(data_prep[freq])
+    return data
+
 def deprecated(func):
     """This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted

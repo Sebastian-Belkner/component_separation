@@ -79,7 +79,7 @@ def load_data(path_name: str) -> Dict[str, Dict]:
         return None
 
 
-def load_plamap_new(pa: Dict):
+def load_plamap_new(pa: Dict, field):
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
@@ -121,7 +121,7 @@ def load_plamap_new(pa: Dict):
             if FREQ not in freqfilter}
 
     maps = {
-        FREQ: hp.read_map(mappath[FREQ], field=(0,1,2))
+        FREQ: hp.read_map(mappath[FREQ], field=field)
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter
     }
@@ -129,7 +129,33 @@ def load_plamap_new(pa: Dict):
 
 
 def load_mask(pa: Dict):
-    pass
+    indir_path = cf[mch]['indir']
+    maskset = cf['pa']['mskset']
+    freqfilter = cf['pa']["freqfilter"]
+    def _read(mask_path, mask_filename):
+        return {FREQ: hp.read_map(
+            '{path}{mask_path}{mask_filename}'
+            .format(
+                path = indir_path,
+                mask_path = mask_path,
+                mask_filename = mask_filename))
+                for FREQ in PLANCKMAPFREQ
+                if FREQ not in freqfilter
+            }
+    def _multi(a,b):
+        return a*b
+    pmask_path = cf[mch][maskset]['pmask']["path"]
+    pmask_filename = cf[mch][maskset]['pmask']['filename']
+    pmasks = [
+                _read(pmask_path, a)
+                for a in pmask_filename]
+    pmask = {
+        FREQ: functools.reduce(
+            _multi,
+            [a[FREQ] for a in pmasks])
+                for FREQ in PLANCKMAPFREQ
+                if FREQ not in freqfilter}
+    return pmask
 
 #%% Collect maps
 @log_on_start(INFO, "Starting to load pla maps")

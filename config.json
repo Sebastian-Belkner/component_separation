@@ -4,7 +4,7 @@
     "Tscale": "K_CMB",
     "mskset": "smica",
     "offdiag": true,
-    "freqdset": "DX12-diff",
+    "freqdset": "DX12",
     "llp1": true,
     "bf": true,
     "lmax": 3000,
@@ -148,7 +148,8 @@
     "outdir": "data/tmp/",
     "outdir_spectrum": "data/tmp/spectrum/",
     "outdir_weight": "data/tmp/weights/",
-    "outdir_map": "data/map/frequency/",
+    "outdir_map": "data/tmp/map/frequency/",
+    "outdir_mask": "data/tmp/mask/frequency/",
     "indir": "data/"
     }
 }
