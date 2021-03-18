@@ -344,7 +344,7 @@ plt.show()
 
 
 # %%
-noisevarmask = np.where(noise_level<2*1e-9,True, False)
+noisevarmask = np.where(noise_level<1*1e-9,True, False)
 
 # %%
 print(

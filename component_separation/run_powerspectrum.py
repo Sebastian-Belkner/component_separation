@@ -75,13 +75,13 @@ def spec2synmap(spectrum, freqcomb):
     return pw.create_synmap(spectrum, cf, mch, freqcomb, specfilter) 
 
 
-def map2spec(maps, freqcomb):
+def map2spec(data, tmask, pmask, freqcomb):
     # tqumap_hpcorrected = tqumap
-    if len(maps) == 3:
-        spectrum = pw.tqupowerspec(maps, lmax, lmax_mask, freqcomb, specfilter)
-    elif len(maps) == 2:
-        spectrum = pw.qupowerspec(maps, lmax, lmax_mask, freqcomb, specfilter)
-    elif len(maps) == 1:
+    if len(data) == 3:
+        spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+    elif len(data) == 2:
+        spectrum = pw.qupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+    elif len(data) == 1:
         print("Only TT spectrum caluclation requested. This is currently not supported.")
     return spectrum
 
@@ -161,11 +161,11 @@ if __name__ == '__main__':
 
     if cf['pa']['new_spectrum']:
         data = io.load_plamap_new(cf['pa'], field=(0,1,2))
-        data = preprocess_map(data)
-        mask = io.load_mask()
-        data = mapmask2maskedarray()
+        data = prep.preprocess_all(data)
+        tmask, pmask, pmask = io.load_mask(cf["pa"])
+        # data = mapmask2maskedarray()
 
-        spectrum = map2spec(data, freqcomb)
+        spectrum = map2spec(data, tmask, pmask, freqcomb)
         io.save_data(spectrum, spec_path+'unscaled'+filename)
     else:
         path_name = spec_path + 'unscaled' + filename

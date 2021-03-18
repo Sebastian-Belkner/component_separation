@@ -45,7 +45,7 @@ llp1 = cf['pa']["llp1"]
 bf = cf['pa']["bf"]
 
 num_sim = cf['pa']["num_sim"]
-freqfilter = cf['pa']["freqfilter"]
+
 spec_path = cf[mch]['outdir_spectrum']
 map_path = cf[mch]['outdir_map']
 mask_path = cf[mch]['outdir_mask']
@@ -54,18 +54,6 @@ indir_path = cf[mch]['indir']
 lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
 
-
-def preprocess_map(data):
-    data_prep = data
-    for freq, val in data.items():
-        print(data_prep[freq].shape)
-        data_prep[freq] = prep.replace_undefnan(data_prep[freq])
-        data_prep[freq] = prep.subtract_mean(data_prep[freq])
-        data_prep[freq] = prep.remove_brightsaturate(data_prep[freq])
-        data_prep[freq] = prep.remove_dipole(data_prep[freq])
-    return data
-
-
 def create_difference_map(FREQ):
     def _difference(data1, data2):
         ret = dict()
@@ -73,7 +61,7 @@ def create_difference_map(FREQ):
             ret.update({freq: (data1[freq] - data2[freq])/2.})
         return ret
     ret_data = _difference(data_hm1, data_hm2)
-    ret_data = preprocess_map(ret_data)
+    ret_data = prep.preprocess_all(ret_data)
 
     return ret_data
 
@@ -135,44 +123,19 @@ if __name__ == '__main__':
                 '545',
                 '857',
             ]
-        def _read(mask_path, mask_filename):
-            return {FREQ: hp.read_map(
-                    '{path}{mask_path}{mask_filename}'
-                    .format(
-                        path = indir_path,
-                        mask_path = mask_path,
-                        mask_filename = mask_filename))
-                        for FREQ in PLANCKMAPFREQ
-                        if FREQ not in freqfilter
-                    }
-        def _multi(a,b):
-            return a*b
-
-        treshold = 2*1e-9
-        
-        indir_path = cf[mch]['indir']
-        maskbase = cf['pa']['mskset']
+        treshold = 3*1e-9
         freqdset = cf["pa"]['freqdset']
-        pmask_path = cf[mch][maskbase]['pmask']["path"]
-        pmask_filename = cf[mch][maskbase]['pmask']['filename']
-       
+        maskbase = cf['pa']['mskset']
         for FREQ in PLANCKMAPFREQ[:-2]:
-            pmasks = [
-                _read(pmask_path, a)
-                for a in pmask_filename]
-            pmask = {
-                FREQ: functools.reduce(
-                    _multi,
-                    [a[FREQ] for a in pmasks])
-                        for FREQ in PLANCKMAPFREQ
-                        if FREQ not in freqfilter}
-            noise_level = io.load_plamap_new(cf["pa"], field=7)
+            print(FREQ)
             freqf = [f for f in freqfilter if f != FREQ]
             cf['pa']["freqfilter"] = freqf
+            noise_level = io.load_plamap_new(cf["pa"], field=7)
             noisevarmask = np.where(noise_level[FREQ]<treshold,True, False)
+            tmask, pmask, pmask = io.load_mask(cf["pa"])
             comb_mask =  pmask[FREQ] * noisevarmask
             comb_mask_negated = pmask[FREQ] * ~noisevarmask
-            print("Frequence:", FREQ)
+            print("Frequency:", FREQ)
             print("Mean noise,   sky coverage")
             print(30*"_")
             print(

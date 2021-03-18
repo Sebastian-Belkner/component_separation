@@ -28,7 +28,6 @@ import component_separation
 from component_separation.cs_util import Planckf, Planckr, Plancks
 
 
-
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
@@ -125,10 +124,11 @@ def load_plamap_new(pa: Dict, field):
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter
     }
+    print("loaded {}".format(mappath))
     return maps
 
 
-def load_mask(pa: Dict):
+def load_mask(pa: Dict, dg_to=1024):
     indir_path = cf[mch]['indir']
     maskset = cf['pa']['mskset']
     freqfilter = cf['pa']["freqfilter"]
@@ -155,7 +155,21 @@ def load_mask(pa: Dict):
             [a[FREQ] for a in pmasks])
                 for FREQ in PLANCKMAPFREQ
                 if FREQ not in freqfilter}
-    return pmask
+
+    pmask = {FREQ: hp.pixelfunc.ud_grade(pmask[FREQ], nside_out=dg_to if int(FREQ)<100 else 2048)
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+        }
+    
+    tmask_path = cf[mch][maskset]['tmask']["path"]
+    tmask_filename = cf[mch][maskset]['tmask']['filename']
+    tmask = _read(tmask_path, tmask_filename)
+    tmask = {FREQ: hp.pixelfunc.ud_grade(tmask[FREQ], nside_out=dg_to)
+                    for FREQ in PLANCKMAPFREQ
+                    if FREQ not in freqfilter
+                }
+    return tmask, pmask, pmask
+
 
 #%% Collect maps
 @log_on_start(INFO, "Starting to load pla maps")
