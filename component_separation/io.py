@@ -128,7 +128,7 @@ def load_plamap_new(pa: Dict, field):
     return maps
 
 
-def load_mask(pa: Dict, dg_to=1024):
+def load_mask_per_freq(pa: Dict, dg_to=1024):
     indir_path = cf[mch]['indir']
     maskset = cf['pa']['mskset']
     freqfilter = cf['pa']["freqfilter"]
@@ -168,6 +168,38 @@ def load_mask(pa: Dict, dg_to=1024):
                     for FREQ in PLANCKMAPFREQ
                     if FREQ not in freqfilter
                 }
+    return tmask, pmask, pmask
+
+
+def load_one_mask_forallfreq(pa: Dict):
+    indir_path = cf[mch]['indir']
+    maskset = cf['pa']['mskset']
+    freqfilter = cf['pa']["freqfilter"]
+    def _read(mask_path, mask_filename):
+        return {FREQ: hp.read_map(
+            '{path}{mask_path}{mask_filename}'
+            .format(
+                path = indir_path,
+                mask_path = mask_path,
+                mask_filename = mask_filename))
+                for FREQ in PLANCKMAPFREQ
+                if FREQ not in freqfilter
+            }
+    def _multi(a,b):
+        return a*b
+    pmask_path = cf[mch][maskset]['pmask']["path"]
+    pmask_filename = cf[mch][maskset]['pmask']['filename']
+    pmasks = [
+                _read(pmask_path, a)
+                for a in pmask_filename]
+    pmask = functools.reduce(
+            _multi,
+            [a for a in pmasks])
+
+    tmask_path = cf[mch][maskset]['tmask']["path"]
+    tmask_filename = cf[mch][maskset]['tmask']['filename']
+    tmask = _read(tmask_path, tmask_filename)
+
     return tmask, pmask, pmask
 
 

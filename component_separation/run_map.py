@@ -133,8 +133,11 @@ if __name__ == '__main__':
             noise_level = io.load_plamap_new(cf["pa"], field=7)
             noisevarmask = np.where(noise_level[FREQ]<treshold,True, False)
             tmask, pmask, pmask = io.load_mask(cf["pa"])
-            comb_mask =  pmask[FREQ] * noisevarmask
-            comb_mask_negated = pmask[FREQ] * ~noisevarmask
+            comb_pmask =  pmask[FREQ] * noisevarmask
+            comb_pmask_negated = pmask[FREQ] * ~noisevarmask
+
+            comb_tmask =  pmask[FREQ] * noisevarmask
+            comb_tmask_negated = pmask[FREQ] * ~noisevarmask
             print("Frequency:", FREQ)
             print("Mean noise,   sky coverage")
             print(30*"_")
@@ -148,18 +151,43 @@ if __name__ == '__main__':
                     np.sum((pmask[FREQ]*noisevarmask)/len(pmask[FREQ])), "\n"
             )
 
-            filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_smallpatch.fits"\
+            filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_{p/t}mask_{s/l}patch.fits"\
                     .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
                     .replace("{freq}", FREQ)\
                     .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
                     .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
-                    .replace("{maskbase}", maskbase)
-            io.save_map(comb_mask, mask_path+filename)
+                    .replace("{maskbase}", maskbase)\
+                    .replace("{s/l}", 's')\
+                    .replace("{p/t}", 'p')
+            io.save_map(comb_pmask, mask_path+filename)
 
-            filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_largepatch.fits"\
+            filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_{p/t}mask_{s/l}patch.fits"\
                     .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
                     .replace("{freq}", FREQ)\
                     .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
                     .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
-                    .replace("{maskbase}", maskbase)
-            io.save_map(comb_mask_negated, mask_path+filename)
+                    .replace("{maskbase}", maskbase)\
+                    .replace("{s/l}", 'l')\
+                    .replace("{p/t}", 'p')
+            io.save_map(comb_pmask_negated, mask_path+filename)
+
+
+            filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_{p/t}mask_{s/l}patch.fits"\
+                    .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
+                    .replace("{freq}", FREQ)\
+                    .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
+                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
+                    .replace("{maskbase}", maskbase)\
+                    .replace("{s/l}", 's')\
+                    .replace("{p/t}", 't')
+            io.save_map(comb_tmask, mask_path+filename)
+
+            filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_{p/t}mask_{s/l}patch.fits"\
+                    .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
+                    .replace("{freq}", FREQ)\
+                    .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
+                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
+                    .replace("{maskbase}", maskbase)\
+                    .replace("{s/l}", 'l')\
+                    .replace("{p/t}", 't')
+            io.save_map(comb_tmask_negated, mask_path+filename)

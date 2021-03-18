@@ -162,7 +162,7 @@ if __name__ == '__main__':
     if cf['pa']['new_spectrum']:
         data = io.load_plamap_new(cf['pa'], field=(0,1,2))
         data = prep.preprocess_all(data)
-        tmask, pmask, pmask = io.load_mask(cf["pa"])
+        tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"])
         # data = mapmask2maskedarray()
 
         spectrum = map2spec(data, tmask, pmask, freqcomb)

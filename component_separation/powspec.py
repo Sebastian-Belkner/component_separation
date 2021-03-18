@@ -104,22 +104,43 @@ def tqupowerspec(tqumap: Dict[List], tmask, pmask, lmax: int, lmax_mask: int, fr
     #         lmax=lmax,
     #         lmax_mask=lmax_mask)
     #     })
-    buff = {
-        FREQC:
-            ps.map2cls(
-                tqumap=tqumap[FREQC.split("-")[0]],
-                tmask=tmask[FREQC.split("-")[0]],
-                pmask=pmask[FREQC.split("-")[0]],
-                lmax=lmax,
-                lmax_mask=lmax_mask,
-                tqumap2=tqumap[FREQC.split("-")[1]],
-                tmask2=tmask[FREQC.split("-")[1]],
-                pmask2=tmask[FREQC.split("-")[1]] #this needs to be fixed, once LFI x HFI is passed
-                # wwt = ww[0],
-                # wwp = ww[1],
-                # wwtp = ww[2]
-                )
-            for FREQC in freqcomb}
+
+    if type(tmask) == dict:
+        buff = {
+            FREQC:
+                ps.map2cls(
+                    tqumap=tqumap[FREQC.split("-")[0]],
+                    tmask=tmask[FREQC.split("-")[0]],
+                    pmask=pmask[FREQC.split("-")[0]],
+                    lmax=lmax,
+                    lmax_mask=lmax_mask,
+                    tqumap2=tqumap[FREQC.split("-")[1]],
+                    tmask2=tmask[FREQC.split("-")[1]],
+                    pmask2=tmask[FREQC.split("-")[1]] #this needs to be fixed, once LFI x HFI is passed
+                    # wwt = ww[0],
+                    # wwp = ww[1],
+                    # wwtp = ww[2]
+                    )
+                for FREQC in freqcomb}
+    else:
+        def _ud_grade(data, FREQ):
+            return hp.pixelfunc.ud_grade(data, nside_out=1024 if int(FREQ)<100 else 2048)
+        buff = {
+            FREQC:
+                ps.map2cls(
+                    tqumap=tqumap[FREQC.split("-")[0]],
+                    tmask=_ud_grade(tmask, [FREQC.split("-")[0]]),
+                    pmask=_ud_grade(pmask, [FREQC.split("-")[0]]),
+                    lmax=lmax,
+                    lmax_mask=lmax_mask,
+                    tqumap2=tqumap[FREQC.split("-")[1]],
+                    tmask2=_ud_grade(tmask, [FREQC.split("-")[1]]),
+                    pmask2=_ud_grade(pmask, [FREQC.split("-")[1]]), #this needs to be fixed, once LFI x HFI is passed
+                    # wwt = ww[0],
+                    # wwp = ww[1],
+                    # wwtp = ww[2]
+                    )
+                for FREQC in freqcomb}
     spectrum = dict()
     for FREQC, _ in buff.items():
         spectrum.update({

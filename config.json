@@ -2,7 +2,7 @@
 "pa":{
     "new_spectrum": false,
     "Tscale": "K_CMB",
-    "mskset": "smica",
+    "mskset": "mask-lpatch-smica",
     "offdiag": true,
     "freqdset": "DX12",
     "llp1": true,
@@ -139,10 +139,28 @@
                 ]
             }
         },
-    "hitshist":{
-        "mask":{
-            "path": "mask/hitshist/",
-            "filename": "{freqdset}-freq_{freq}-{tresh_low}to{tresh_up}-split_{split}.hitshist.npy"
+    "mask-spatch-smica":{
+        "tmask":{
+            "path": "tmp/mask/",
+            "filename": "HFI_SkyMask_217_2048_R3.01_full_smica_tmask_spatch.fits"
+            },
+        "pmask":{
+            "path": "tmp/mask/",
+            "filename": [
+                "HFI_SkyMask_217_2048_R3.01_full_smica_pmask_spatch.fits"
+                ]
+            }
+        },
+    "mask-lpatch-smica":{
+        "tmask":{
+            "path": "tmp/mask/",
+            "filename": "HFI_SkyMask_217_2048_R3.01_full_smica_tmask_lpatch.fits"
+            },
+        "pmask":{
+            "path": "tmp/mask/",
+            "filename": [
+                "HFI_SkyMask_217_2048_R3.01_full_smica_pmask_lpatch.fits"
+                ]
             }
         },
     "outdir": "data/tmp/",
