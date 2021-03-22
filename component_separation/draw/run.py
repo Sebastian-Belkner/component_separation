@@ -360,9 +360,21 @@ def plot_spectrum_new(fname):
         "BT": (-1e-3, 1e3),
         "BE": (-1e-3, 1e3)
     }
+    freqcomb =  [
+        "{}-{}".format(FREQ,FREQ2)
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+            for FREQ2 in PLANCKMAPFREQ
+            if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
+    
     dc = dcf["plot"]["spectrum"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    spectrum = io.load_spectrum(inpath_name, fname)
+    def _inpathname(freqc,spec):
+        return  dc["indir_root"]+dc["indir_rel"]+spec+freqc+"-"+dc["in_desc"]+fname
+    speccs =  [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+    spec_data = {spec: {
+        freqc: np.array(io.load_cl(_inpathname(freqc,spec)))
+        for freqc in freqcomb} for 
+        spec in speccs}
     lmax = dcf['pa']['lmax']
 
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
@@ -370,8 +382,6 @@ def plot_spectrum_new(fname):
         freqdset = freqdset,
         split = split)
    
-    spec_data = _reorder_spectrum_dict(spectrum)
-
     spectrum_truth = io.load_truthspectrum()
     for specc, data in spec_data.items():
         title_string = "{} spectrum - {}".format(specc, plotsubtitle)
@@ -465,113 +475,139 @@ def plot_compare_optimalspectrum(fname):
                     # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
                 retspec = {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
         return retspec
-
-
-    dcf["pa"]["freqdset"] = "NPIPE"
-    dcf["pa"]["mskset"] = "lens"
     fname = io.make_filenamestring(dcf)
-    dc = dcf["plot"]["spectrum"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    spectrum = io.load_spectrum(inpath_name, fname)
     lmax = dcf['pa']['lmax']
-
-    spec_data = _reorder_spectrum_dict(spectrum)
+    freqcomb =  [
+    "{}-{}".format(FREQ,FREQ2)
+        for FREQ in PLANCKMAPFREQ
+        if FREQ not in freqfilter
+        for FREQ2 in PLANCKMAPFREQ
+        if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
+    
+    dc = dcf["plot"]["spectrum"]
+    def _inpathname(freqc,spec):
+        return  dc["indir_root"]+dc["indir_rel"]+spec+freqc+"-"+dc["in_desc"]+fname
+    speccs =  [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+    spectrum = {freqc: {
+        spec: np.array(io.load_cl(_inpathname(freqc,spec)))
+        for spec in speccs}  
+        for freqc in freqcomb}
 
     cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
     icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
 
-    spec_data_wweighted_NPIPE = _weightspec(icov_l, spec_data)
-
-
-    dcf["pa"]["freqdset"] = "NPIPE"
-    dcf["pa"]["mskset"] = "smica"
-    fname = io.make_filenamestring(dcf)
-
-    dc = dcf["plot"]["spectrum"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    spectrum = io.load_spectrum(inpath_name, fname)
-    lmax = dcf['pa']['lmax']
-
     spec_data = _reorder_spectrum_dict(spectrum)
-
+    spec_data_wweighted = _weightspec(icov_l, spec_data)
 
     spectrum_truth = io.load_truthspectrum()
 
-    cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-    icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+    
 
-    spec_data_wweighted_DX12 = _weightspec(icov_l, spec_data)
+    for specc, data in spec_data_wweighted.items():
+        title_string = "{} spectrum - {}".format(specc, "optimal spectrum included")
+        if "Planck-"+specc in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+specc]
+        else:
+            spectrum_trth = None
 
-    # for specc, data in spec_data_wweighted_NPIPE.items():
-    #     title_string = "{} spectrum - {}".format(specc, "optimal spectrum included")
-    #     if "Planck-"+specc in spectrum_truth.columns:
-    #         spectrum_trth = spectrum_truth["Planck-"+specc]
-    #     else:
-    #         spectrum_trth = None
+        mp = cplt.plot_powspec_binned(
+            data,
+            lmax,
+            title_string = title_string,
+            truthfile = spectrum_trth,
+            truth_label = "Planck-"+specc
+            )
 
-    #     mp = cplt.plot_powspec_binned(
-    #         data,
-    #         lmax,
-    #         title_string = title_string,
-    #         truthfile = spectrum_trth,
-    #         truth_label = "Planck-"+specc
-    #         )
+        outpath_name = \
+            dc["outdir_root"] + \
+            dc["outdir_rel"] + \
+            specc+"_spectrum/" + \
+            specc+"_spectrum" + "-" + \
+            "withoptimal" + "-" + \
+            fname + ".jpg"
+        io.save_figure(
+            mp = mp,
+            path_name = outpath_name)
+    
+    # dcf["pa"]["freqdset"] = "NPIPE"
+    # dcf["pa"]["mskset"] = "lens"
+    # fname = io.make_filenamestring(dcf)
+    # dc = dcf["plot"]["spectrum"]
+    # inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    # spectrum = io.load_spectrum(inpath_name, fname)
+    # lmax = dcf['pa']['lmax']
 
-    #     outpath_name = \
-    #         dc["outdir_root"] + \
-    #         dc["outdir_rel"] + \
-    #         specc+"_spectrum/" + \
-    #         specc+"_spectrum" + "-" + \
-    #         "withoptimal" + "-" + \
-    #         fname + ".jpg"
-    #     io.save_figure(
-    #         mp = mp,
-    #         path_name = outpath_name)
-    if "Planck-"+spec_pick in spectrum_truth.columns:
-            spectrum_trth = spectrum_truth["Planck-"+spec_pick]
+    # spec_data = _reorder_spectrum_dict(spectrum)
 
-    plt.figure(figsize=(8,6))
-    gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
-    ax1 = plt.subplot(gs[0])
-    mp = cplt.plot_compare_powspec_binned(
-        plt,
-        spec_data_wweighted_NPIPE[spec_pick],
-        spec_data_wweighted_DX12[spec_pick],
-        lmax=3000,
-        title_string = "improvement",
-        truthfile = spectrum_trth,
-        truth_label = "Planck " + spec_pick
-    )
-    # ax1.set_xticks(np.arange([0,3000,500]))
-    # ax1.set_xticks([0,200,1000,2000])
-    import matplotlib
-    ax1.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    diff_spec = dict()
-    for specc, va in spec_data_wweighted_NPIPE.items():
-        if specc == spec_pick:
-            if specc not in spec_data_wweighted_NPIPE.keys():
-                diff_spec.update({specc: {}})
-            diff_spec[specc] = {
-                "optimal-optimal": 
-                (spec_data_wweighted_DX12[specc]["optimal-optimal"] - spec_data_wweighted_NPIPE[specc]["optimal-optimal"])/spec_data_wweighted_DX12[specc]["optimal-optimal"]}
+    # cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+    # icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
 
-    ax2 = mp.subplot(gs[1])
-    # ax1.set_xticks([100*n for n in range(30)])
-    mp = cplt.plot_powspec_diff_binned(plt,
-        diff_spec[spec_pick],
-        lmax=3000
-    )
-    ax2.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    outpath_name = \
-        dc["outdir_root"] + \
-        dc["outdir_rel"] + \
-        spec_pick+"_spectrum/" + \
-        spec_pick+"_spectrum" + "-" + \
-        "improvement-NPIPE_smica-NPIPE_lens" + "-" + \
-        fname[16:38] + ".jpg"
-    io.save_figure(
-        mp = mp,
-        path_name = outpath_name)
+    # spec_data_wweighted_NPIPE = _weightspec(icov_l, spec_data)
+
+
+    # dcf["pa"]["freqdset"] = "NPIPE"
+    # dcf["pa"]["mskset"] = "smica"
+    # fname = io.make_filenamestring(dcf)
+
+    # dc = dcf["plot"]["spectrum"]
+    # inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    # spectrum = io.load_spectrum(inpath_name, fname)
+    # lmax = dcf['pa']['lmax']
+
+    # spec_data = _reorder_spectrum_dict(spectrum)
+
+
+    # spectrum_truth = io.load_truthspectrum()
+
+    # cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+    # icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+
+    # spec_data_wweighted_DX12 = _weightspec(icov_l, spec_data)
+    # if "Planck-"+spec_pick in spectrum_truth.columns:
+    #         spectrum_trth = spectrum_truth["Planck-"+spec_pick]
+
+    # plt.figure(figsize=(8,6))
+    # gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+    # ax1 = plt.subplot(gs[0])
+    # mp = cplt.plot_compare_powspec_binned(
+    #     plt,
+    #     spec_data_wweighted_NPIPE[spec_pick],
+    #     spec_data_wweighted_DX12[spec_pick],
+    #     lmax=3000,
+    #     title_string = "improvement",
+    #     truthfile = spectrum_trth,
+    #     truth_label = "Planck " + spec_pick
+    # )
+    # # ax1.set_xticks(np.arange([0,3000,500]))
+    # # ax1.set_xticks([0,200,1000,2000])
+    # import matplotlib
+    # ax1.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    # diff_spec = dict()
+    # for specc, va in spec_data_wweighted_NPIPE.items():
+    #     if specc == spec_pick:
+    #         if specc not in spec_data_wweighted_NPIPE.keys():
+    #             diff_spec.update({specc: {}})
+    #         diff_spec[specc] = {
+    #             "optimal-optimal": 
+    #             (spec_data_wweighted_DX12[specc]["optimal-optimal"] - spec_data_wweighted_NPIPE[specc]["optimal-optimal"])/spec_data_wweighted_DX12[specc]["optimal-optimal"]}
+
+    # ax2 = mp.subplot(gs[1])
+    # # ax1.set_xticks([100*n for n in range(30)])
+    # mp = cplt.plot_powspec_diff_binned(plt,
+    #     diff_spec[spec_pick],
+    #     lmax=3000
+    # )
+    # ax2.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    # outpath_name = \
+    #     dc["outdir_root"] + \
+    #     dc["outdir_rel"] + \
+    #     spec_pick+"_spectrum/" + \
+    #     spec_pick+"_spectrum" + "-" + \
+    #     "improvement-NPIPE_smica-NPIPE_lens" + "-" + \
+    #     fname[16:38] + ".jpg"
+    # io.save_figure(
+    #     mp = mp,
+    #     path_name = outpath_name)
         
 
 def plot_noise_comparison():
@@ -855,7 +891,7 @@ if __name__ == '__main__':
 
     if dcf["plot"]["spectrum"]["do_plot"]:
         print("plotting spectrum")
-        plot_spectrum(fname = fname)
+        plot_spectrum_new(fname = fname)
 
     if dcf["plot"]["spectrum_bias"]["do_plot"]:
         print("plotting spectrum bias")
@@ -873,4 +909,4 @@ if __name__ == '__main__':
         print("plotting spectrum with noise subtracted")
         plot_spec_nonoise()
 
-    # plot_compare_optimalspectrum(fname)
+    plot_compare_optimalspectrum(fname)

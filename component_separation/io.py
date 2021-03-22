@@ -171,7 +171,7 @@ def load_mask_per_freq(pa: Dict, dg_to=1024):
     return tmask, pmask, pmask
 
 
-def load_one_mask_forallfreq(pa: Dict):
+def load_one_mask_forallfreq(pa: Dict, udgrade=None):
     indir_path = cf[mch]['indir']
     maskset = cf['pa']['mskset']
     freqfilter = cf['pa']["freqfilter"]
@@ -187,6 +187,7 @@ def load_one_mask_forallfreq(pa: Dict):
         return a*b
     pmask_path = cf[mch][maskset]['pmask']["path"]
     pmask_filename = cf[mch][maskset]['pmask']['filename']
+    print('loading mask {}'.format(pmask_filename))
     pmasks = [
                 _read(pmask_path, a)
                 for a in pmask_filename]
@@ -197,6 +198,9 @@ def load_one_mask_forallfreq(pa: Dict):
     tmask_path = cf[mch][maskset]['tmask']["path"]
     tmask_filename = cf[mch][maskset]['tmask']['filename']
     tmask = _read(tmask_path, tmask_filename)
+    if udgrade:
+        tmask = hp.ud_grade(tmask, nside_out=udgrade)
+        pmask = hp.ud_grade(pmask, nside_out=udgrade)
 
     return tmask, pmask, pmask
 
@@ -527,13 +531,21 @@ def save_figure(mp, path_name: str, outdir_root: str = None, outdir_rel: str = N
 
 @log_on_start(INFO, "Saving to {path_name}")
 @log_on_end(DEBUG, "Data saved successfully to {path_name}")
-def save_map(data: Dict[str, Dict], path_name: str):
+def save_map(data, path_name: str):
     hp.write_map(path_name, data, overwrite=True)
     print("saved map to {}".format(path_name))
 
 
 @log_on_start(INFO, "Saving to {path_name}")
 @log_on_end(DEBUG, "Data saved successfully to {path_name}")
-def save_spectrum(data: Dict[str, Dict], path_name: str):
+def save_spectrum(data, path_name: str):
     hp.write_cl(path_name, data, overwrite=True)
     print("saved spectrum to {}".format(path_name))
+
+
+@log_on_start(INFO, "Saving to {path_name}")
+@log_on_end(DEBUG, "Data saved successfully to {path_name}")
+def load_cl(path_name: str):
+    print('loaded {}'.format(path_name))
+    return hp.read_cl(path_name)
+   

@@ -186,8 +186,9 @@ if __name__ == '__main__':
 
         spectrum_save = _reorder_spectrum_dict(spectrum)
         for specc, val in spectrum_save.items():
-            buff=np.array([val[freqc] for freqc in freqcomb])
-            io.save_spectrum(buff, spec_path+specc+'unscaled'+filename)
+            for freqc in freqcomb:
+                # buff=np.array([val[freqc] for freqc in freqcomb])
+                io.save_spectrum(val[freqc], spec_path+specc+freqc+"-"+'unscaled'+filename)
     else:
         path_name = spec_path + 'unscaled' + filename
         spectrum = io.load_spectrum(path_name=path_name)
@@ -197,13 +198,19 @@ if __name__ == '__main__':
 
     spectrum_scaled = postprocess_spectrum(spectrum, freqcomb)
     io.save_data(spectrum_scaled, spec_path+'scaled'+filename)
-    spectrum_save = _reorder_spectrum_dict(spectrum_scaled)
-    for specc, val in spectrum_save.items():
-        buff=np.array([val[freqc] for freqc in freqcomb])
-        print(buff.shape, [freqc for freqc in freqcomb])
-        io.save_spectrum(buff, spec_path+specc+'scaled'+filename)
+    spectrum_save_scaled = _reorder_spectrum_dict(spectrum_scaled)
+    
+    for specc, val in spectrum_save_scaled.items():
+        for freqc in freqcomb:
+            # buff=np.array([val[freqc] for freqc in freqcomb])
+            io.save_spectrum(val[freqc], spec_path+specc+freqc+"-"+'scaled'+filename)
+    
+    # for specc, val in spectrum_save.items():
+    #     buff=np.array([val[freqc] for freqc in freqcomb])
+    #     print(buff.shape)
+    #     io.save_spectrum(buff, spec_path+specc+'scaled'+filename)
 
-    weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
-    io.save_data(weights, weight_path+cf['pa']["Tscale"]+filename)
+    # weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
+    # io.save_data(weights, weight_path+cf['pa']["Tscale"]+filename)
 
     # weighted_spec = spec_weight2weighted_spec(spectrum, weights)

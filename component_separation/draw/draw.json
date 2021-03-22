@@ -1,6 +1,6 @@
 {
 "pa": {
-    "mskset": "smica",
+    "mskset": "mask-spatch-smica",
     "Tscale": "K_CMB",
     "offdiag": true,
     "freqdset": "DX12",
@@ -21,7 +21,7 @@
 },
 "plot": {
     "spectrum": {
-        "do_plot": true,
+        "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
         "indir_rel": "",
         "outdir_root": "vis/spectrum/",
@@ -99,7 +99,7 @@
     },
 
     "spec_w/noise": {
-        "do_plot": true,
+        "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
         "indir_rel": "",
         "outdir_root": "vis/spectrum/",

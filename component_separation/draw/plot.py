@@ -347,7 +347,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
 
     def std_dev_binned(d):
         mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))/100
+        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))
         return mean, err
 
     
@@ -369,9 +369,9 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     for freqc, val in data.items():
         idx_max+=len(freqc)
         freqs = freqc.split("-")
-        # if "353" in freqs:
-        if freqs[0]  == freqs[1]:
-            binmean, binerr = std_dev_binned(data[freqc])
+        # if "100" in freqs:
+        if freqs[0] == freqs[1]:
+            binmean, binerr = std_dev_binned(np.nan_to_num(val))
             binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
             plt.errorbar(
                 0.5 * bl + 0.5 * br,

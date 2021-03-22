@@ -1,6 +1,6 @@
 {
 "pa":{
-    "new_spectrum": false,
+    "new_spectrum": true,
     "Tscale": "K_CMB",
     "mskset": "mask-spatch-smica",
     "offdiag": true,

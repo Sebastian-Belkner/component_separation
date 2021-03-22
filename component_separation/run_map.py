@@ -132,23 +132,29 @@ if __name__ == '__main__':
             cf['pa']["freqfilter"] = freqf
             noise_level = io.load_plamap_new(cf["pa"], field=7)
             noisevarmask = np.where(noise_level[FREQ]<treshold,True, False)
-            tmask, pmask, pmask = io.load_mask(cf["pa"])
-            comb_pmask =  pmask[FREQ] * noisevarmask
-            comb_pmask_negated = pmask[FREQ] * ~noisevarmask
+            if int(FREQ)<100:
+                tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"], 1024)
+            else:
+                tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"])
+            comb_pmask =  pmask * noisevarmask
+            comb_pmask_negated = pmask * ~noisevarmask
 
-            comb_tmask =  pmask[FREQ] * noisevarmask
-            comb_tmask_negated = pmask[FREQ] * ~noisevarmask
+            comb_tmask =  pmask * noisevarmask
+            comb_tmask_negated = pmask * ~noisevarmask
             print("Frequency:", FREQ)
             print("Mean noise,   sky coverage")
             print(30*"_")
             print(
                 np.mean(noise_level[FREQ]), "1" ,"\n",
                 np.mean(
-                    noise_level[FREQ] * pmask[FREQ]),
-                    np.sum(pmask[FREQ]/len(pmask[FREQ])), "\n",
+                    noise_level[FREQ] * pmask),
+                    np.sum(pmask/len(pmask)), "\n",
                 np.mean(
-                    noise_level[FREQ] * pmask[FREQ] * noisevarmask),
-                    np.sum((pmask[FREQ]*noisevarmask)/len(pmask[FREQ])), "\n"
+                    noise_level[FREQ] * comb_pmask),
+                    np.sum((comb_pmask)/len(pmask)), "\n",
+                np.mean(
+                    noise_level[FREQ] * comb_pmask_negated),
+                    np.sum((comb_pmask_negated)/len(pmask)), "\n"
             )
 
             filename = "{LorH}_SkyMask_{freq}_{nside}_R3.{00/1}_full_{maskbase}_{p/t}mask_{s/l}patch.fits"\
