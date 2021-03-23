@@ -1,8 +1,8 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "Tscale": "K_CMB",
-    "mskset": "mask-spatch-smica",
+    "mskset": "smica",
     "offdiag": true,
     "freqdset": "DX12",
     "llp1": true,

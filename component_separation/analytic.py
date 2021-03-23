@@ -1,10 +1,14 @@
 #!/usr/local/bin/python
 
-# %% Load packages and helper functions
 """
-run.py: script for executing main functionality of component_separation
+run.py: 
+    Script for calculating the gain of the optimal powerspectrum. 
+    Section I takes real data,
+    Section II takes fake data,
+    Section III takes no data.
+"""
 
-"""
+# %% Load packages and helper functions
 
 __author__ = "S. Belkner"
 
@@ -38,9 +42,43 @@ shape = (lmax, n_cha, n_cha)
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 
+
+signal = pd.read_csv(
+        "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/"+cf[mch]['powspec_truthfile'],
+        header=0,
+        sep='    ',
+        index_col=0)
+spectrum_trth = signal["Planck-"+"EE"][:shape[0]+1].to_numpy()
+
+base = 10
+nbins = 150
+
 with open('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/config.json', "r") as f:
     cf = json.load(f)
 
+
+def std_dev_binned(d, bins):
+    print(d.shape)
+    val = np.nan_to_num(d.compressed())
+    linsp = np.where(d.mask==False)[0]
+    print(linsp.shape, val.shape)
+    n, _ = np.histogram(
+        linsp,
+        bins=bins)
+    sy, _ = np.histogram(
+        linsp,
+        bins=bins,
+        weights=val)
+    sy2, _ = np.histogram(
+        linsp,
+        bins=bins,
+        weights=val * val)
+    mean = sy / n
+    std = np.sqrt(sy2/n - mean*mean)
+    return mean, std, _
+CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
+                  '#f781bf', '#a65628', '#984ea3',
+                  '#999999', '#e41a1c', '#dede00']
 
 def create_noisespectrum(arcmin, fwhm=np.array([2,10,27])):
     """Analog to gauss_beam
@@ -126,7 +164,7 @@ def load_empiric_noise_aac_covmatrix():
     return spectrum
 
 
-# %% set 'fixed' parameters
+# %% Set 'fixed' parameters
 
 lmax = cf['pa']["lmax"]
 freqfilter = cf['pa']["freqfilter"]
@@ -142,43 +180,13 @@ PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 noise_spectrum = load_empiric_noise_aac_covmatrix()
 C_lN  = pw.build_covmatrices(noise_spectrum, lmax, freqfilter, specfilter)
 
-# %% load truth signal
-signal = pd.read_csv(
-        "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/"+cf[mch]['powspec_truthfile'],
-        header=0,
-        sep='    ',
-        index_col=0)
-spectrum_trth = signal["Planck-"+"EE"][:shape[0]+1].to_numpy()
-plt.xlabel('multipole')
-plt.ylabel('powerspectrum')
-plt.plot(spectrum_trth, label= 'Planck EE-spectrum')
-plt.legend()
-
-# %% Build toy-cl
-C_lS = np.zeros_like(C_lN["EE"].T, float)
-row, col = np.diag_indices(C_lS[0,:,:].shape[0])
-c = np.ones((3001,7,7))
-C_lS =  (np.ones((7,7,3001))* spectrum_trth).T
-C_lF = np.zeros_like(C_lN["EE"].T, float)
 
 
-# %% plot noise+signal
-plt.figure(figsize=(8,6))
-for n in range(C_lN["EE"].shape[1]):
-    # plt.plot(C_lN["EE"].T[:,n,n] + C_lS[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
-    plt.plot(C_lN["EE"].T[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
-plt.title("Noise + signal spectra")
-plt.xscale('log')
-plt.yscale('log')
-plt.xlim((10,lmax))
-plt.legend()
-plt.ylim((0,1e7))
-plt.show()
+"""
+SECTION 1: Take real data
+""" 
 
-
-
-
-# %%
+# %% Load Spectra, currently this includes "smallpatch", "largepatch", and fullsky. All maps are however smica-masked.
 with open('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/component_separation/draw/draw.json', "r") as f:
     dcf = json.load(f)
 freqfilter = dcf['pa']["freqfilter"]
@@ -193,7 +201,6 @@ freqcomb =  [
 dc = dcf["plot"]["spectrum"]
 def _inpathname(freqc,spec, fname):
     return  "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/"+dc["indir_root"]+dc["indir_rel"]+spec+freqc+"-"+dc["in_desc"]+fname
-# %%
 
 dcf["pa"]["mskset"] =  "mask-spatch-smica"
 fname = io.make_filenamestring(dcf)
@@ -202,8 +209,6 @@ sspectrum = {freqc: {
     spec: np.array(io.load_cl(_inpathname(freqc,spec, fname)))
     for spec in speccs}  
     for freqc in freqcomb}
-
-
 
 dcf["pa"]["mskset"] =  "mask-lpatch-smica"
 fname = io.make_filenamestring(dcf)
@@ -220,13 +225,13 @@ allspectrum = io.load_spectrum(inpath_name, fname)
 allC_l  = pw.build_covmatrices(allspectrum, lmax, freqfilter, specfilter)
 
 
-# %%
+# %% Build Auto and Cross covariance Matrix
 sC_l = np.nan_to_num(pw.build_covmatrices(sspectrum, lmax, freqfilter, specfilter)["EE"].T)[2:2000]
 lC_l = np.nan_to_num(pw.build_covmatrices(lspectrum, lmax, freqfilter, specfilter)["EE"].T)[2:2000]
 allC_l = np.nan_to_num(pw.build_covmatrices(allspectrum, lmax, freqfilter, specfilter)["EE"].T)[2:2000]
 
 
-# %%
+# %% Calculate Optimal Powerspectrum
 cov_min_1 = np.nan_to_num(calculate_minimalcov2(sC_l))
 cov_min_2 = np.nan_to_num(calculate_minimalcov2(lC_l))
 cov_min_3 = np.nan_to_num(calculate_minimalcov2(allC_l))
@@ -234,16 +239,17 @@ cov_min_3 = np.nan_to_num(calculate_minimalcov2(allC_l))
 cov_min_1ma = ma.masked_array(cov_min_1, mask=np.where(cov_min_1<=0, True, False))
 cov_min_2ma = ma.masked_array(cov_min_2, mask=np.where(cov_min_2<=0, True, False))
 
-# %%
+
+# %% Build Weight for Inverse Variance Weighting
 C_full = np.zeros((allC_l.shape[0],2,2), float)
-print(np.cov([cov_min_1[0],cov_min_2[0]]))
 C_full[:,0,0] = np.array([(2*cov_min_1[l] * cov_min_1[l])/((2*l+1)*0.23) for l in range(allC_l.shape[0])])
 C_full[:,1,1] = np.array([(2*cov_min_2[l] * cov_min_2[l])/((2*l+1)*0.71) for l in range(allC_l.shape[0])])
 C_full[:,1,0] = 0*np.array([(2*cov_min_1[l] * cov_min_2[l])/((2*l+1)*np.sqrt(0.23*0.71)) for l in range(allC_l.shape[0])])
 C_full[:,0,1] = 0*np.array([(2*cov_min_2[l] * cov_min_1[l])/((2*l+1)*np.sqrt(0.23*0.71)) for l in range(allC_l.shape[0])])
-
 print(C_full[10])
-# %%
+
+
+# %% Calculate combined powerspectrum via inverse variance weighting
 weights_1 = np.zeros((C_full.shape[0], C_full.shape[1]))
 for l in range(C_full.shape[0]):
     try:
@@ -255,7 +261,7 @@ opt_1 = np.array([weights_1[l] @ np.array([cov_min_1, cov_min_2])[:,l] for l in 
 opt_1ma = ma.masked_array(opt_1, mask=np.where(opt_1<=0, True, False))
 
 
-# %%
+# %% Calculate optimal Powerspectrum
 opt_2 = np.zeros((C_full.shape[0]))
 for l in range(C_full.shape[0]):
     try:
@@ -266,55 +272,12 @@ for l in range(C_full.shape[0]):
 opt_2ma = ma.masked_array(opt_2, mask=np.where(opt_2<=0, True, False))
 
 
-# %% Idea 3: use var(c) = 2*C_l^2/(nmodes*f_sky) as weights
-weights_3 = np.zeros((C_full.shape[0], C_full.shape[1]))
-for l in range(C_full.shape[0]):
-    try:
-        # np.linalg.inv()
-        weights_3[l] = calculate_weights(
-            np.linalg.inv(
-                2* C_full[l,:,:] @ C_full[l,:,:])/(2*(l+1)*np.array([0.23,0.71])))
-    except:
-        pass
-opt_3 = np.array([weights_3[l] @ np.array([cov_min_1, cov_min_2])[:,l] for l in range(C_full.shape[0])])
-opt_3ma = ma.masked_array(opt_3, mask=np.where(opt_3<=0, True, False))
 
-
-# %%
-base = 10
-nbins = 150
+# %% Plot
 bins = np.logspace(np.log(1)/np.log(base), np.log(C_full.shape[0]+1)/np.log(base), nbins, base=base)
-bl = bins[:-1]
-br = bins[1:]
-
-def std_dev_binned(d):
-    print(d.shape)
-    val = np.nan_to_num(d.compressed())
-    linsp = np.where(d.mask==False)[0]
-    print(linsp.shape, val.shape)
-    n, _ = np.histogram(
-        linsp,
-        bins=bins)
-    sy, _ = np.histogram(
-        linsp,
-        bins=bins,
-        weights=val)
-    sy2, _ = np.histogram(
-        linsp,
-        bins=bins,
-        weights=val * val)
-    mean = sy / n
-    std = np.sqrt(sy2/n - mean*mean)
-    return mean, std, _
-CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
-                  '#f781bf', '#a65628', '#984ea3',
-                  '#999999', '#e41a1c', '#dede00']
-
-
-# %% plot the combinations
 plt.figure(figsize=(8,6))
 print("opt1_ma:")
-mean, std, _ = std_dev_binned(opt_1ma)
+mean, std, _ = std_dev_binned(opt_1ma, bins)
 plt.errorbar(
     (_[1:] + _[:-1])/2,
     mean,
@@ -328,7 +291,7 @@ plt.errorbar(
     alpha=0.9)
 
 # print("opt2_ma:")
-# mean, std, _ = std_dev_binned(opt_2ma)
+# mean, std, _ = std_dev_binned(opt_2ma, bins)
 # plt.errorbar(
 #     (_[1:] + _[:-1])/2,
 #     mean,
@@ -341,7 +304,7 @@ plt.errorbar(
 #     alpha=0.9)
 
 # print("opt3_ma")
-# mean, std, _ = std_dev_binned(opt_3ma)
+# mean, std, _ = std_dev_binned(opt_3ma, bins)
 # plt.errorbar(
 #     (_[1:] + _[:-1])/2,
 #     mean,
@@ -354,7 +317,7 @@ plt.errorbar(
 #     alpha=0.9)
 
 print("cov_min_1ma")
-mean, std, _ = std_dev_binned(cov_min_1ma)
+mean, std, _ = std_dev_binned(cov_min_1ma, bins)
 plt.errorbar(
     (_[1:] + _[:-1])/2,
     mean,
@@ -367,7 +330,7 @@ plt.errorbar(
     alpha=0.9)
 
 print("cov_min_2ma")
-mean, std, _ = std_dev_binned(cov_min_2ma)
+mean, std, _ = std_dev_binned(cov_min_2ma, bins)
 plt.errorbar(
     (_[1:] + _[:-1])/2,
     mean,
@@ -404,6 +367,41 @@ plt.ylim((1e1,3e2))
 
 plt.legend()
 plt.savefig('skypatches.jpg')
+
+
+
+"""
+SECTION 2: Take fake data
+""" 
+
+
+# %% Load True CMB signal
+plt.xlabel('multipole')
+plt.ylabel('powerspectrum')
+plt.plot(spectrum_trth, label= 'Planck EE-spectrum')
+plt.legend()
+
+# %% Build toy-cl
+C_lS = np.zeros_like(C_lN["EE"].T, float)
+row, col = np.diag_indices(C_lS[0,:,:].shape[0])
+c = np.ones((3001,7,7))
+C_lS =  (np.ones((7,7,3001))* spectrum_trth).T
+C_lF = np.zeros_like(C_lN["EE"].T, float)
+
+
+# %% plot noise+signal
+plt.figure(figsize=(8,6))
+for n in range(C_lN["EE"].shape[1]):
+    # plt.plot(C_lN["EE"].T[:,n,n] + C_lS[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
+    plt.plot(C_lN["EE"].T[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
+    plt.plot(C_lS["EE"].T[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
+plt.title("Noise / signal spectra")
+plt.xscale('log')
+plt.yscale('log')
+plt.xlim((10,lmax))
+plt.legend()
+plt.ylim((0,1e7))
+plt.show()
 
 
 # %%
@@ -470,14 +468,6 @@ plt.legend()
 
 
 
-
-
-
-
-
-# %%
-plt.plot(opt_4ma)
-
 # %% calculate minimal powerspectrum
 cov_min = calculate_minimalcov(C_lN["EE"].T[2:], C_lS[2:], C_lF[2:])
 cov_min_k = calculate_minimalcov(C_lN["EE"].T[2:]/5., C_lS[2:], C_lF[2:])
@@ -513,7 +503,22 @@ plt.legend()
 plt.show()
 
 
-# plt.plot(((cov_min_s-cov_min)/(cov_min_s-cov_min_k))[50:])
+
+"""
+SECTION 3: Take no data
+""" 
+
+# %% Noisemaps
+noiselevel = np.array([5,6,7])
+ll = np.arange(1,lmax+2,1)
+
+noise = np.array(
+    [gauss_beam(noiselevel[0]*0.000290888, lmax)[:,1]*ll*(ll+1),
+    gauss_beam(noiselevel[1]*0.000290888, lmax)[:,1]*ll*(ll+1),
+    gauss_beam(noiselevel[2]*0.000290888, lmax)[:,1]*ll*(ll+1)])
+noise = create_noisespectrum(arcmin=noiselevel)
+plt.plot(((cov_min_s-cov_min)/(cov_min_s-cov_min_k))[50:])
+
 
 # %%
 raw = np.nan_to_num(C_lN["EE"].T[2:] + C_lS[2:] + C_lF[2:])
@@ -523,66 +528,12 @@ plt.plot(cosvar)
 plt.plot(raw[:,5,5])
 plt.xscale('log')
 plt.yscale('log')
-
-# %%
-f = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_217-field_2048_R3.01_full.fits"
-import healpy as hp
-noise_level = hp.read_map(f, field=7)
-
-# %%
-import functools
-def _read(mask_path, mask_filename):
-    return {FREQ: hp.read_map(
-            '{mask_path}{mask_filename}'
-            .format(
-                mask_path = mask_path,
-                mask_filename = mask_filename))
-                for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter
-            }
-def _multi(a,b):
-    return a*b
-pmask_filename = ["gmaskP_apodized_0_2048.fits.gz", "psmaskP_2048.fits.gz"]
-pmasks = [_read("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/mask/", a) for a in pmask_filename]
-pmask = {FREQ: functools.reduce(_multi, [a[FREQ] for a in pmasks])
-            for FREQ in PLANCKMAPFREQ
-            if FREQ not in freqfilter
-        }
-
-
-# %%
-hp.mollview(pmask["217"], norm='hist')
-np.sum(pmask["217"]/len(pmask["217"]))
-# %%
-hp.mollview(noise_level* pmask["217"], norm='hist')
-plt.show()
-
-
-# %%
 noisevarmask = np.where(noise_level<1*1e-9,True, False)
 
-# %%
-print(
-    np.mean(noise_level), "1" ,"\n",
-    np.mean(noise_level* pmask["217"]), np.sum(pmask["217"]/len(pmask["217"])), "\n",
-    np.mean(noise_level* pmask["217"] * noisevarmask), np.sum((pmask["217"]*noisevarmask)/len(pmask["217"])), "\n"
-)
-
 
 # %%
-hp.mollview(noise_level* pmask["217"] * noisevarmask, norm='hist')
+hp.mollview(noise* pmask["217"] * noisevarmask, norm='hist')
 
-
-# %%
-weights = calculate_weights(np.linalg.inv(C_lS[2:] + C_lF[2:] + C_lN["EE"].T[2:]))
-for n in range(C_lN["EE"].shape[1]):
-    plt.plot(weights[:,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
-plt.xlabel("Multipole l")
-plt.ylabel("weight")
-# plt.xscale('log', base=2)
-plt.ylim((-0.1,1.0))
-plt.legend()
-plt.savefig('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/vis/analytic/weights.jpg')
 
 
 # %%
@@ -636,24 +587,48 @@ plt.legend()
 
 plt.show()
 
-# %% Weights
-weights = calculate_weights(np.linalg.inv(C_lS + C_lF + C_lN))
-plt.plot(weights[:,0], label='data0')
-plt.plot(weights[:,1], label='data1')
-plt.plot(weights[:,2], label='data2')
-plt.ylim((-1,1))
-plt.legend()
 
 
+"""
+Backup
+"""
 
-# old
-# 
-# # %% Noisemaps
-# noiselevel = np.array([5,6,7])
-# ll = np.arange(1,lmax+2,1)
+# %%
+f = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_217-field_2048_R3.01_full.fits"
+import healpy as hp
+noise_level = hp.read_map(f, field=7)
 
-# noise = np.array(
-#     [gauss_beam(noiselevel[0]*0.000290888, lmax)[:,1]*ll*(ll+1),
-#     gauss_beam(noiselevel[1]*0.000290888, lmax)[:,1]*ll*(ll+1),
-#     gauss_beam(noiselevel[2]*0.000290888, lmax)[:,1]*ll*(ll+1)])
-# noise = create_noisespectrum(arcmin=noiselevel)
+# %%
+import functools
+def _read(mask_path, mask_filename):
+    return {FREQ: hp.read_map(
+            '{mask_path}{mask_filename}'
+            .format(
+                mask_path = mask_path,
+                mask_filename = mask_filename))
+                for FREQ in PLANCKMAPFREQ
+                if FREQ not in freqfilter
+            }
+def _multi(a,b):
+    return a*b
+pmask_filename = ["gmaskP_apodized_0_2048.fits.gz", "psmaskP_2048.fits.gz"]
+pmasks = [_read("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/mask/", a) for a in pmask_filename]
+pmask = {FREQ: functools.reduce(_multi, [a[FREQ] for a in pmasks])
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+        }
+
+
+# %%
+hp.mollview(pmask["217"], norm='hist')
+np.sum(pmask["217"]/len(pmask["217"]))
+# %%
+hp.mollview(noise_level* pmask["217"], norm='hist')
+plt.show()
+
+# %%
+print(
+    np.mean(noise_level), "1" ,"\n",
+    np.mean(noise_level* pmask["217"]), np.sum(pmask["217"]/len(pmask["217"])), "\n",
+    np.mean(noise_level* pmask["217"] * noisevarmask), np.sum((pmask["217"]*noisevarmask)/len(pmask["217"])), "\n"
+)

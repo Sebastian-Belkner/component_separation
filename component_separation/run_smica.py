@@ -121,7 +121,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
     # find a starting point
     acmb = model.get_comp_by_name("cmb").mixmat()
-    fixed = False
+    fixed = True
     if fixed:
         afix = 0-cmb._mixmat.get_mask() #0:free 1:fixed
         cfix = 0-cmb._powspec.get_mask() #0:free 1:fixed
@@ -132,7 +132,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     cmbcq = np.squeeze(model.get_comp_by_name("cmb").powspec())
     polar = True if acmb.shape[1]==2 else False
 
-    if not fixed: # TODO; did i interpret this right?  if not is_mixmat_fixed(model)
+    if fixed: # TODO; did i interpret this right?  if not is_mixmat_fixed(model)
         if not no_starting_point:
             model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=qmax)
             cmb.set_mixmat(acmb, fixed=afix)
@@ -221,10 +221,11 @@ def build_smica_model(nmap, Q, N):
     plt.title("Signal spectrum")
     plt.show()
     # print("C_lS cov: {}".format(C_lS))
-    cmbcq = C_lS_bn.T
-    cmb.set_powspec(cmbcq[:,0,0]) # where cmbcq is a starting point for cmbcq like binned lcdm
+    cmbcq = C_lS_bn[0,0,:]
+    print(cmbcq.shape)
+    cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 
-    # cmb.set_powspec(cmbcq[:,0,0]*0, fixed='all') # B modes fit
+    # cmb.set_powspec(cmbcq*0, fixed='all') # B modes fit
     dim = 6
     gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
     gal.fix_mixmat("all")
@@ -274,15 +275,25 @@ speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
 
 cf["pa"]['freqdset'] = "DX12-diff"
 fname = io.make_filenamestring(cf)
-inpath_name = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/" + cf[mch]["outdir_spectrum"] + "scaled" + fname
-noise = io.load_spectrum(inpath_name, fname)
-
+# inpath_name = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/" + cf[mch]["outdir_spectrum"] + "scaled" + fname
+def _inpathname(freqc,spec):
+    return  "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/tmp/spectrum/"+spec+freqc+"-"+"scaled"+fname
+speccs =  [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+noise = {freqc: {
+    spec: np.array(io.load_cl(_inpathname(freqc,spec)))
+    for spec in speccs}  
+    for freqc in freqcomb}
 
 cf["pa"]['freqdset'] = "DX12"
 freqdset = cf["pa"]['freqdset']
 fname = io.make_filenamestring(cf)
 inpath_name = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/"+ cf[mch]["outdir_spectrum"] + 'scaled' + fname
-spectrum = io.load_spectrum(inpath_name, fname)
+
+speccs =  [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+spectrum = {freqc: {
+    spec: np.array(io.load_cl(_inpathname(freqc,spec)))
+    for spec in speccs}  
+    for freqc in freqcomb}
 cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
 
 # spectrum = _reorder_spectrum_dict(spectrum)
@@ -319,7 +330,11 @@ Q = len(nmodes)
 smica_model, gal, N_cov_bn = build_smica_model(cov_bn.shape[0], Q, noise)
 
 # %%
-
+print(cov_bn.shape)
+print(N_cov_bn.shape)
+print(smica_model.dim)
+# print(smica_model.dim())
+print(smica_model.get_dim())
 fit_model_to_cov(
     smica_model,
     cov_bn,
@@ -332,9 +347,6 @@ fit_model_to_cov(
     logger=None,
     qmax=None,
     no_starting_point=False)
-
-
-
 
 
 
