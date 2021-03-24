@@ -240,11 +240,15 @@ cov_min_1ma = ma.masked_array(cov_min_1, mask=np.where(cov_min_1<=0, True, False
 cov_min_2ma = ma.masked_array(cov_min_2, mask=np.where(cov_min_2<=0, True, False))
 
 
-# %% Build Weight for Inverse Variance Weighting
+# %% Build weights for Inverse Variance Weighting
 C_full = np.zeros((allC_l.shape[0],2,2), float)
-C_full[:,0,0] = np.array([(2*cov_min_1[l] * cov_min_1[l])/((2*l+1)*0.23) for l in range(allC_l.shape[0])])
-C_full[:,1,1] = np.array([(2*cov_min_2[l] * cov_min_2[l])/((2*l+1)*0.71) for l in range(allC_l.shape[0])])
-C_full[:,1,0] = 0*np.array([(2*cov_min_1[l] * cov_min_2[l])/((2*l+1)*np.sqrt(0.23*0.71)) for l in range(allC_l.shape[0])])
+C_full[:,0,0] = np.array(
+    [(2*cov_min_1[l] * cov_min_1[l])/((2*l+1)*0.23)
+    for l in range(allC_l.shape[0])])
+C_full[:,1,1] = np.array(
+    [(2*cov_min_2[l] * cov_min_2[l])/((2*l+1)*0.71) for l in range(allC_l.shape[0])])
+C_full[:,1,0] = 0*np.array([(2*cov_min_1[l] * cov_min_2[l])/((2*l+1)*np.sqrt(0.23*0.71))
+        for l in range(allC_l.shape[0])])
 C_full[:,0,1] = 0*np.array([(2*cov_min_2[l] * cov_min_1[l])/((2*l+1)*np.sqrt(0.23*0.71)) for l in range(allC_l.shape[0])])
 print(C_full[10])
 
@@ -266,11 +270,12 @@ opt_2 = np.zeros((C_full.shape[0]))
 for l in range(C_full.shape[0]):
     try:
         opt_2[l] = np.nan_to_num(
-            calculate_minimalcov2(C_full[l,:,:]))
+            calculate_minimalcov2(np.cov(np.array([
+                [cov_min_1[l], 0],
+                [0, cov_min_2[l]]]))))
     except:
         pass
 opt_2ma = ma.masked_array(opt_2, mask=np.where(opt_2<=0, True, False))
-
 
 
 # %% Plot
@@ -282,7 +287,7 @@ plt.errorbar(
     (_[1:] + _[:-1])/2,
     mean,
     yerr=std,
-    label="Idea1, weights*powerspectra",# + freqc,
+    label="Combined spectrum, weights*powerspectra",# + freqc,
     capsize=3,
     elinewidth=2,
     fmt='x',
@@ -290,67 +295,48 @@ plt.errorbar(
     # color=CB_color_cycle[idx],
     alpha=0.9)
 
-# print("opt2_ma:")
-# mean, std, _ = std_dev_binned(opt_2ma, bins)
+print("opt2_ma:")
+mean, std, _ = std_dev_binned(opt_2ma, bins)
+plt.errorbar(
+    (_[1:] + _[:-1])/2,
+    mean,
+    yerr=std,
+    label="Combined spectrum, weights*powerspectra",# + freqc,
+    capsize=3,
+    elinewidth=2,
+    fmt='x',
+    markersize=10,
+    # color=CB_color_cycle[idx],
+    alpha=0.9)
+
+# print("cov_min_1ma")
+# mean, std, _ = std_dev_binned(cov_min_1ma, bins)
 # plt.errorbar(
 #     (_[1:] + _[:-1])/2,
 #     mean,
 #     yerr=std,
-#     label="Idea2, weights*powerspectra",# + freqc,
+#     label="low noise patch",# + freqc,
 #     capsize=3,
 #     elinewidth=2,
 #     fmt='x',
 #     # color=CB_color_cycle[idx],
 #     alpha=0.9)
 
-# print("opt3_ma")
-# mean, std, _ = std_dev_binned(opt_3ma, bins)
+# print("cov_min_2ma")
+# mean, std, _ = std_dev_binned(cov_min_2ma, bins)
 # plt.errorbar(
 #     (_[1:] + _[:-1])/2,
 #     mean,
 #     yerr=std,
-#     label="Idea3, weights with 2*c^2/(nmodes fsky)",# + freqc,
+#     label="high noise patch",# + freqc,
 #     capsize=3,
 #     elinewidth=2,
 #     fmt='x',
 #     # color=CB_color_cycle[idx],
 #     alpha=0.9)
 
-print("cov_min_1ma")
-mean, std, _ = std_dev_binned(cov_min_1ma, bins)
-plt.errorbar(
-    (_[1:] + _[:-1])/2,
-    mean,
-    yerr=std,
-    label="low noise patch",# + freqc,
-    capsize=3,
-    elinewidth=2,
-    fmt='x',
-    # color=CB_color_cycle[idx],
-    alpha=0.9)
-
-print("cov_min_2ma")
-mean, std, _ = std_dev_binned(cov_min_2ma, bins)
-plt.errorbar(
-    (_[1:] + _[:-1])/2,
-    mean,
-    yerr=std,
-    label="high noise patch",# + freqc,
-    capsize=3,
-    elinewidth=2,
-    fmt='x',
-    # color=CB_color_cycle[idx],
-    alpha=0.9)
-
-# plt.plot(opt_1ma, label = 'Idea1, weights*powerspectra', alpha=0.5, lw=3)
-# plt.plot(opt_2ma, label='Idea2, minimalcov(minimalpowerspectra)', alpha=0.5, ls='--', lw=3)
-# plt.plot(opt_3ma, label='Idea3, 2*C_l^2/(nmodes*f_sky) as weights', alpha=0.5, lw=3)
-# plt.plot(opt_4ma, label='Idea4, minimalcov(2*C_l^2/(nmodes*f_sky))', alpha=0.5, ls='-.', lw=3)
 plt.plot(spectrum_trth, label="Planck EE spectrum")
-# plt.plot(cov_min_patched, label = 'patched 4/5 + 1/5 noise', alpha=0.5)
-# plt.plot(cov_min_1, label = "low noise patch", lw=1)
-# plt.plot(cov_min_2, label = "high noise patch", lw=1)
-plt.plot(cov_min_3, label = "all sky", lw=2, alpha=0.7)
+# plt.plot(cov_min_3, label = "all sky", lw=2, alpha=0.7)
 # plt.plot(C_p1[:,5,5])
 # plt.plot(C_p2[:,5,5]
 
@@ -362,8 +348,8 @@ plt.ylabel("Powerspectrum")
 plt.grid(which='both', axis='x')
 plt.grid(which='major', axis='y')
 
-plt.xlim((3e2,2e3))
-plt.ylim((1e1,3e2))
+plt.xlim((3e1,2e3))
+plt.ylim((1e-1,1e2))
 
 plt.legend()
 plt.savefig('skypatches.jpg')
@@ -371,15 +357,9 @@ plt.savefig('skypatches.jpg')
 
 
 """
-SECTION 2: Take fake data
+SECTION 2: Take fake CMB data and noise data from diff maps
 """ 
 
-
-# %% Load True CMB signal
-plt.xlabel('multipole')
-plt.ylabel('powerspectrum')
-plt.plot(spectrum_trth, label= 'Planck EE-spectrum')
-plt.legend()
 
 # %% Build toy-cl
 C_lS = np.zeros_like(C_lN["EE"].T, float)
@@ -392,19 +372,19 @@ C_lF = np.zeros_like(C_lN["EE"].T, float)
 # %% plot noise+signal
 plt.figure(figsize=(8,6))
 for n in range(C_lN["EE"].shape[1]):
-    # plt.plot(C_lN["EE"].T[:,n,n] + C_lS[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
-    plt.plot(C_lN["EE"].T[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
-    plt.plot(C_lS["EE"].T[:,n,n], label='{} Channel'.format(PLANCKMAPFREQ[n]))
-plt.title("Noise / signal spectra")
+    plt.plot(C_lN["EE"].T[:,n,n], label='Noise {} Channel'.format(PLANCKMAPFREQ[n]))
+
+plt.plot(C_lS[:,0,0])
+plt.title("EE noise andd signal spectra")
 plt.xscale('log')
 plt.yscale('log')
 plt.xlim((10,lmax))
 plt.legend()
-plt.ylim((0,1e7))
+plt.ylim((1e-2,1e6))
 plt.show()
 
 
-# %%
+# %% Build toy-patches
 C_lN1 = C_lN["EE"].T[2:] * 1./3.
 C_lN2 = C_lN["EE"].T[2:] * 2./3.
 C_lN3 = C_lN["EE"].T[2:]
@@ -431,7 +411,7 @@ for l in range(C_fullana.shape[0]):
         weights_1[l] = calculate_weights(np.linalg.inv(C_fullana[l,:,:]))
     except:
         pass
-opt_1 = np.array([weights_1[l] @ np.array([cov_min_1ana, cov_min_2ana])[:,l] for l in range(lmax-1)])
+opt_1 = np.array([weights_1[l] @ np.array([cov_min_1ana, cov_min_2ana])[:,l] for l in range(C_fullana.shape[0])])
 opt_1ma = ma.masked_array(opt_1, mask=np.where(opt_1<=0, True, False))
 
 
@@ -441,18 +421,16 @@ for l in range(C_fullana.shape[0]):
     try:
         opt_2[l] = np.nan_to_num(
             calculate_minimalcov2(np.array([
-                [cov_min_1ana[l], np.sqrt(np.var([cov_min_1ana[l], cov_min_2ana[l]]))],
-                [np.sqrt(np.var([cov_min_1ana[l], cov_min_2ana[l]])), cov_min_2ana[l]]])))
+                [cov_min_1ana[l], 0],
+                [0, cov_min_2ana[l]]])))
     except:
         pass
 opt_2ma = ma.masked_array(opt_2, mask=np.where(opt_2<=0, True, False))
 
 
-
-# %% plot the combinations
-plt.figure(figsize=(10,8))
-plt.plot(opt_1ma, label = 'Idea1, weights*powerspectra', alpha=0.5, lw=3)
-plt.plot(opt_2ma, label='Idea2, minimalcov(minimalpowerspectra)', alpha=0.5, ls='--', lw=3)
+# %% plot the combination
+plt.plot(opt_1ma, label = 'Combined spectrum, weights*powerspectra', alpha=0.5, lw=3)
+plt.plot(opt_2ma, label='minimalcov(minimalpowerspectra)', alpha=0.5, ls='--', lw=3)
 plt.plot(spectrum_trth, label="Planck EE spectrum")
 # plt.plot(cov_min_patched, label = 'patched 4/5 + 1/5 noise', alpha=0.5)
 plt.plot(cov_min_1ana, label = "low noise patch", lw=1)
@@ -460,55 +438,17 @@ plt.plot(cov_min_2ana, label = "high noise patch", lw=1)
 plt.plot(cov_min_3ana, label = "all noise", lw=1)
 plt.xscale('log')
 plt.yscale('log')
-# plt.plot(C_p1[:,5,5])
-# plt.plot(C_p2[:,5,5]
-# plt.ylim((1e1,1e2))
+plt.ylim((1e1,1e2))
 plt.xlim((6e2,1.5e3))
 plt.legend()
-
-
-
-# %% calculate minimal powerspectrum
-cov_min = calculate_minimalcov(C_lN["EE"].T[2:], C_lS[2:], C_lF[2:])
-cov_min_k = calculate_minimalcov(C_lN["EE"].T[2:]/5., C_lS[2:], C_lF[2:])
-cov_min_s = calculate_minimalcov(C_lS[2:], C_lF[2:], C_lN["EE"].T[2:]*0.000001)
-
-# C_full = np.concatenate((
-#     np.concatenate((C_p1, np.zeros_like(C_p1)), axis=1),
-#     np.concatenate((np.zeros_like(C_p1), C_p2), axis=1)), axis=2)
-
-C_full = np.concatenate((
-    np.concatenate((C_p1, C_lS[2:]), axis=1),
-    np.concatenate((C_lS[2:], C_p2), axis=1)), axis=2)
-
-cov_min_patched = calculate_minimalcov(C_full)
-
-# %%
-
-cov_min_patched = calculate_minimalcov(C_full)
-# plt.figure(figsize=(8,6))
-plt.plot(cov_min, label='full noise')
-plt.plot(cov_min_s, label= 'signal only', alpha=0.5)
-plt.plot(cov_min_k, label='1/5 noise', alpha=0.5)
-plt.plot(spectrum_trth, label= 'Planck EE-spectrum')
-plt.plot(cov_min_patched, label = 'patched 4/5 + 1/5 noise', alpha=0.5)
-plt.legend()
-plt.xscale('log')
-plt.yscale('log')
-plt.xlabel('multipole')
-plt.ylabel('powerspectrum')
-plt.xlim((10,lmax))
-plt.legend()
-# plt.ylim((1e-1,1e3))
-plt.show()
-
 
 
 """
 SECTION 3: Take no data
 """ 
 
-# %% Noisemaps
+
+# %% Create Noisespectrum from gaussbeam
 noiselevel = np.array([5,6,7])
 ll = np.arange(1,lmax+2,1)
 
@@ -517,8 +457,57 @@ noise = np.array(
     gauss_beam(noiselevel[1]*0.000290888, lmax)[:,1]*ll*(ll+1),
     gauss_beam(noiselevel[2]*0.000290888, lmax)[:,1]*ll*(ll+1)])
 noise = create_noisespectrum(arcmin=noiselevel)
-plt.plot(((cov_min_s-cov_min)/(cov_min_s-cov_min_k))[50:])
 
+
+# %% Plot Noisespectrum
+plt.plot(noise[0,:])
+plt.plot(noise[1,:])
+plt.plot(noise[2,:])
+
+
+# %% Build toy-patches
+C_lN1 = C_lN["EE"].T[2:] * 1./3.
+C_lN2 = C_lN["EE"].T[2:] * 2./3.
+C_lN3 = C_lN["EE"].T[2:]
+C_p1 = C_lS[2:] + C_lF[2:] + C_lN1
+C_p2 = C_lS[2:] + C_lF[2:] + C_lN2
+C_p3 = C_lS[2:] + C_lF[2:] + C_lN3
+cov_min_1ana = np.nan_to_num(calculate_minimalcov2(C_lN1))
+cov_min_2ana = np.nan_to_num(calculate_minimalcov2(C_lN2))
+cov_min_3ana = np.nan_to_num(calculate_minimalcov2(C_lN3))
+
+C_fullana = np.zeros((lmax-1,2,2), float)
+C_fullana[:,0,0] = np.array([(2*cov_min_1ana[l] * cov_min_1ana[l])/((2*l+1)*0.23) for l in range(C_fullana.shape[0])])
+C_fullana[:,1,1] = np.array([(2*cov_min_2ana[l] * cov_min_2ana[l])/((2*l+1)*0.71) for l in range(C_fullana.shape[0])])
+C_fullana[:,1,0] = 0*np.array([(2*cov_min_1ana[l] * cov_min_2ana[l])/((2*l+1)*np.sqrt(0.23*0.71)) for l in range(C_fullana.shape[0])])
+C_fullana[:,0,1] = 0*np.array([(2*cov_min_2ana[l] * cov_min_1ana[l])/((2*l+1)*np.sqrt(0.23*0.71)) for l in range(C_fullana.shape[0])])
+
+
+# %% Idea 1: patched cov_{min}_l = sum_i weights_il * C_{full}_l, with weights_il = cov(c,c)^{-1}1/(1^Tcov(c,c)^{-1}1)
+weights_1 = np.zeros((C_fullana.shape[0], C_fullana.shape[1]))
+for l in range(C_fullana.shape[0]):
+    try:
+        # np.linalg.inv()
+        weights_1[l] = calculate_weights(np.linalg.inv(C_fullana[l,:,:]))
+    except:
+        pass
+opt_1 = np.array([weights_1[l] @ np.array([cov_min_1ana, cov_min_2ana])[:,l] for l in range(C_fullana.shape[0])])
+opt_1ma = ma.masked_array(opt_1, mask=np.where(opt_1<=0, True, False))
+
+
+# %% Plot
+plt.plot(opt_1ma, label = 'Combined spectrum, weights*powerspectra', alpha=0.5, lw=3)
+# plt.plot(opt_2ma, label='minimalcov(minimalpowerspectra)', alpha=0.5, ls='--', lw=3)
+plt.plot(spectrum_trth, label="Planck EE spectrum")
+# plt.plot(cov_min_patched, label = 'patched 4/5 + 1/5 noise', alpha=0.5)
+plt.plot(cov_min_1ana, label = "low noise patch", lw=1)
+plt.plot(cov_min_2ana, label = "high noise patch", lw=1)
+plt.plot(cov_min_3ana, label = "all noise", lw=1)
+plt.xscale('log')
+plt.yscale('log')
+# plt.ylim((1e1,1e2))
+# plt.xlim((6e2,1.5e3))
+plt.legend()
 
 # %%
 raw = np.nan_to_num(C_lN["EE"].T[2:] + C_lS[2:] + C_lF[2:])

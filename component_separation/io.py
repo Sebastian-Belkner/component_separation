@@ -545,7 +545,8 @@ def save_spectrum(data, path_name: str):
 
 @log_on_start(INFO, "Saving to {path_name}")
 @log_on_end(DEBUG, "Data saved successfully to {path_name}")
-def load_cl(path_name: str):
-    print('loaded {}'.format(path_name))
+def load_cl(path_name: str, verbose=False):
+    if verbose:
+        print('loaded {}'.format(path_name))
     return hp.read_cl(path_name)
    
