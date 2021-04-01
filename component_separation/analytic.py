@@ -35,7 +35,8 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 lmax = 3000
-n_cha = 7
+n_cha = 5
+npatch = 2
 shape = (lmax+1, n_cha, n_cha)
 
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
@@ -45,6 +46,13 @@ PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 base = 10
 nbins = 150
 
+
+# %% ONLY DO ONCE!
+cf[mch]["indir"] = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/"
+noisevar_map = io.load_plamap_new(cf, field=7)
+
+
+# %%
 with open('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/config.json', "r") as f:
     cf = json.load(f)
 
@@ -90,13 +98,12 @@ def create_noisespectrum(dp, fwhm):
     Returns:
         [type]: [description]
     """   
-    rad = dp[np.newaxis].T * np.ones(lmax+1)  * 0.000290888
     ll = np.arange(0,lmax+1,1)
     # TODO AMPLITUDE SHOULD be noise level in muK arcmin
-    def _spec(rad):
-        return (dp)**2 * np.exp(ll*(ll+1)*fwhm**2/(8*np.log(2)))
-        # return (2*0.000290888/(2.728*1e6))**2 * np.exp(ll*(ll+1)*rad**2/(8*np.log(2)))
-    return _spec(rad)
+
+    return dp *1e6* np.exp(ll*(ll+1)*(fwhm*0.000290888)**2/(8*np.log(2)))
+    # return (2*0.000290888/(2.728*1e6))**2 * np.exp(ll*(ll+1)*rad**2/(8*np.log(2)))
+
 
 
 def gauss_beam(fwhm):
@@ -124,47 +131,313 @@ def calculate_weights(cov):
     elaw = np.ones(cov.shape[1])
     weights = (cov @ elaw) / (elaw @ cov @ elaw)[np.newaxis].T
     return weights
-    
 
-def calculate_minimalcov(C_lN: np.ndarray, C_lS: np.ndarray = 0, C_lF: np.ndarray = 0) -> np.array:
+
+def calculate_minimalcov(C_l) -> np.array:
     """Returns the minimal covariance using inverse variance weighting, i.e. calculates
     :math:`C^{\texttt{min}}_l = \frac{1}{\textbf{1}^\dagger (C_l^S + C_l^F + C_l^N)^{-1}\textbf{1}}`.
 
     Args:
-        C_lS (np.ndarray): An array of auto- and cross-covariance matrices of the CMB for all instruments, its dimension is [Nspec,Nspec,lmax]
-        C_lF (np.ndarray): An array of auto- and cross-covariance matrices of the superposition of Foregrounds for all instruments, its dimension is [Nspec,Nspec,lmax]
-        C_lN (np.ndarray): An array of auto- and cross-covariance matrices of the Noise for all instruments, its dimension is [Nspec,Nspec,lmax]
-    """
-    elaw = np.ones(C_lN.shape[1])
-    cov_minimal = (elaw @ np.linalg.inv(C_lS + C_lF + C_lN) @ elaw)
-    return 1/cov_minimal
+        C_l (np.ndarray): An array of auto- and cross-covariance matrices for all instruments, its dimension is [Nspec,Nspec,lmax]
 
-def calculate_minimalcov2(C_l) -> np.array:
-    """Returns the minimal covariance using inverse variance weighting, i.e. calculates
-    :math:`C^{\texttt{min}}_l = \frac{1}{\textbf{1}^\dagger (C_l^S + C_l^F + C_l^N)^{-1}\textbf{1}}`.
-
-    Args:
-        C_lS (np.ndarray): An array of auto- and cross-covariance matrices of the CMB for all instruments, its dimension is [Nspec,Nspec,lmax]
-        C_lF (np.ndarray): An array of auto- and cross-covariance matrices of the superposition of Foregrounds for all instruments, its dimension is [Nspec,Nspec,lmax]
-        C_lN (np.ndarray): An array of auto- and cross-covariance matrices of the Noise for all instruments, its dimension is [Nspec,Nspec,lmax]
-    """
-    elaw = np.ones(C_l.shape[1])
-    cov_minimal = (elaw @ np.linalg.inv(C_l) @ elaw)
-    return 1/cov_minimal
-
-
-def calculate_minimalcov3(C_l) -> np.array:
-    """Returns the minimal covariance using inverse variance weighting, i.e. calculates
-    :math:`C^{\texttt{min}}_l = \frac{1}{\textbf{1}^\dagger (C_l^S + C_l^F + C_l^N)^{-1}\textbf{1}}`.
-
-    Args:
-        C_lS (np.ndarray): An array of auto- and cross-covariance matrices of the CMB for all instruments, its dimension is [Nspec,Nspec,lmax]
-        C_lF (np.ndarray): An array of auto- and cross-covariance matrices of the superposition of Foregrounds for all instruments, its dimension is [Nspec,Nspec,lmax]
-        C_lN (np.ndarray): An array of auto- and cross-covariance matrices of the Noise for all instruments, its dimension is [Nspec,Nspec,lmax]
     """
     elaw = np.ones(C_l.shape[-1])
     cov_minimal = (elaw @ np.linalg.inv(C_l) @ elaw)
     return 1/cov_minimal
+
+
+def get_beamsize():
+    # [32,27,13,10,7,5,5]
+    # np.array([32,27,13,7,5])
+    # np.array([30,30,30,30,30])
+    return np.array([32,27,13,7,5])
+
+
+# %% Set 'fixed' parameters
+
+lmax = cf['pa']["lmax"]
+freqfilter = cf['pa']["freqfilter"]
+specfilter = cf['pa']["specfilter"]
+
+a = np.zeros(shape, float)
+C_lF = np.zeros(shape, float)
+C_lN = np.zeros(shape, float)
+
+PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+
+
+
+# %% Build toy-cl
+C_lS = np.zeros_like(C_lN.T, float)
+row, col = np.diag_indices(C_lS[0,:,:].shape[0])
+C_lS =  (np.ones((n_cha,n_cha,3001))* spectrum_trth).T
+C_lF = np.zeros_like(C_lN.T, float)
+
+
+"""
+                                    ##########################################
+                                    ##########################################
+                                                Load Noiselevel info
+                                    ##########################################
+                                    ##########################################
+""" 
+
+
+# %%
+def get_noiselevel(data, npatch, freq):
+    patch_bounds = np.array(list(range(npatch+1)))/npatch
+    mean, binedges, _ = plt.hist(data, bins=np.logspace(np.log10(data.min()),np.log10(data.max()),10000), log=True, alpha=0.5)
+    plt.xscale('log')
+    patch_noiselevel = np.zeros((len(patch_bounds)-1))
+    buff=0
+    buff2=0
+    patchidx=0
+    boundaries = np.zeros((npatch))
+    noisebuff = 0
+    for idx,n in enumerate(mean):
+        buff += mean[idx]
+        buff2 += mean[idx]
+        if buff < (patch_bounds[patchidx+1] * len(data)):
+            noisebuff +=  mean[idx] * (binedges[idx+1]+binedges[idx])/2
+        else:
+            boundaries[patchidx] = (binedges[idx+1]+binedges[idx])/2
+            patch_noiselevel[patchidx] = noisebuff/buff2
+            buff2=0
+            patchidx+=1
+            noisebuff=0
+    boundaries[-1] = (binedges[-2]+binedges[-1])/2
+    patch_noiselevel[-1] = noisebuff/buff2
+    plt.vlines(np.concatenate(([data.min()],boundaries)), ymin=0, ymax=1e6, color='red', alpha=0.5)
+    return patch_noiselevel
+
+
+noise_level = np.array([get_noiselevel(noisevar_map[freq], npatch, freq) for freq in ["030", "044", "070", "143", "217"]]) #["217"]["030", "044", "070", "100", "143", "217", "353"]])
+# noise_level_FS = np.array([get_noiselevel(noisevar_map[freq], 1, freq) for freq in ["030", "044", "070", "143", "217"]]) #["217"]["030", "044", "070", "100", "143", "217", "353"]])
+
+
+# %%
+def get_noiselevelFS(data):
+    # mean, binedges, _ = plt.hist(data, bins=1000)
+    return [data.mean()]
+    # return [binedges[mean.argmax()]]
+noise_level_FS = np.array([get_noiselevelFS(noisevar_map[freq]) for freq in ["030", "044", "070", "143", "217"]]) #["217"]["030", "044", "070", "100", "143", "217", "353"]])
+
+
+# %%
+print(noise_level.shape)
+print(noise_level_FS.shape)
+print(fwhm.shape)
+
+# %%
+fwhm = np.array([get_beamsize() for n in range(npatch)]).T
+ll = np.arange(0,lmax+1,1)
+noise_spectrum = np.zeros((5, npatch,lmax+1))
+# np.array(list(map(create_noisespectrum, noise_level.flatten(), fwhm.flatten()))).reshape((noise_level.shape[1], noise_level.shape[0], lmax+1), order="F")#*ll*(ll+1)/(2*np.pi)
+for n in range(noise_spectrum.shape[0]):
+    for m in range(noise_spectrum.shape[1]):
+        noise_spectrum[n,m,:] = create_noisespectrum(noise_level[n,m], fwhm[n,m])*ll*(ll+1)/(2*np.pi)
+
+
+C_lN = np.zeros((npatch, lmax+1,5, 5))
+for n in range(C_lN.shape[0]):
+    C_lN[n]  = create_covmatrix(noise_spectrum[:,n,:])
+
+
+# %%
+print(C_lN.shape)
+
+# %%
+# noise_spectrum_FS = np.array(list(map(create_noisespectrum, noise_level_FS.flatten(), fwhm.flatten()))).reshape((noise_level_FS.shape[1], noise_level_FS.shape[0], lmax+1), order="F")#*ll*(ll+1)/(2*np.pi)
+# for n in range(noise_spectrum_FS.shape[0]):
+#     for m in range(noise_spectrum_FS.shape[1]):
+#         noise_spectrum_FS[n,m,:] = noise_spectrum_FS[n,m,:]*ll*(ll+1)/(2*np.pi)
+
+noise_spectrum_FS = np.zeros((5, 1,lmax+1))
+# np.array(list(map(create_noisespectrum, noise_level.flatten(), fwhm.flatten()))).reshape((noise_level.shape[1], noise_level.shape[0], lmax+1), order="F")#*ll*(ll+1)/(2*np.pi)
+for n in range(noise_spectrum_FS.shape[0]):
+    for m in range(noise_spectrum_FS.shape[1]):
+        noise_spectrum_FS[n,m,:] = create_noisespectrum(noise_level_FS[n,m], fwhm[n,m])*ll*(ll+1)/(2*np.pi)
+
+
+C_lN_fullsky = np.zeros((1, lmax+1,5, 5))
+for n in range(C_lN.shape[0]):
+    C_lN_fullsky[n]  = create_covmatrix(noise_spectrum_FS[:,n,:])
+# C_lN_fullsky = np.array(list(map(create_covmatrix, noise_spectrum_FS.reshape(1,5,3001))))
+
+# %%
+print(noise_spectrum.shape)
+# %%
+plt.plot(C_lS[:,0,0])
+# noise_spectrum = noise_spectrum.reshape((10,5,3001), order="F")
+# print(noise_spectrum.shape)
+# for n in range(noise_spectrum.shape[1]):
+#     plt.plot(noise_spectrum[0,n,:], label = "noisespec, {} noise patch".format(n), lw=2, ls="--")#, color=CB_color_cycle[0])
+
+print(C_lN.shape)
+for n in range(C_lN.shape[0]):
+    plt.plot(C_lN[n,:,0,0], label = "cln, {} noise patch".format(n), lw=2, ls="--")#, color=CB_color_cycle[0])
+plt.plot(C_lN_fullsky[0,:,0,0], color = "black")
+plt.legend()
+plt.yscale("log")
+plt.ylim((1e-2,1e1))
+plt.xlim((1e1,4e3))
+plt.xscale("log")
+"""
+                                    ##########################################
+                                    ##########################################
+                                                    SECTION 1
+                                    ##########################################
+                                    ##########################################
+""" 
+
+
+# %% Create Noisespectrum from gaussbeam
+
+# m = np.array([list(range(1, n_cha+1)) for patch in range(npatch)]).T
+# #TODO take realistic numbers
+# noiseamp_patch = np.array(list(range(1,npatch+1)))*10+30
+# noiselevel = (m * noiseamp_patch).T
+# fwhm = (m * noiseamp_patch*0.0001).T
+# ll = np.arange(0,lmax+1,1)
+# noise = np.array(list(map(create_noisespectrum, noiselevel.flatten()*0.000290888, fwhm.flatten())))[:,:].reshape(*noiselevel.shape, lmax+1)*ll*(ll+1)/(2*np.pi)
+
+fsky = np.zeros((npatch, npatch), float)
+np.fill_diagonal(fsky, 1/npatch*np.ones((npatch)))
+
+
+
+# %%
+print(np.array([1,2,3])*np.array([0.5,0.5,0.5]))
+print(((2*ll+1)*fsky[n,n]))
+# %%
+C_p = C_lS + C_lN
+C_pNS = 0 * C_lS + C_lN
+C_pNN = C_lS + 0.000001 * C_lN
+
+C_pFS = C_lS + C_lN_fullsky[0]
+C_pNS_FS = 0 * C_lS + C_lN_fullsky[0]
+cov_min = np.concatenate(
+    (
+        np.zeros(shape=(C_p.shape[0],1)),
+        np.array([calculate_minimalcov(C_p[n,1:]) for n in range(C_p.shape[0])])),axis=1)
+cov_min_NS = np.concatenate((np.zeros(shape=(C_p.shape[0],1)),calculate_minimalcov(C_pNS[:,1:])),axis=1)
+cov_min_NN = np.concatenate((np.zeros(shape=(C_p.shape[0],1)),np.nan_to_num(calculate_minimalcov(C_pNN[:,1:]))),axis=1)
+cov_min_FS = np.concatenate((np.zeros(shape=(1)),np.nan_to_num(calculate_minimalcov(C_pFS[1:]))),axis=0)
+cov_min_NS_FS = np.concatenate((np.zeros(shape=(1)),np.nan_to_num(calculate_minimalcov(C_pNS_FS[1:]))),axis=0)
+
+# %%
+var_patches = np.zeros((lmax+1,C_p.shape[0],C_p.shape[0]), float)
+var_patches_NS = np.zeros((lmax+1,C_p.shape[0],C_p.shape[0]), float)
+
+for n in range(npatch):
+    var_patches[:,n,n] = 2*cov_min[n,:]*cov_min[n,:]/((2*ll+1)*fsky[n,n])
+    var_patches_NS[:,n,n] = 2*cov_min_NS[n,:]*cov_min_NS[n,:]/((2*ll+1)*fsky[n,n])
+
+# var_patches = np.array([2*np.outer(cov_min[:,l], cov_min[:,l]) for l in range(var_patches.shape[0])])/np.outer((2*ll+1),fsky).reshape(lmax+1,C_p.shape[0],C_p.shape[0])
+# var_patches_NS = np.array([2*np.outer(cov_min_NS[:,l], cov_min_NS[:,l]) for l in range(var_patches.shape[0])])/np.outer((2*ll+1),fsky).reshape(lmax+1,C_p.shape[0],C_p.shape[0])
+var_patches_NN = np.array([2*np.outer(cov_min_NN[:,l], cov_min_NN[:,l]) for l in range(var_patches.shape[0])])/np.outer((2*ll+1),fsky).reshape(lmax+1,C_p.shape[0],C_pNN.shape[0])
+
+
+
+
+var_patches[var_patches == inf] = 0
+var_patches_NS[var_patches_NS == inf] = 0
+var_patches_NN[var_patches_NN == inf] = 0
+
+var_FS = np.array(
+    [(2*cov_min_FS[l] * cov_min_FS[l])/((2*l+1))
+    for l in range(cov_min_FS.shape[0])])
+var_FSma = ma.masked_array(var_FS, mask=np.where(var_FS<=0, True, False))
+
+var_FS_NS = 2*cov_min_NS_FS * cov_min_NS_FS/(2*ll+1)
+var_FS_NSma = ma.masked_array(var_FS_NS, mask=np.where(var_FS_NS<=0, True, False))
+
+# %% cov_{min} =  calculate_minimalcov3(cosmic_variance(Cp1_l, Cp2_l))
+opt = np.zeros((var_patches.shape[0]))
+for l in range(var_patches.shape[0]):
+    try:
+        opt[l] = np.nan_to_num(
+            calculate_minimalcov(var_patches[l]))
+    except:
+        pass
+    opt_ma = ma.masked_array(opt, mask=np.where(opt<=0, True, False))
+
+# %%
+print(cov_min_NS_FS.shape)
+print(var_FS_NSma.shape)
+# %% Plot
+plt.figure(figsize=(10,8))
+
+# for n in range(var_patches_NS.shape[1]):
+#     plt.plot(np.sqrt(var_patches[:,n,n]), label = "variance, {} noise patch".format(n), lw=2, ls="-")#, color=CB_color_cycle[0])
+# plt.plot(np.sqrt(opt_ma), label='sqrt(minimalcov(\"cosmic+noise variance\"))', alpha=0.5, lw=2, ls="-", color=CB_color_cycle[2])
+# plt.plot(np.sqrt(var_FSma), label="sqrt(variance), full sky", lw=2,ls="-", color="black")
+
+for n in range(var_patches_NS.shape[1]):
+      plt.plot(np.sqrt(var_patches_NS[:,n,n]), label = "noise, {} noise patch".format(n), lw=2, ls="--")#, color=CB_color_cycle[0])
+plt.plot(np.sqrt(opt_NSma), label='noise only, minimalcov(minimalpowerspectra)', alpha=0.5, lw=2, ls="--", color=CB_color_cycle[2])
+plt.plot(np.sqrt(var_FS_NSma), label='noise only, full sky', lw=2, ls="--", color="black")
+plt.xscale('log')
+plt.yscale('log')
+
+# plt.plot(cov_min_NS_FS, label = "{} noise patch".format(n), lw=3, ls="-.", color= "black")
+# plt.plot(spectrum_trth, label="Planck EE spectrum", lw=3, ls="-.", color='black')
+# for n in range(cov_min_NS.shape[0]):
+#     plt.plot(cov_min_NS[n], label = "{} noise patch".format(n), lw=3, ls="-.")
+# plt.plot(cov_min[-1], label = "D_l, highest noise patch", lw=1, ls="-.", color=CB_color_cycle[1])
+# plt.plot(var_FSma, label = "D_l, all sky patch", lw=1, ls="-.", color=CB_color_cycle[3])
+# plt.plot(opt_3ma, label='D_l, minimalcov(minimalpowerspectra)', alpha=0.5, lw=3, color=CB_color_cycle[2])
+
+
+plt.xlabel("Multipole")
+plt.ylabel("Powerspectrum")
+plt.xlim((2e1,3e3))
+plt.ylim((1e-2,1e3))
+
+
+plt.legend(loc='lower right')
+# plt.text(9e2, 1e2, "Noise+signal", fontsize=20)
+plt.title("Combining patches which have Noise + Signal")
+plt.savefig('analyticpatching-noise+signal.jpg')
+
+
+# %%
+# plt.figure(figsize=(10,8))
+plt.plot(var_FS_NSma/opt_NSma-1, label='100 patches ', lw=2, ls="-", color=CB_color_cycle[0])
+# plt.plot(patch20, label='20 patches ', lw=2, ls="-", color=CB_color_cycle[1])
+# plt.plot(patch4, label='4 patches ', lw=2, ls="-", color=CB_color_cycle[2])
+plt.hlines(0,1e0,3e3, color="black", ls="--")
+plt.xscale('log')
+plt.xlabel("Multipole")
+plt.ylabel(r"$\frac{\sigma^{Full}-\sigma^{patched}}{\sigma^{patched}}$", fontsize=20)
+plt.title("Variances comparison between full sky and patched sky")
+# plt.yscale('log')
+plt.legend(loc='upper left')
+# plt.xlim((1e3,2.5e3))
+plt.ylim((-.2,2.5))
+plt.tight_layout()
+plt.savefig("comppachfull.jpg")
+
+# %%
+patch4_NS = var_FS_NSma/opt_NSma-1
+
+# %%
+patch4 = var_FSma/opt_ma-1
+
+# %%
+patch20 = var_FSma/opt_ma-1
+
+
+
+# %%
+"""
+                                    ##########################################
+                                    ##########################################
+                                                    Backup
+                                    ##########################################
+                                    ##########################################
+"""
+
 
 
 def load_empiric_noise_aac_covmatrix():
@@ -180,174 +453,49 @@ def load_empiric_noise_aac_covmatrix():
     spectrum = io.load_spectrum(inpath_name, fname)
     return spectrum
 
-
-# %% Set 'fixed' parameters
-
-lmax = cf['pa']["lmax"]
-freqfilter = cf['pa']["freqfilter"]
-specfilter = cf['pa']["specfilter"]
-
-a = np.zeros(shape, float)
-C_lF = np.zeros(shape, float)
-C_lN = np.zeros(shape, float)
-
-PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-noise_spectrum = load_empiric_noise_aac_covmatrix()
-C_lN  = pw.build_covmatrices(noise_spectrum, lmax, freqfilter, specfilter)
-
-
-# %% Build toy-cl
-C_lS = np.zeros_like(C_lN["EE"].T, float)
-row, col = np.diag_indices(C_lS[0,:,:].shape[0])
-C_lS =  (np.ones((7,7,3001))* spectrum_trth).T
-C_lF = np.zeros_like(C_lN["EE"].T, float)
-
-
-"""
-                                    ##########################################
-                                    ##########################################
-                                                    SECTION 1
-                                    ##########################################
-                                    ##########################################
-""" 
-
-
-
-
-# %% Create Noisespectrum from gaussbeam
-npatch=3
-m = np.array([list(range(1, n_cha+1)) for patch in range(npatch)]).T
-#TODO take realistic numbers
-noiseamp_patch = np.array(list(range(1,npatch+1)))*10+30
-noiselevel = (m * noiseamp_patch).T
-fwhm = (m * noiseamp_patch*0.0001).T
-ll = np.arange(0,lmax+1,1)
-noise = np.array(list(map(create_noisespectrum, noiselevel.flatten()*0.000290888, fwhm.flatten())))[:,:].reshape(*noiselevel.shape, lmax+1)*ll*(ll+1)/(2*np.pi)
-
-fsky = np.zeros((npatch, npatch), float)
-np.fill_diagonal(fsky, (0.23,0.71, 0.04))
-
-
-# %%
-C_lN = np.array(list(map(create_covmatrix, noise)))
-C_lN_fullsky = (C_lN.T @ np.diag(fsky)).T
-C_p = C_lS + C_lN
-C_pNS = 0 * C_lS + C_lN
-C_pNN = C_lS + 0.000001 * C_lN
-C_pFS = C_lS + C_lN_fullsky
-C_pNS_FS = 0 * C_lS + C_lN_fullsky
-cov_min = np.concatenate((np.zeros(shape=(C_p.shape[0],1)),np.nan_to_num(calculate_minimalcov3(C_p[:,1:]))),axis=1)
-cov_min_NS = np.concatenate((np.zeros(shape=(C_p.shape[0],1)),np.nan_to_num(calculate_minimalcov3(C_pNS[:,1:]))),axis=1)
-cov_min_NN = np.concatenate((np.zeros(shape=(C_p.shape[0],1)),np.nan_to_num(calculate_minimalcov3(C_pNN[:,1:]))),axis=1)
-cov_min_FS = np.concatenate((np.zeros(shape=(1)),np.nan_to_num(calculate_minimalcov3(C_pFS[1:]))),axis=0)
-cov_min_NS_FS = np.concatenate((np.zeros(shape=(1)),np.nan_to_num(calculate_minimalcov3(C_pNS_FS[1:]))),axis=0)
-
-# %%
-var_patches = np.zeros((lmax+1,C_p.shape[0],C_p.shape[0]), float)
-var_patches = np.array([2*np.outer(cov_min[:,l], cov_min[:,l]) for l in range(var_patches.shape[0])])/np.outer((2*ll+1),fsky).reshape(lmax+1,C_p.shape[0],C_p.shape[0])
-var_patches_NS = np.array([2*np.outer(cov_min_NS[:,l], cov_min_NS[:,l]) for l in range(var_patches.shape[0])])/np.outer((2*ll+1),fsky).reshape(lmax+1,C_p.shape[0],C_pNS.shape[0])
-var_patches_NN = np.array([2*np.outer(cov_min_NN[:,l], cov_min_NN[:,l]) for l in range(var_patches.shape[0])])/np.outer((2*ll+1),fsky).reshape(lmax+1,C_p.shape[0],C_pNN.shape[0])
-
-var_patches[var_patches == inf] = 0
-var_patches_NS[var_patches_NS == inf] = 0
-var_patches_NN[var_patches_NN == inf] = 0
-
-var_FS = np.array(
-    [(2*cov_min_FS[l] * cov_min_FS[l])/((2*l+1)*0.96)
-    for l in range(cov_min_FS.shape[0])])
-var_FSma = ma.masked_array(var_FS, mask=np.where(var_FS<=0, True, False))
-
 # %% no-noise combination, cov_{min} =  calculate_minimalcov2((Cp1_l, Cp2_l))
 opt_NN = np.zeros((var_patches_NN.shape[0]))
 for l in range(var_patches_NN.shape[0]):
     try:
         opt_NN[l] = np.nan_to_num(
-            calculate_minimalcov2(np.array([
-                [cov_min_NN[l], 0],
+            calculate_minimalcov(np.array([
+                [cov_min_NN[0][l], 0],
                 [0, cov_min_NN[l]]])))
     except:
         pass
 opt_NNma = ma.masked_array(opt_NN, mask=np.where(opt_NN<=0, True, False))
 
-
-# %% Idea 3.3: no signal all sky, cov_{min} =  calculate_minimalcov2((Cp1_l, Cp2_l))
+# %% 
 opt_NS = np.zeros((var_patches_NS.shape[0]))
 for l in range(var_patches_NS.shape[0]):
     try:
         opt_NS[l] = np.nan_to_num(
-            calculate_minimalcov2(np.array([
-                [cov_min_NS[0][l], 0],
-                [0, cov_min_NS[l]]])))
+            calculate_minimalcov(var_patches_NS[l]))
     except:
         pass
 opt_NSma = ma.masked_array(opt_NS, mask=np.where(opt_NS<=0, True, False))
 
 
-# %% cov_{min} =  calculate_minimalcov3(cosmic_variance(Cp1_l, Cp2_l))
-opt = np.zeros((var_patches.shape[0]))
-for l in range(var_patches.shape[0]):
+# %% Idea 3.3: no signal all sky, cov_{min} =  calculate_minimalcov2((Cp1_l, Cp2_l))
+opt_NS = np.zeros((var_patches_NS.shape[0]))
+print(opt_NS.shape)
+for l in range(var_patches_NS.shape[0]):
     try:
-        opt[l] = np.nan_to_num(
-            calculate_minimalcov3(var_patches[l]))
+        opt_NS[l] = np.nan_to_num(
+            calculate_minimalcov(np.array([
+                [cov_min_NS[0,l], 0,0,0,0,0,0,0,0,0],
+                [0,cov_min_NS[1,l],0,0,0,0,0,0,0,0],
+                [0,0,cov_min_NS[2,l], 0,0,0,0,0,0,0],
+                [0,0,0,cov_min_NS[3,l], 0,0,0,0,0,0],
+                [0,0,0,0,cov_min_NS[4,l], 0,0,0,0,0],
+                [0,0,0,0,0, cov_min_NS[5,l] ,0,0,0,0],
+                [0,0,0,0,0,0,cov_min_NS[6,l], 0,0,0],
+                [0,0,0,0,0,0,0,cov_min_NS[7,l], 0,0],
+                [0,0,0,0,0,0,0,0,cov_min_NS[8,l], 0],
+                [0,0,0,0,0,0,0,0,0,cov_min_NS[9,l]]])))
     except:
         pass
-    opt_ma = ma.masked_array(opt, mask=np.where(opt<=0, True, False))
-
-
-# %% Plot
-plt.figure(figsize=(10,8))
-
-plt.plot(np.sqrt(var_patches[:,0,0]), label= "sqrt(\"cosmic+noise variance\"), low noise patch", lw=2, ls="-", color=CB_color_cycle[0])
-plt.plot(np.sqrt(var_patches[:,1,1]), label= "sqrt(\"cosmic+noise variance\"), high noise patch", lw=2,ls="-", color=CB_color_cycle[1])
-plt.plot(np.sqrt(opt_ma), label='sqrt(minimalcov(\"cosmic+noise variance\"))', alpha=0.5, lw=2, ls="-", color=CB_color_cycle[2])
-plt.plot(np.sqrt(var_FSma), label="variance, full sky", lw=2,ls="-", color=CB_color_cycle[3])
-
-
-plt.plot(var_patches_NS[:,0,0], label = "noise, low noise patch", lw=2, ls="--", color=CB_color_cycle[0])
-plt.plot(var_patches_NS[:,1,1], label = "noise, high noise patch", lw=2, ls="--", color=CB_color_cycle[1])
-plt.plot(opt_NSma, label='noise only, minimalcov(minimalpowerspectra)', alpha=0.5, lw=2, ls="--", color=CB_color_cycle[2])
-plt.plot(cov_min_NS_FS, label='noise only, full sky', lw=2, ls="--", color=CB_color_cycle[3])
-plt.xscale('log')
-plt.yscale('log')
-
-
-plt.plot(spectrum_trth, label="Planck EE spectrum", lw=1, ls="-.", color='black')
-plt.plot(cov_min[0], label = "D_l, low noise patch", lw=1, ls="-.", color=CB_color_cycle[0])
-plt.plot(cov_min[1], label = "D_l, high noise patch", lw=1, ls="-.", color=CB_color_cycle[1])
-# plt.plot(var_FSma, label = "D_l, all sky patch", lw=1, ls="-.", color=CB_color_cycle[3])
-# plt.plot(opt_3ma, label='D_l, minimalcov(minimalpowerspectra)', alpha=0.5, lw=3, color=CB_color_cycle[2])
-
-
-plt.xlabel("Multipole")
-plt.ylabel("Powerspectrum")
-plt.xlim((4e1,3e3))
-plt.ylim((1e-1,1e8))
-
-
-plt.legend(loc='upper left')
-# plt.text(9e2, 1e2, "Noise+signal", fontsize=20)
-plt.title("Combining patches which have Noise + Signal")
-plt.savefig('analyticpatching-noise+signal.jpg')
-
-
-# %%
-plt.plot((var_FSma-opt_ma)/opt_ma, label='Improvement when patching', lw=2, ls="-", color=CB_color_cycle[0])
-plt.xscale('log')
-plt.yscale('log')
-plt.legend(loc='upper left')
-# plt.xlim((1e3,2.5e3))
-plt.ylim((-1,2e1))
-
-
-# %%
-"""
-                                    ##########################################
-                                    ##########################################
-                                                    Backup
-                                    ##########################################
-                                    ##########################################
-"""
-
+opt_NSma = ma.masked_array(opt_NS, mask=np.where(opt_NS<=0, True, False))
 
 # %% Build toy-patches
 

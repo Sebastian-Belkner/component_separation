@@ -78,7 +78,7 @@ def load_data(path_name: str) -> Dict[str, Dict]:
         return None
 
 
-def load_plamap_new(pa: Dict, field):
+def load_plamap_new(cf: Dict, field):
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
@@ -93,9 +93,9 @@ def load_plamap_new(pa: Dict, field):
     NotSureWhatToExpect
     """
 
-    freqdset = pa['freqdset'] # NPIPE or DX12
-    freqfilter = pa["freqfilter"]
-    nside = pa["nside"]
+    freqdset = cf["pa"]['freqdset'] # NPIPE or DX12
+    freqfilter = cf["pa"]["freqfilter"]
+    nside = cf["pa"]["nside"]
 
     freq_filename = cf[mch][freqdset]['filename']
     
