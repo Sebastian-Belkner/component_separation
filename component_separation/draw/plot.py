@@ -697,7 +697,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
 
     for freqc, val in data1.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
-            mean, std, _ = std_dev_binned(data1[freqc])
+            mean, std, _ = _std_dev_binned(data1[freqc])
             base_line = plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
@@ -721,7 +721,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
             #     alpha=0.9,
             #     color = "black")
 
-            mean, std, _ = std_dev_binned(data2[idx])
+            mean, std, _ = _std_dev_binned(data2[idx])
             if idx == 0:
                 plt.plot(
                     (_[1:] + _[:-1])/2,
@@ -760,12 +760,9 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     # plt.gca().set_prop_cycle(None)
     plt.xscale("log", base=base)
     lmax = cf['pa']['lmax']
-    nbins=75
     # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
     base = 2
-    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
-    bl = bins[:-1]
-    br = bins[1:]
+
 
 
     plt.yscale("linear")
