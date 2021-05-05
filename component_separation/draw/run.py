@@ -286,7 +286,11 @@ def plot_weights_bias(fname):
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     weights2 = io.load_weights(inpath_name, fname)
     ret = np.array([[np.nan_to_num(weights2[sp][freq].to_numpy()) for freq, val in weights2[sp].items()] for sp in ["TT", "EE", "BB", "TE"]])
+    # import pickle
+    # pickle.dump(ret, )
+    print(len(weights2['EE']['channel @070GHz'].to_numpy()))
     np.save("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/tmp/weights/weightsK_CMBNPIPE-msk_lens-lmax_3000-lmaxmsk_6000-freqs_030,044,070,100,143,217,353_specs-TT,EE,BB,TE.npy", ret)
+    sys.exit()
     # ["030", "044", "070", "100", "143", "217","353", "030", "044", "070", "100", "143", "217", "353"]
     
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
