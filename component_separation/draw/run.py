@@ -285,12 +285,12 @@ def plot_weights_bias(fname):
     fname = io.make_filenamestring(dcf)
     inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
     weights2 = io.load_weights(inpath_name, fname)
-    
-
+    ret = np.array([[weights2[sp][freq].to_numpy() for freq, val in weights2[sp].items()] for sp in ["TT", "EE", "BB", "TE"]])
+    np.save("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/tmp/weights/weightsK_CMBNPIPE-msk_lens-lmax_3000-lmaxmsk_6000-freqs_030,044,070,100,143,217,353_specs-TT,EE,BB,TE.npy", ret)
     # ["030", "044", "070", "100", "143", "217","353", "030", "044", "070", "100", "143", "217", "353"]
     
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = "public smica weights vs DX12-smica",
+        mskset = "public smica weights vs NPIPE-lens",
         freqdset = freqdset,
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
@@ -311,7 +311,7 @@ def plot_weights_bias(fname):
             ax1 = plt.subplot(gs[0])
 
             mp = cplt.plot_compare_weights_binned(plt,
-                weights1[specc],
+                weights2[specc],
                 smica_weights,
                 # weights1[specc],
                 # weights2[specc],
@@ -1013,9 +1013,9 @@ if __name__ == '__main__':
         print("plotting variance")
         plot_variance()
 
-    if dcf["plot"]["S/N"]["do_plot"]:
-        print("plotting S/N")
-        plot_variance()
+    # if dcf["plot"]["S/N"]["do_plot"]:
+    #     print("plotting S/N")
+    #     plot_variance()
 
 
     # plot_compare_optimalspectrum(fname)
