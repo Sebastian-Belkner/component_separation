@@ -499,7 +499,7 @@ def plot_compare_optimalspectrum(fname):
     spec_data = _reorder_spectrum_dict(spectrum)
     spec_data_wweighted = _weightspec(icov_l, spec_data)
 
-    spectrum_truth = io.load_truthspectrum()
+    spectrum_truth = io.load_truthspectrum(abspath='/mnt/c/Users/sebas/OneDrive/Desktop/Uni/')
 
     
 
@@ -868,6 +868,106 @@ def plot_spec_nonoise():
             mp = mp,
             path_name = outpath_name)    
 
+def plot_variance():
+    ylim = {
+        "TT": (1e2, 1e5),
+        "EE": (1e-10, 1e-2),
+        "BB": (1e-5, 1e5),
+        "TE": (1e-2, 1e4),
+        "TB": (-1e-3, 1e3),
+        "EB": (-1e-3, 1e3),
+        "ET": (1e-2, 1e5),
+        "BT": (-1e-3, 1e3),
+        "BE": (-1e-3, 1e3)
+    }
+    freqcomb =  [
+        "{}-{}".format(FREQ,FREQ2)
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter
+            for FREQ2 in PLANCKMAPFREQ
+            if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
+    
+    dc = dcf["plot"]["spectrum"]
+    def _inpathname(freqc,spec):
+        return  dc["indir_root"]+dc["indir_rel"]+spec+freqc+"-"+dc["in_desc"]+fname
+    speccs =  [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
+    # spec_data = {spec: {
+    #     freqc: np.array(io.load_cl(_inpathname(freqc,spec)))
+    #     for freqc in freqcomb} for 
+    #     spec in speccs}
+
+    spec_pick = "EE"
+    def _weightspec(icov_l, spectrum):
+        import copy
+        # retspec = copy.deepcopy(spectrum)
+        for specc, data in spectrum.items():
+            if specc == spec_pick:
+                icovsum = np.array([np.sum(icov_l[specc][l]) for l in range(lmax)])
+                    # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
+                retspec = {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
+        return retspec
+
+    spectrum = {freqc: {
+        spec: np.array(io.load_cl(_inpathname(freqc,spec)))
+        for spec in speccs}  
+        for freqc in freqcomb}
+    lmax = dcf['pa']['lmax']
+    npatch = 1
+    ll = np.arange(0,lmax,1)
+    # fsky = np.zeros((npatch, npatch), float)
+    # np.fill_diagonal(fsky, 1/npatch*0.73)#*np.ones((npatch)))
+
+    cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+    icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+
+    spec_data = _reorder_spectrum_dict(spectrum)
+    spec_data_wweighted = _weightspec(icov_l, spec_data)
+
+    def dl2cl(dl):
+        return dl/(ll*(ll+1))*2*np.pi
+
+    def cl2var(cov_ltot_min, fsky):
+        return 2 * cov_ltot_min * cov_ltot_min/((2*ll+1)*fsky)
+    var_data = {spec: {
+        freqc: dl2cl(spec_data_wweighted[spec][freqc])
+            for freqc in ['optimal-optimal']} for 
+        spec in [spec_pick]}
+    var_data[spec_pick].update({'-2cl**2/nmode-': cl2var(dl2cl(spec_data_wweighted[spec_pick]['optimal-optimal']),0.96)})
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = split)
+   
+    spectrum_truth = io.load_truthspectrum(abspath='/mnt/c/Users/sebas/OneDrive/Desktop/Uni/')
+    for specc, data in var_data.items():
+        title_string = "{} variance - {}".format(specc, plotsubtitle)
+        if "Planck-"+specc in spectrum_truth.columns:
+            pass
+            spectrum_trth = spectrum_truth["Planck-"+specc]
+        else:
+            spectrum_trth = None
+
+        mp = cplt.plot_variance_binned(
+            data,
+            lmax,
+            title_string = title_string,
+            ylim = ylim[specc],
+            truthfile = dl2cl(spectrum_trth[:lmax]),
+            truth_label = "Planck-"+specc
+            )
+
+        outpath_name = \
+            dc["outdir_root"] + \
+            dc["outdir_rel"] + \
+            specc+"_spectrum/" + \
+            specc+"_variance" + "-" + \
+            dc["out_desc"] + "-" + \
+            fname + ".jpg"
+        io.save_figure(
+            mp = mp,
+            path_name = outpath_name)    
+
+
 if __name__ == '__main__':
     set_logger(DEBUG)
     fname = io.make_filenamestring(dcf)
@@ -909,4 +1009,13 @@ if __name__ == '__main__':
         print("plotting spectrum with noise subtracted")
         plot_spec_nonoise()
 
-    plot_compare_optimalspectrum(fname)
+    if dcf["plot"]["variance"]["do_plot"]:
+        print("plotting variance")
+        plot_variance()
+
+    if dcf["plot"]["S/N"]["do_plot"]:
+        print("plotting S/N")
+        plot_variance()
+
+
+    # plot_compare_optimalspectrum(fname)

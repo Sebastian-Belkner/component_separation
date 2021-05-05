@@ -39,6 +39,29 @@ compath = os.path.dirname(component_separation.__file__)
 with open('{}/draw/draw.json'.format(compath), "r") as f:
     cf = json.load(f)
 
+lmax = cf['pa']['lmax']
+bins = np.logspace(np.log10(1), np.log10(cf['pa']['lmax']+1), 200)
+bl = bins[:-1]
+br = bins[1:]
+def _std_dev_binned(d):
+    if type(d) == np.ndarray:
+        val = d
+    else:
+        val = np.nan_to_num(d.to_numpy())
+    n, _ = np.histogram(
+        np.linspace(0,lmax,lmax),
+        bins=bins)
+    sy, _ = np.histogram(
+        np.linspace(0,lmax,lmax),
+        bins=bins,
+        weights=val)
+    sy2, _ = np.histogram(
+        np.linspace(0,lmax,lmax),
+        bins=bins,
+        weights=val * val)
+    mean = sy / n
+    std = np.sqrt(sy2/n - mean*mean)
+    return mean, std, _
 
 def plot_beamwindowfunction(beamf, aa, bb, ab, field1, field2, p):
     TEB = {
@@ -225,16 +248,8 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
     # koi = next(iter(data.keys()))
     # specs = list(data[koi].keys())
     # bins = np.arange(0, lmax+1, lmax/200)
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
-    bl = bins[:-1]
-    br = bins[1:]
 
 
-
-    def std_dev_binned(d):
-        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))/np.sqrt(100)
-        return mean, err
 
     
     plt.figure(figsize=(8,6))
@@ -254,7 +269,7 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
 
 
 
-    binmean, binerr = std_dev_binned(data1)
+    binmean, binerr , _ = _std_dev_binned(data1)
     binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
     plt.errorbar(
         0.5 * bl + 0.5 * br,
@@ -273,7 +288,7 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
         )
 
 
-    binmean, binerr = std_dev_binned(data2)
+    binmean, binerr , _ = _std_dev_binned(data2)
     binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
     plt.errorbar(
         0.5 * bl + 0.5 * br,
@@ -293,7 +308,7 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
     
 
 
-    binmean, binerr = std_dev_binned((data2-data1)/data2)
+    binmean, binerr , _ = _std_dev_binned((data2-data1)/data2)
     binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
     plt.errorbar(
         0.5 * bl + 0.5 * br,
@@ -343,13 +358,6 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     bl = bins[:-1]
     br = bins[1:]
 
-
-
-    def std_dev_binned(d):
-        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))
-        return mean, err
-
     
     plt.figure(figsize=(8,6))
     plt.xlabel("Multipole l")
@@ -371,7 +379,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
         freqs = freqc.split("-")
         # if "100" in freqs:
         if freqs[0] == freqs[1]:
-            binmean, binerr = std_dev_binned(np.nan_to_num(val))
+            binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val))
             binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
             plt.errorbar(
                 0.5 * bl + 0.5 * br,
@@ -400,6 +408,65 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     return plt
 
 
+def plot_variance_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple = (1e-3,1e6), truthfile = None, truth_label: str = None) -> None:
+    """Plotting
+
+    Args:
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    # koi = next(iter(data.keys()))
+    # specs = list(data[koi].keys())
+
+
+    plt.figure(figsize=(8,6))
+    plt.xlabel("Multipole l")
+    plt.ylabel("Powerspectrum")
+
+    plt.grid(which='both', axis='x')
+    plt.grid(which='major', axis='y')
+    idx=0
+    idx_max = len(next(iter(data.keys())))
+
+    plt.title(title_string)
+    plt.xlim((10,4000))
+    plt.ylim(ylim)
+    plt.xscale("log", nonpositive='clip')
+    plt.yscale("log", nonpositive='clip')
+    for freqc, val in data.items():
+        idx_max+=len(freqc)
+        freqs = freqc.split("-")
+        # if "100" in freqs:
+        if freqs[0] == freqs[1]:
+            binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val))
+            plt.plot(
+                0.5 * bl + 0.5 * br,
+                binerr*binerr,
+                label='variance from data',
+                ms=4,
+                alpha=(2*idx_max-idx)/(2*idx_max)
+                )
+            idx+=1
+    binmean, binerr , _ = _std_dev_binned(np.nan_to_num(data['-2cl**2/nmode-']))
+    plt.plot(
+            0.5 * bl + 0.5 * br,
+            binmean,
+            label=freqc,
+            ms=4,
+            alpha=(2*idx_max-idx)/(2*idx_max)
+            )
+    if truthfile is not None:
+        plt.plot(
+            truthfile,
+            label = truth_label,
+            ls='-', marker='.',
+            ms=0,
+            lw=3)
+    plt.legend()
+    return plt
+
+
 def plot_powspec_binned_bokeh(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
     """Plotting
 
@@ -415,13 +482,6 @@ def plot_powspec_binned_bokeh(data: Dict, lmax: Dict, title_string: str, truthfi
     bl = bins[:-1]
     br = bins[1:]
 
-
-
-    def std_dev_binned(d):
-        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))
-        return mean, err
-
     from bokeh.plotting import figure as bfigure
     plt = bfigure(title=title_string, y_axis_type="log", x_axis_type="log",
            x_range=(10,4000), y_range=(1e-3,1e6),
@@ -436,7 +496,7 @@ def plot_powspec_binned_bokeh(data: Dict, lmax: Dict, title_string: str, truthfi
         col = inferno(idx_max)
         freqs = freqc.split("-")
         if freqs[0]  == freqs[1]:
-            binmean, binerr = std_dev_binned(data[freqc])
+            binmean, binerr , _ = _std_dev_binned(data[freqc])
             binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
             plt.line(
                 0.5 * bl + 0.5 * br,
@@ -509,25 +569,6 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     bl = bins[:-1]
     br = bins[1:]
 
-    def std_dev_binned(d):
-        if type(d) != np.ndarray:
-            val = np.nan_to_num(d.to_numpy())[:lmax]
-        else:
-            val = np.nan_to_num(d)[:lmax]
-        n, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins)
-        sy, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val)
-        sy2, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val * val)
-        mean = sy / n
-        std = np.sqrt(sy2/n - mean*mean)
-        return mean, std, _
 
     plt.xscale("log", nonpositive='clip')
     plt.yscale("linear")
@@ -550,7 +591,7 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
         # if "070" in freqc or "030" in freqc or "044" in freqc:
             idx_max+=len(freqc)
-            mean, std, _ = std_dev_binned(data[freqc])
+            mean, std, _ = _std_dev_binned(data[freqc])
             plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
@@ -581,30 +622,6 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                   '#999999', '#e41a1c', '#dede00']
 
     base = 2
-    nbins=150
-    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
-    bl = bins[:-1]
-    br = bins[1:]
-
-    def std_dev_binned(d):
-        if type(d) != np.ndarray:
-            val = np.nan_to_num(d.to_numpy())[:lmax]
-        else:
-            val = np.nan_to_num(d)[:lmax]
-        n, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins)
-        sy, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val)
-        sy2, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val * val)
-        mean = sy / n
-        std = np.sqrt(sy2/n - mean*mean)
-        return mean, std, _
 
     plt.xscale("log", nonpositive='clip')
     plt.yscale("log", nonpositive='clip')
@@ -619,7 +636,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
 
     for freqc, val in data2.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
-            mean, std, _ = std_dev_binned(data1[freqc])
+            mean, std, _ = _std_dev_binned(data1[freqc])
             plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
@@ -630,7 +647,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 fmt='x',
                 color=CB_color_cycle[idx],
                 alpha=0.9)
-            mean, std, _ = std_dev_binned(data2[freqc])
+            mean, std, _ = _std_dev_binned(data2[freqc])
             plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
@@ -675,32 +692,12 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.ylim((-0.1,1))
     plt.xlim((20, 4000))
 
-    def std_dev_binned(d, bins):
-        if type(d) == np.ndarray:
-            val = d
-        else:
-            val = np.nan_to_num(d.to_numpy())
-        n, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins)
-        sy, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val)
-        sy2, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val * val)
-        mean = sy / n
-        std = np.sqrt(sy2/n - mean*mean)
-        return mean, std, _
-
 
     # plt.xlabel("Multipole l")
 
     for freqc, val in data1.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
-            mean, std, _ = std_dev_binned(data1[freqc], bins)
+            mean, std, _ = std_dev_binned(data1[freqc])
             base_line = plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
@@ -712,7 +709,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 alpha=0.9,
                 color = CB_color_cycle[idx])
 
-            # mean, std, _ = std_dev_binned(data2[freqc], bins)
+            # mean, std, _ = _std_dev_binned(data2[freqc], bins)
             # base_line = plt.plot(
             #     (_[1:] + _[:-1])/2,
             #     mean,
@@ -724,7 +721,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
             #     alpha=0.9,
             #     color = "black")
 
-            mean, std, _ = std_dev_binned(data2[idx], bins)
+            mean, std, _ = std_dev_binned(data2[idx])
             if idx == 0:
                 plt.plot(
                     (_[1:] + _[:-1])/2,
@@ -770,10 +767,6 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     bl = bins[:-1]
     br = bins[1:]
 
-    def std_dev_binned(d):
-        mean = np.array([np.mean(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))])
-        err = np.array(np.sqrt([np.std(d[int(bl[idx]):int(br[idx])]) for idx in range(len(bl))]))/np.sqrt(2)
-        return mean, err
 
     plt.yscale("linear")
 
@@ -791,7 +784,7 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
         # if "070" in freqc or "030" in freqc or "044" in freqc:
             idx_max+=len(freqc)
-            binmean, binerr = std_dev_binned(data[freqc])
+            binmean, binerr , _ = _std_dev_binned(data[freqc])
             plt.plot(
                 0.5 * bl + 0.5 * br,
                 binmean,
@@ -820,32 +813,9 @@ def plot_weights_binned(plt, weights: pd.DataFrame, lmax: int, title_string: str
     nbins=250
     # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
     base = 2
-    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
-    #np.arange(0, lmax+1, lmax/20)
-    bl = bins[:-1]
-    br = bins[1:]
-
-    def std_dev_binned(d):
-        val = np.nan_to_num(d.to_numpy())
-        n, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins)
-        sy, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val)
-        sy2, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val * val)
-        mean = sy / n
-        std = np.sqrt(sy2/n - mean*mean)
-        return mean, std, _
-
-
 
     for name, data in weights.items():
-        # binmean, binerr = std_dev_binned(data)
+        # binmean, binerr , _ = _std_dev_binned(data)
         # plt.errorbar(
         #     0.5 * bl + 0.5 * br,
         #     binmean,
@@ -854,7 +824,7 @@ def plot_weights_binned(plt, weights: pd.DataFrame, lmax: int, title_string: str
         #     capsize=3,
         #     elinewidth=2
         #     )
-        mean, std, _ = std_dev_binned(data)
+        mean, std, _ = _std_dev_binned(data)
         plt.errorbar(
             (_[1:] + _[:-1])/2,
             mean,
@@ -886,32 +856,8 @@ def plot_noiselevel_binned(plt, noise: pd.DataFrame, lmax: int, title_string: st
     nbins=250
     # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
     base = 2
-    bins = np.logspace(np.log(1)/np.log(base), np.log(lmax+1)/np.log(base), nbins, base=base)
-    #np.arange(0, lmax+1, lmax/20)
-    bl = bins[:-1]
-    br = bins[1:]
 
-    def std_dev_binned(d):
-        val = np.nan_to_num(d)
-        n, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins)
-        sy, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val)
-        sy2, _ = np.histogram(
-            np.linspace(0,lmax,lmax),
-            bins=bins,
-            weights=val * val)
-        mean = sy / n
-        std = np.sqrt(sy2/n - mean*mean)
-        return mean, std, _
-
-
-
-       
-    mean, std, _ = std_dev_binned(noise)
+    mean, std, _ = _std_dev_binned(noise)
     plt.errorbar(
         (_[1:] + _[:-1])/2,
         mean,
