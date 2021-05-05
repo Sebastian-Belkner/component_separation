@@ -1,0 +1,5 @@
+outs:
+- md5: 82f1ae994f16fe8907120a8ba83266f0
+  size: 672164
+  path: weightsK_CMBNPIPE-msk_lens-lmax_3000-lmaxmsk_6000-freqs_030,044,070,100,143,217,353_specs-TT,EE,BB,TE.pkl
+  isexec: true
