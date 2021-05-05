@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 """
-run.py: script for executing main functionality of component_separation
+run_powerspectrum.py: script for executing main functionality of component_separation
 
 """
 
@@ -75,14 +75,16 @@ def spec2synmap(spectrum, freqcomb):
     return pw.create_synmap(spectrum, cf, mch, freqcomb, specfilter) 
 
 
-def map2spec(maps, freqcomb):
+def map2spec(data, tmask, pmask, freqcomb):
     # tqumap_hpcorrected = tqumap
-    if len(maps) == 3:
-        spectrum = pw.tqupowerspec(maps, lmax, lmax_mask, freqcomb, specfilter)
-    elif len(maps) == 2:
-        spectrum = pw.qupowerspec(maps, lmax, lmax_mask, freqcomb, specfilter)
-    elif len(maps) == 1:
-        print("Only TT spectrum caluclation requested. This is currently not supported.")
+    # if len(data) == 3:
+    #     spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+    # elif len(data) == 2:
+    #     spectrum = pw.qupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+    # elif len(data) == 1:
+    #     print("Only TT spectrum caluclation requested. This is currently not supported.")
+
+    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
     return spectrum
 
 
@@ -129,22 +131,6 @@ def spec_weight2weighted_spec(spectrum, weights):
     return spec
 
 
-def preprocess_map(data):
-    # if data[0] == None:
-    #     data = data[1:]
-    # elif data[1] == None:
-    #     data = [data[0]]
-    # data = prep.remove_unseen(data)
-    data_prep = data
-    for idx, IQU in enumerate(data_prep):
-        for key, val in IQU.items():
-            data_prep[idx][key]["map"] = prep.replace_undefnan(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.subtract_mean(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.remove_brightsaturate(data_prep[idx][key]["map"])
-            data_prep[idx][key]["map"] = prep.remove_dipole(data_prep[idx][key]["map"])
-    return data
-
-
 def postprocess_spectrum(data, freqcomb):
     spec_sc = pw.apply_scale(data, llp1=llp1)
     if bf:
@@ -154,6 +140,22 @@ def postprocess_spectrum(data, freqcomb):
         spec_scbf = spec_sc
     return spec_scbf
 
+def mapmask2maskedarray(data):
+    pass
+
+def _reorder_spectrum_dict(spectrum):
+    spec_data = dict()
+    for f in spectrum.keys():
+        for s in spectrum[f].keys():
+            if s in spec_data:
+                spec_data[s].update({
+                    f: spectrum[f][s]})
+            else:
+                spec_data.update({s:{}})
+                spec_data[s].update({
+                    f: spectrum[f][s]
+                })
+    return spec_data
 
 if __name__ == '__main__':
     print(40*"$")
@@ -174,10 +176,19 @@ if __name__ == '__main__':
     filename = io.make_filenamestring(cf)
 
     if cf['pa']['new_spectrum']:
-        data = io.load_plamap(cf['pa'])
-        data = preprocess_map(data)
-        spectrum = map2spec(data, freqcomb)
+        data = io.load_plamap_new(cf['pa'], field=(0,1,2))
+        data = prep.preprocess_all(data)
+        tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"])
+        # data = mapmask2maskedarray()
+
+        spectrum = map2spec(data, tmask, pmask, freqcomb)
         io.save_data(spectrum, spec_path+'unscaled'+filename)
+
+        spectrum_save = _reorder_spectrum_dict(spectrum)
+        for specc, val in spectrum_save.items():
+            for freqc in freqcomb:
+                # buff=np.array([val[freqc] for freqc in freqcomb])
+                io.save_spectrum(val[freqc], spec_path+specc+freqc+"-"+'unscaled'+filename)
     else:
         path_name = spec_path + 'unscaled' + filename
         spectrum = io.load_spectrum(path_name=path_name)
@@ -187,8 +198,19 @@ if __name__ == '__main__':
 
     spectrum_scaled = postprocess_spectrum(spectrum, freqcomb)
     io.save_data(spectrum_scaled, spec_path+'scaled'+filename)
+    spectrum_save_scaled = _reorder_spectrum_dict(spectrum_scaled)
+    
+    for specc, val in spectrum_save_scaled.items():
+        for freqc in freqcomb:
+            # buff=np.array([val[freqc] for freqc in freqcomb])
+            io.save_spectrum(val[freqc], spec_path+specc+freqc+"-"+'scaled'+filename)
+    
+    # for specc, val in spectrum_save.items():
+    #     buff=np.array([val[freqc] for freqc in freqcomb])
+    #     print(buff.shape)
+    #     io.save_spectrum(buff, spec_path+specc+'scaled'+filename)
 
-    weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
-    io.save_data(weights, weight_path+cf['pa']["Tscale"]+filename)
+    # weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
+    # io.save_data(weights, weight_path+cf['pa']["Tscale"]+filename)
 
     # weighted_spec = spec_weight2weighted_spec(spectrum, weights)

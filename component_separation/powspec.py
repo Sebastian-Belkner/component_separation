@@ -79,7 +79,7 @@ def _crosscomb(option, f1, f2):
 
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
-def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqcomb: List[str], specfilter: List[str]) -> Dict[str, Dict]:
+def tqupowerspec(tqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int, freqcomb: List[str], specfilter: List[str]) -> Dict[str, Dict]:
     """Calculate powerspectrum using MSC.pospace and TQUmaps
 
     Args:
@@ -104,17 +104,41 @@ def tqupowerspec(tqumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqc
     #         lmax=lmax,
     #         lmax_mask=lmax_mask)
     #     })
+
+    # if type(tmask) == dict:
+    #     buff = {
+    #         FREQC:
+    #             ps.map2cls(
+    #                 tqumap=tqumap[FREQC.split("-")[0]],
+    #                 tmask=tmask[FREQC.split("-")[0]],
+    #                 pmask=pmask[FREQC.split("-")[0]],
+    #                 lmax=lmax,
+    #                 lmax_mask=lmax_mask,
+    #                 tqumap2=tqumap[FREQC.split("-")[1]],
+    #                 tmask2=tmask[FREQC.split("-")[1]],
+    #                 pmask2=tmask[FREQC.split("-")[1]] #this needs to be fixed, once LFI x HFI is passed
+    #                 # wwt = ww[0],
+    #                 # wwp = ww[1],
+    #                 # wwtp = ww[2]
+    #                 )
+    #             for FREQC in freqcomb}
+    # else:
+    def _ud_grade(data, FREQ):
+        if int(FREQ)<100:
+            return hp.pixelfunc.ud_grade(data, nside_out=1024)
+        else:
+            return hp.pixelfunc.ud_grade(data, nside_out=2048)
     buff = {
         FREQC:
             ps.map2cls(
-                tqumap=[tqumap[0][FREQC.split("-")[0]]['map'], tqumap[1][FREQC.split("-")[0]]['map'], tqumap[2][FREQC.split("-")[0]]['map']],
-                tmask=tqumap[0][FREQC.split("-")[0]]['mask'],
-                pmask=tqumap[1][FREQC.split("-")[0]]['mask'],
+                tqumap=tqumap[FREQC.split("-")[0]],
+                tmask=_ud_grade(tmask, FREQC.split("-")[0]),
+                pmask=_ud_grade(pmask, FREQC.split("-")[0]),
                 lmax=lmax,
                 lmax_mask=lmax_mask,
-                tqumap2=[tqumap[0][FREQC.split("-")[1]]['map'], tqumap[1][FREQC.split("-")[1]]['map'], tqumap[2][FREQC.split("-")[1]]['map']],
-                tmask2=tqumap[0][FREQC.split("-")[1]]['mask'],
-                pmask2=tqumap[1][FREQC.split("-")[1]]['mask'] #this needs to be fixed, once LFI x HFI is passed
+                tqumap2=tqumap[FREQC.split("-")[1]],
+                tmask2=_ud_grade(tmask, FREQC.split("-")[1]),
+                pmask2=_ud_grade(pmask, FREQC.split("-")[1]), #this needs to be fixed, once LFI x HFI is passed
                 # wwt = ww[0],
                 # wwp = ww[1],
                 # wwtp = ww[2]

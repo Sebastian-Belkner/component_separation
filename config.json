@@ -4,7 +4,7 @@
     "Tscale": "K_CMB",
     "mskset": "smica",
     "offdiag": true,
-    "freqdset": "NPIPE",
+    "freqdset": "DX12",
     "llp1": true,
     "bf": true,
     "lmax": 3000,
@@ -12,6 +12,7 @@
     "freqdatsplit": "",
     "run_sim": false,
     "num_sim": 5,
+    "lownoise_patch": false,
     "freqfilter": [
         "545",
         "857"
@@ -101,6 +102,18 @@
             "path": "map/frequency/",
             "filename": "{LorH}_SkyMap_{freq}-field_{nside}_R3.{00/1}_full.fits"
         },
+    "DX12-split1":{
+        "path": "map/frequency/",
+        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-{even/half1}ring.fits"
+    },
+    "DX12-split2":{
+        "path": "map/frequency/",
+        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-{odd/half2}ring.fits"
+    },
+    "DX12-diff":{
+        "path": "map/frequency/",
+        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-evenoddhalfdifference_unscaled-preprocessed.fits.npy"
+    },
     "lens":{
         "tmask":{
             "path": "mask/",
@@ -126,15 +139,35 @@
                 ]
             }
         },
-    "hitshist":{
-        "mask":{
-            "path": "mask/hitshist/",
-            "filename": "{freqdset}-freq_{freq}-{tresh_low}to{tresh_up}-split_{split}.hitshist.npy"
+    "mask-spatch-smica":{
+        "tmask":{
+            "path": "tmp/mask/frequency/",
+            "filename": "HFI_SkyMask_217_2048_R3.01_full_smica_tmask_spatch.fits"
+            },
+        "pmask":{
+            "path": "tmp/mask/frequency/",
+            "filename": [
+                "HFI_SkyMask_217_2048_R3.01_full_smica_pmask_spatch.fits"
+                ]
+            }
+        },
+    "mask-lpatch-smica":{
+        "tmask":{
+            "path": "tmp/mask/frequency/",
+            "filename": "HFI_SkyMask_217_2048_R3.01_full_smica_tmask_lpatch.fits"
+            },
+        "pmask":{
+            "path": "tmp/mask/frequency/",
+            "filename": [
+                "HFI_SkyMask_217_2048_R3.01_full_smica_pmask_lpatch.fits"
+                ]
             }
         },
     "outdir": "data/tmp/",
     "outdir_spectrum": "data/tmp/spectrum/",
     "outdir_weight": "data/tmp/weights/",
+    "outdir_map": "data/tmp/map/frequency/",
+    "outdir_mask": "data/tmp/mask/frequency/",
     "indir": "data/"
     }
 }
