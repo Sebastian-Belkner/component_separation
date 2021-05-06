@@ -3,6 +3,8 @@ ext/
 data/tmp/map/
 data/tmp/mask/
 data/tmp/spectrum/
+data/tmp/weights/syn/
+data/tmp/weights/
 data/simulations/
 test/data/
 .pytest_cache/
