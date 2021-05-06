@@ -1,0 +1,5 @@
+outs:
+- md5: 3529277fe6ac1416c8a076c3027ad5ba
+  size: 771548
+  path: weightsK_RJDX12-msk_smica-lmax_3000-lmaxmsk_6000-freqs_030,044,070,100,143,217,353_specs-TT,EE,BB,TE_split-Full.npy
+  isexec: true
