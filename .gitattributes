@@ -12,3 +12,4 @@ vis/** filter=lfs diff=lfs merge=lfs -text
 data/tmp/weights/**.npy
 data/tmp/weights/weightsK_CMBNPIPE-msk_lens-lmax_3000-lmaxmsk_6000-freqs_030,044,070,100,143,217,353_specs-TT,EE,BB,TE.npy filter=lfs diff=lfs merge=lfs -text
 data/tracking/ filter=lfs diff=lfs merge=lfs -text
+data/tracking/weightsK_CMBNPIPE-msk_lens-lmax_3000-lmaxmsk_6000-freqs_030,044,070,100,143,217,353_specs-TT,EE,BB,TE.npy filter=lfs diff=lfs merge=lfs -text
