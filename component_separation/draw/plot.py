@@ -43,6 +43,7 @@ lmax = cf['pa']['lmax']
 bins = np.logspace(np.log10(1), np.log10(cf['pa']['lmax']+1), 200)
 bl = bins[:-1]
 br = bins[1:]
+
 def _std_dev_binned(d):
     if type(d) == np.ndarray:
         val = d
@@ -351,52 +352,42 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    # koi = next(iter(data.keys()))
-    # specs = list(data[koi].keys())
-
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
-    bl = bins[:-1]
-    br = bins[1:]
-
-    
     plt.figure(figsize=(8,6))
     plt.xlabel("Multipole l")
     plt.ylabel("Powerspectrum")
-
     plt.grid(which='both', axis='x')
     plt.grid(which='major', axis='y')
     idx=0
     idx_max = len(next(iter(data.keys())))
-
-
     plt.title(title_string)
     plt.xlim((10,4000))
     plt.ylim(ylim)
     plt.xscale("log", nonpositive='clip')
     plt.yscale("log", nonpositive='clip')
+
     for freqc, val in data.items():
         idx_max+=len(freqc)
         freqs = freqc.split("-")
         # if "100" in freqs:
-        if freqs[0] == freqs[1]:
-            binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val))
-            binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
-            plt.errorbar(
-                0.5 * bl + 0.5 * br,
-                binmean,
-                yerr=(binerr_low, binerr),
-                # 0.5 * bl + 0.5 * br,
-                # binmean,
-                # yerr=binerr,
-                label=freqc,
-                capsize=2,
-                elinewidth=1,
-                fmt='x',
-                # ls='-',
-                ms=4,
-                alpha=(2*idx_max-idx)/(2*idx_max)
-                )
-            idx+=1
+        # if freqs[0] == '070':# and freqs[1] > '100':
+        binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val[:lmax]))
+        # binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+        plt.errorbar(
+            0.5 * bl + 0.5 * br,
+            binmean,
+            # yerr=(binerr_low, binerr),
+            # 0.5 * bl + 0.5 * br,
+            # binmean,
+            yerr=binerr,
+            label=freqc,
+            capsize=2,
+            elinewidth=1,
+            fmt='x',
+            # ls='-',
+            ms=4,
+            alpha=(2*idx_max-idx)/(2*idx_max)
+            )
+        idx+=1
     if truthfile is not None:
         plt.plot(
             truthfile,
@@ -565,10 +556,6 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
                   '#f781bf', '#a65628', '#984ea3',
                   '#999999', '#e41a1c', '#dede00']
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 100)
-    bl = bins[:-1]
-    br = bins[1:]
-
 
     plt.xscale("log", nonpositive='clip')
     plt.yscale("linear")
@@ -620,8 +607,6 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     CB_color_cycle = ['#377eb8', '#ff7f00', '#4daf4a',
                   '#f781bf', '#a65628', '#984ea3',
                   '#999999', '#e41a1c', '#dede00']
-
-    base = 2
 
     plt.xscale("log", nonpositive='clip')
     plt.yscale("log", nonpositive='clip')
@@ -761,12 +746,8 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     plt.xscale("log", base=base)
     lmax = cf['pa']['lmax']
     # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
-    base = 2
-
-
 
     plt.yscale("linear")
-
     plt.xlabel("Multipole l")
     plt.ylabel('Rel. difference')
 
@@ -807,9 +788,7 @@ def plot_weights_binned(plt, weights: pd.DataFrame, lmax: int, title_string: str
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
     import matplotlib.ticker as mticker
-    nbins=250
     # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
-    base = 2
 
     for name, data in weights.items():
         # binmean, binerr , _ = _std_dev_binned(data)
@@ -821,11 +800,12 @@ def plot_weights_binned(plt, weights: pd.DataFrame, lmax: int, title_string: str
         #     capsize=3,
         #     elinewidth=2
         #     )
-        mean, std, _ = _std_dev_binned(data)
+        binmean, binerr , _ = _std_dev_binned(data)
+        binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
         plt.errorbar(
-            (_[1:] + _[:-1])/2,
-            mean,
-            yerr=std,
+            0.5 * bl + 0.5 * br,
+            binmean,
+            yerr=(binerr_low, binerr),
             label=name+legendstr,
             capsize=2,
             elinewidth=1,

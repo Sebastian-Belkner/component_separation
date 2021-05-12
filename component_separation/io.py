@@ -98,6 +98,7 @@ def load_plamap_new(cf: Dict, field):
     nside = cf["pa"]["nside"]
 
     freq_filename = cf[mch][freqdset]['filename']
+    print(mch, freqdset, freq_filename)
     
     indir_path = cf[mch]['indir']
     freq_path = cf[mch][freqdset]['path']
@@ -383,9 +384,9 @@ def load_plamap(pa: Dict) -> List[Dict]:
     return [tmap, qmap, umap]
 
 
-def load_truthspectrum(abspath=""):
+def load_truthspectrum(abs_path=""):
     return pd.read_csv(
-        abspath+cf[mch]['powspec_truthfile'],
+        abs_path+cf[mch]['powspec_truthfile'],
         header=0,
         sep='    ',
         index_col=0)

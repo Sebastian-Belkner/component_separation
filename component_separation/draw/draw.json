@@ -1,9 +1,8 @@
 {
 "pa": {
-    "mskset": "smica",
+    "mskset": "lens",
     "Tscale": "K_CMB",
-    "offdiag": true,
-    "freqdset": "DX12",
+    "freqdset": "NPIPE",
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
@@ -21,7 +20,7 @@
 },
 "plot": {
     "spectrum": {
-        "do_plot": false,
+        "do_plot": true,
         "indir_root": "data/tmp/spectrum/",
         "indir_rel": "",
         "outdir_root": "vis/spectrum/",
@@ -79,12 +78,12 @@
         }
     },
     "weights_bias": {
-        "do_plot": true,
+        "do_plot": false,
         "indir_root": "data/tmp/weights/",
         "indir_rel": "",
         "outdir_root": "vis/weights/",
         "outdir_rel": "",
-        "in_desc": "weightsK_CMB",
+        "in_desc": "K_CMB",
         "out_desc": "K_CMB"
     },
     "weights": {
@@ -93,7 +92,7 @@
         "indir_rel": "",
         "outdir_root": "vis/weights/",
         "outdir_rel": "",
-        "in_desc": "weightsK_CMB",
+        "in_desc": "K_CMB",
         "out_desc": "K_CMB"
     },
 
@@ -103,7 +102,7 @@
         "indir_rel": "",
         "outdir_root": "vis/noise_comparison/",
         "outdir_rel": "",
-        "in_desc": "weightsK_RJ",
+        "in_desc": "K_RJ",
         "out_desc": "K_RJ"
     },
 

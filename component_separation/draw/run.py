@@ -117,7 +117,6 @@ def plot_weights(fname):
             fig, ax = plt.subplots(figsize=(8,6))
             base=2
             plt.xlabel("Multipole l")
-            plt.ylabel("noiseleveldiff")
             plt.xscale("log", base=base)
             title_string = "{} weigthts - {}".format(spec, plotsubtitle)
             mp = cplt.plot_weights_binned(plt,
@@ -137,6 +136,7 @@ def plot_weights(fname):
             io.save_figure(
                 mp = mp,
                 path_name = outpath_name)
+    return outpath_name
 
 
 def plot_beamwindowfunctions():
@@ -373,7 +373,7 @@ def plot_spectrum_new(fname):
     
     dc = dcf["plot"]["spectrum"]
     def _inpathname(freqc,spec):
-        return  dc["indir_root"]+dc["indir_rel"]+spec+freqc+"-"+dc["in_desc"]+fname
+        return  dc["indir_root"]+dc["indir_rel"]+freqdset+"/"+spec+freqc+"-"+dc["in_desc"]+fname
     speccs =  [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
     spec_data = {spec: {
         freqc: np.array(io.load_cl(_inpathname(freqc,spec)))
@@ -385,8 +385,7 @@ def plot_spectrum_new(fname):
         mskset = mskset,
         freqdset = freqdset,
         split = split)
-   
-    spectrum_truth = io.load_truthspectrum()
+    spectrum_truth = io.load_truthspectrum(abs_path=cf['pa']["abs_path"])
     for specc, data in spec_data.items():
         title_string = "{} spectrum - {}".format(specc, plotsubtitle)
         if "Planck-"+specc in spectrum_truth.columns:
@@ -412,7 +411,8 @@ def plot_spectrum_new(fname):
             fname + ".jpg"
         io.save_figure(
             mp = mp,
-            path_name = outpath_name)    
+            path_name = outpath_name)
+    print("spectrum saved to {}".format(outpath_name))  
 
 
 def plot_spectrum(fname):
@@ -466,6 +466,7 @@ def plot_spectrum(fname):
         io.save_figure(
             mp = mp,
             path_name = outpath_name)    
+        print("spectrum saved to {}".format(outpath_name))
 
 
 def plot_compare_optimalspectrum(fname):
@@ -532,86 +533,8 @@ def plot_compare_optimalspectrum(fname):
         io.save_figure(
             mp = mp,
             path_name = outpath_name)
+    print("spectrum saved to {}".format(outpath_name))
     
-    # dcf["pa"]["freqdset"] = "NPIPE"
-    # dcf["pa"]["mskset"] = "lens"
-    # fname = io.make_filenamestring(dcf)
-    # dc = dcf["plot"]["spectrum"]
-    # inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    # spectrum = io.load_spectrum(inpath_name, fname)
-    # lmax = dcf['pa']['lmax']
-
-    # spec_data = _reorder_spectrum_dict(spectrum)
-
-    # cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-    # icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-
-    # spec_data_wweighted_NPIPE = _weightspec(icov_l, spec_data)
-
-
-    # dcf["pa"]["freqdset"] = "NPIPE"
-    # dcf["pa"]["mskset"] = "smica"
-    # fname = io.make_filenamestring(dcf)
-
-    # dc = dcf["plot"]["spectrum"]
-    # inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    # spectrum = io.load_spectrum(inpath_name, fname)
-    # lmax = dcf['pa']['lmax']
-
-    # spec_data = _reorder_spectrum_dict(spectrum)
-
-
-    # spectrum_truth = io.load_truthspectrum()
-
-    # cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-    # icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-
-    # spec_data_wweighted_DX12 = _weightspec(icov_l, spec_data)
-    # if "Planck-"+spec_pick in spectrum_truth.columns:
-    #         spectrum_trth = spectrum_truth["Planck-"+spec_pick]
-
-    # plt.figure(figsize=(8,6))
-    # gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
-    # ax1 = plt.subplot(gs[0])
-    # mp = cplt.plot_compare_powspec_binned(
-    #     plt,
-    #     spec_data_wweighted_NPIPE[spec_pick],
-    #     spec_data_wweighted_DX12[spec_pick],
-    #     lmax=3000,
-    #     title_string = "improvement",
-    #     truthfile = spectrum_trth,
-    #     truth_label = "Planck " + spec_pick
-    # )
-    # # ax1.set_xticks(np.arange([0,3000,500]))
-    # # ax1.set_xticks([0,200,1000,2000])
-    # import matplotlib
-    # ax1.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    # diff_spec = dict()
-    # for specc, va in spec_data_wweighted_NPIPE.items():
-    #     if specc == spec_pick:
-    #         if specc not in spec_data_wweighted_NPIPE.keys():
-    #             diff_spec.update({specc: {}})
-    #         diff_spec[specc] = {
-    #             "optimal-optimal": 
-    #             (spec_data_wweighted_DX12[specc]["optimal-optimal"] - spec_data_wweighted_NPIPE[specc]["optimal-optimal"])/spec_data_wweighted_DX12[specc]["optimal-optimal"]}
-
-    # ax2 = mp.subplot(gs[1])
-    # # ax1.set_xticks([100*n for n in range(30)])
-    # mp = cplt.plot_powspec_diff_binned(plt,
-    #     diff_spec[spec_pick],
-    #     lmax=3000
-    # )
-    # ax2.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-    # outpath_name = \
-    #     dc["outdir_root"] + \
-    #     dc["outdir_rel"] + \
-    #     spec_pick+"_spectrum/" + \
-    #     spec_pick+"_spectrum" + "-" + \
-    #     "improvement-NPIPE_smica-NPIPE_lens" + "-" + \
-    #     fname[16:38] + ".jpg"
-    # io.save_figure(
-    #     mp = mp,
-    #     path_name = outpath_name)
         
 
 def plot_noise_comparison():
@@ -987,7 +910,8 @@ if __name__ == '__main__':
 
     if dcf["plot"]["weights"]["do_plot"]:
         print("plotting weights")
-        plot_weights(fname = fname)
+        outpath_name = plot_weights(fname = fname)
+        print("weights saved to {}".format(outpath_name))
     
     if dcf["plot"]["noise"]["do_plot"]:
         print("plotting noise")
@@ -1012,6 +936,7 @@ if __name__ == '__main__':
     if dcf["plot"]["spec_w/noise"]["do_plot"]:
         print("plotting spectrum with noise subtracted")
         plot_spec_nonoise()
+
 
     if dcf["plot"]["variance"]["do_plot"]:
         print("plotting variance")

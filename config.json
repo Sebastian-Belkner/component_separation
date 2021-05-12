@@ -1,10 +1,10 @@
 {
 "pa":{
-    "new_spectrum": false,
+    "new_spectrum": true,
     "Tscale": "K_CMB",
-    "mskset": "smica",
+    "mskset": "lens",
     "offdiag": true,
-    "freqdset": "DX12",
+    "freqdset": "NPIPE",
     "llp1": true,
     "bf": true,
     "lmax": 3000,
@@ -13,6 +13,7 @@
     "run_sim": false,
     "num_sim": 5,
     "lownoise_patch": false,
+    "abs_path" :  "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/",
     "freqfilter": [
         "545",
         "857"

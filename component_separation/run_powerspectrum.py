@@ -57,7 +57,7 @@ bf = cf['pa']["bf"]
 
 num_sim = cf['pa']["num_sim"]
 
-spec_path = cf[mch]['outdir_spectrum']
+spec_path = cf[mch]['outdir_spectrum']+cf['pa']["freqdset"]+"/"
 weight_path = cf[mch]['outdir_weight']
 indir_path = cf[mch]['indir']
 
@@ -134,7 +134,7 @@ def spec_weight2weighted_spec(spectrum, weights):
 def postprocess_spectrum(data, freqcomb):
     spec_sc = pw.apply_scale(data, llp1=llp1)
     if bf:
-        beamf = io.load_beamf(freqcomb=freqcomb)
+        beamf = io.load_beamf(freqcomb=freqcomb, abs_path=cf['pa']["abs_path"])
         spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
     else:
         spec_scbf = spec_sc
@@ -174,9 +174,10 @@ if __name__ == '__main__':
     speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
 
     filename = io.make_filenamestring(cf)
+    print("generated filename for this session: {}".format(filename))
 
     if cf['pa']['new_spectrum']:
-        data = io.load_plamap_new(cf['pa'], field=(0,1,2))
+        data = io.load_plamap_new(cf, field=(0,1,2))
         data = prep.preprocess_all(data)
         tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"])
         # data = mapmask2maskedarray()
@@ -210,7 +211,7 @@ if __name__ == '__main__':
     #     print(buff.shape)
     #     io.save_spectrum(buff, spec_path+specc+'scaled'+filename)
 
-    # weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
-    # io.save_data(weights, weight_path+cf['pa']["Tscale"]+filename)
+    weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
+    io.save_data(weights, weight_path+cf['pa']["Tscale"]+filename)
 
     # weighted_spec = spec_weight2weighted_spec(spectrum, weights)
