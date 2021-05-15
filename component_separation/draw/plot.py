@@ -344,7 +344,7 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
     return plt
 
 
-def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple = (1e-3,1e6), truthfile = None, truth_label: str = None) -> None:
+def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple = (1e-3,1e6), truthfile = None, truth_label: str = None, filter=None) -> None:
     """Plotting
 
     Args:
@@ -360,34 +360,34 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.title(title_string)
-    plt.xlim((10,4000))
-    plt.ylim(ylim)
-    plt.xscale("log", nonpositive='clip')
-    plt.yscale("log", nonpositive='clip')
+    plt.xlim((850,950))
+    plt.ylim((-1e3,1e3))
+    # plt.xscale("log", nonpositive='clip')
+    # plt.yscale("log", nonpositive='clip')
 
     for freqc, val in data.items():
         idx_max+=len(freqc)
         freqs = freqc.split("-")
         # if "100" in freqs:
-        # if freqs[0] == '070':# and freqs[1] > '100':
-        binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val[:lmax]))
-        # binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
-        plt.errorbar(
-            0.5 * bl + 0.5 * br,
-            binmean,
-            # yerr=(binerr_low, binerr),
-            # 0.5 * bl + 0.5 * br,
-            # binmean,
-            yerr=binerr,
-            label=freqc,
-            capsize=2,
-            elinewidth=1,
-            fmt='x',
-            # ls='-',
-            ms=4,
-            alpha=(2*idx_max-idx)/(2*idx_max)
-            )
-        idx+=1
+        if True:#freqs[0] == filter:# and freqs[1] > '100':
+            binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val[:lmax]))
+            # binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean,
+                # yerr=(binerr_low, binerr),
+                # 0.5 * bl + 0.5 * br,
+                # binmean,
+                # yerr=binerr,
+                label=freqc,
+                capsize=2,
+                elinewidth=1,
+                fmt='x',
+                # ls='-',
+                ms=4,
+                alpha=(2*idx_max-idx)/(2*idx_max)
+                )
+            idx+=1
     if truthfile is not None:
         plt.plot(
             truthfile,

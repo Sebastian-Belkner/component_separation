@@ -2,7 +2,7 @@
 "pa": {
     "mskset": "lens",
     "Tscale": "K_CMB",
-    "freqdset": "NPIPE",
+    "freqdset": "DX12",
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
@@ -20,7 +20,7 @@
 },
 "plot": {
     "spectrum": {
-        "do_plot": true,
+        "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
         "indir_rel": "",
         "outdir_root": "vis/spectrum/",
@@ -87,7 +87,7 @@
         "out_desc": "K_CMB"
     },
     "weights": {
-        "do_plot": false,
+        "do_plot": true,
         "indir_root": "data/tmp/weights/",
         "indir_rel": "",
         "outdir_root": "vis/weights/",
