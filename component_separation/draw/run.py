@@ -111,7 +111,7 @@ def plot_weights(fname):
         freqdset = freqdset,
         split = split)
 
-    for spec in PLANCKSPECTRUM:
+    for idx,spec in enumerate(PLANCKSPECTRUM):
         if spec not in specfilter:
             fig, ax = plt.subplots(figsize=(8,6))
             base=2
@@ -119,7 +119,7 @@ def plot_weights(fname):
             plt.xscale("log", base=base)
             title_string = "{} weigthts - {}".format(spec, plotsubtitle)
             mp = cplt.plot_weights_binned(plt,
-                weights[spec],
+                weights[idx],
                 lmax = dcf['pa']['lmax'],
                 title_string = title_string,
                 )
@@ -131,7 +131,7 @@ def plot_weights(fname):
                 spec+"_weights" + "-" + \
                 dc["out_desc"] +"-" + \
                 fname + ".jpg"        
-
+            print(spec + "processed " + outpath_name)
             io.save_figure(
                 mp = mp,
                 path_name = outpath_name)
@@ -386,32 +386,33 @@ def plot_spectrum_new(fname):
         split = split)
     spectrum_truth = io.load_truthspectrum()
     for specc, data in spec_data.items():
-        title_string = "{} spectrum - {}".format(specc, plotsubtitle)
-        if "Planck-"+specc in spectrum_truth.columns:
-            spectrum_trth = spectrum_truth["Planck-"+specc]
-        else:
-            spectrum_trth = None
+        # for freq in PLANCKMAPFREQ:
+            title_string = "{} spectrum - {}".format(specc, plotsubtitle)
+            if "Planck-"+specc in spectrum_truth.columns:
+                spectrum_trth = spectrum_truth["Planck-"+specc]
+            else:
+                spectrum_trth = None
 
-        mp = cplt.plot_powspec_binned(
-            data,
-            lmax,
-            title_string = title_string,
-            ylim = ylim[specc],
-            truthfile = spectrum_trth,
-            truth_label = "Planck-"+specc
-            
-            )
-        outpath_name = \
-            dc["outdir_root"] + \
-            dc["outdir_rel"] + \
-            specc+"_spectrum/" + \
-            specc+"_spectrum" + "-" + \
-            dc["out_desc"] + "-" + \
-            fname + ".jpg"
-        io.save_figure(
-            mp = mp,
-            path_name = outpath_name)
-    print("spectrum saved to {}".format(outpath_name))  
+            mp = cplt.plot_powspec_binned(
+                data,
+                lmax,
+                title_string = title_string,
+                ylim = ylim[specc],
+                truthfile = spectrum_trth,
+                truth_label = "Planck-"+specc,
+                # filter = freq
+                )
+            outpath_name = \
+                dc["outdir_root"] + \
+                dc["outdir_rel"] + \
+                specc+"_spectrum/" + \
+                specc+"_spectrum" + "-" + \
+                dc["out_desc"] + "-" + \
+                fname + ".jpg"
+            io.save_figure(
+                mp = mp,
+                path_name = outpath_name)
+            print("spectrum saved to {}".format(outpath_name))  
 
 
 def plot_spectrum(fname):

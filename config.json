@@ -1,10 +1,10 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "Tscale": "K_CMB",
     "mskset": "lens",
     "offdiag": true,
-    "freqdset": "NPIPE",
+    "freqdset": "DX12",
     "llp1": true,
     "bf": true,
     "lmax": 3000,
@@ -174,7 +174,7 @@
     "outdir_weight": "data/tmp/weights/",
     "outdir_map": "data/tmp/map/frequency/",
     "outdir_mask": "data/tmp/mask/frequency/",
-    "abs_path" :  "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/",
-    "indir": "data/"
+    "indir": "data/",
+    "abs_path": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/"
     }
 }

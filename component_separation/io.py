@@ -100,12 +100,14 @@ def load_plamap_new(cf: Dict, field):
     freq_filename = cf[mch][freqdset]['filename']
     print(mch, freqdset, freq_filename)
     
+    abs_path = cf[mch]['abs_path']
     indir_path = cf[mch]['indir']
     freq_path = cf[mch][freqdset]['path']
 
     mappath = {
-        FREQ:'{path}{freq_path}{freq_filename}'
+        FREQ:'{abs_path}{path}{freq_path}{freq_filename}'
             .format(
+                abs_path = abs_path,
                 path = indir_path,
                 freq_path = freq_path,
                 freq_filename = freq_filename
@@ -176,10 +178,12 @@ def load_one_mask_forallfreq(pa: Dict, udgrade=None):
     indir_path = cf[mch]['indir']
     maskset = cf['pa']['mskset']
     freqfilter = cf['pa']["freqfilter"]
+    abs_path = cf[mch]['abs_path']
     def _read(mask_path, mask_filename):
         return hp.read_map(
-            '{path}{mask_path}{mask_filename}'
+            '{abs_path}{path}{mask_path}{mask_filename}'
             .format(
+                abs_path = abs_path,
                 path = indir_path,
                 mask_path = mask_path,
                 mask_filename = mask_filename))
@@ -405,7 +409,7 @@ def load_weights(path_name: str, indir_root: str = None, indir_rel: str = None, 
     if os.path.isfile(path_name):
         data = np.load(path_name, allow_pickle=True)
         print( "loaded {}".format(path_name))
-        return data.item()
+        return data
     else:
         print("no existing weights at {}".format(path_name))
         return None
@@ -518,6 +522,7 @@ def save_data(data: Dict[str, Dict], path_name: str, filename: str = 'default'):
     if os.path.exists(path_name):
         os.remove(path_name)
     np.save(path_name, data)
+    print('Data saved to {}'.format(path_name))
 
 
 @log_on_start(INFO, "Saving to {path_name}")
