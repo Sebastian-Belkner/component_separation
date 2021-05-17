@@ -13,7 +13,7 @@
     "run_sim": false,
     "num_sim": 5,
     "lownoise_patch": false,
-    "abs_path" :  "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/",
+
     "freqfilter": [
         "545",
         "857"
@@ -57,7 +57,7 @@
         },
     "lens":{
         "tmask":{
-            "path": "data/mask/",
+            "path": "/global/u2/s/sebibel/data/mask/",
             "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
@@ -69,7 +69,7 @@
         },
     "smica":{
         "tmask":{
-            "path": "data/mask/",
+            "path": "/global/u2/s/sebibel/data/mask/",
             "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
@@ -81,6 +81,11 @@
             }
         },
     "outdir": "/global/u2/s/sebibel/tmp/",
+    "abs_path" :  "/global/u2/s/sebibel/",
+    "outdir_spectrum": "/global/u2/s/sebibel/tmp/spectrum/",
+    "outdir_weight": "/global/u2/s/sebibel/tmp/weights/",
+    "outdir_map": "/global/u2/s/sebibel/tmp/map/frequency/",
+    "outdir_mask": "/global/u2/s/sebibel/tmp/mask/frequency/",
     "indir": ""
     },
 "XPS":{
@@ -169,6 +174,7 @@
     "outdir_weight": "data/tmp/weights/",
     "outdir_map": "data/tmp/map/frequency/",
     "outdir_mask": "data/tmp/mask/frequency/",
+    "abs_path" :  "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/",
     "indir": "data/"
     }
 }

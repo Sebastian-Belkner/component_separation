@@ -361,33 +361,35 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     idx_max = len(next(iter(data.keys())))
     plt.title(title_string)
     plt.xlim((10,4000))
-    plt.ylim(ylim)
+    plt.ylim((-100,1e2))
     plt.xscale("log", nonpositive='clip')
-    plt.yscale("log", nonpositive='clip')
+#     plt.yscale("log", nonpositive='clip')
 
     for freqc, val in data.items():
         idx_max+=len(freqc)
         freqs = freqc.split("-")
         # if "100" in freqs:
-        # if freqs[0] == '070':# and freqs[1] > '100':
-        binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val[:lmax]))
-        # binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
-        plt.errorbar(
-            0.5 * bl + 0.5 * br,
-            binmean,
-            # yerr=(binerr_low, binerr),
-            # 0.5 * bl + 0.5 * br,
-            # binmean,
-            yerr=binerr,
-            label=freqc,
-            capsize=2,
-            elinewidth=1,
-            fmt='x',
-            # ls='-',
-            ms=4,
-            alpha=(2*idx_max-idx)/(2*idx_max)
-            )
-        idx+=1
+        if freqs[0] == '044':# and freqs[1]:# == '100':
+            binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val[:lmax]))
+            # binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+            plt.errorbar(
+                0.5 * bl + 0.5 * br,
+                binmean,
+                # yerr=(binerr_low, binerr),
+                # 0.5 * bl + 0.5 * br,
+                # binmean,
+                yerr=binerr,
+                label=freqc,
+                capsize=2,
+                elinewidth=1,
+                fmt='x',
+                # ls='-',
+                ms=4,
+                alpha=(2*idx_max-idx)/(2*idx_max)
+                )
+            idx+=1
+            if "EE" in title_string:
+                print(binmean[150:200])
     if truthfile is not None:
         plt.plot(
             truthfile,
