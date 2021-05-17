@@ -39,6 +39,7 @@ compath = os.path.dirname(component_separation.__file__)
 with open('{}/draw/draw.json'.format(compath), "r") as f:
     cf = json.load(f)
 
+freqfilter = cf['pa']["freqfilter"]
 lmax = cf['pa']['lmax']
 bins = np.logspace(np.log10(1), np.log10(cf['pa']['lmax']+1), 200)
 bl = bins[:-1]
@@ -683,7 +684,7 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     for freqc, val in data1.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
             mean, std, _ = _std_dev_binned(data1[freqc])
-            base_line = plt.errorbar(
+            plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
@@ -693,18 +694,6 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 fmt='x',
                 alpha=0.9,
                 color = CB_color_cycle[idx])
-
-            # mean, std, _ = _std_dev_binned(data2[freqc], bins)
-            # base_line = plt.plot(
-            #     (_[1:] + _[:-1])/2,
-            #     mean,
-            #     # yerr=std,
-            #     # label=freqc,
-            #     # capsize=3,
-            #     # elinewidth=2,
-            #     # fmt='x',
-            #     alpha=0.9,
-            #     color = "black")
 
             mean, std, _ = _std_dev_binned(data2[idx])
             if idx == 0:
@@ -787,29 +776,19 @@ def plot_weights_binned(plt, weights: pd.DataFrame, lmax: int, title_string: str
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    import matplotlib.ticker as mticker
-    # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
+    def _name(idx):
+        return [freq for freq in PLANCKMAPFREQ if freq not in freqfilter][idx]
 
-    for name, data in weights.items():
-        # binmean, binerr , _ = _std_dev_binned(data)
-        # plt.errorbar(
-        #     0.5 * bl + 0.5 * br,
-        #     binmean,
-        #     yerr=binerr,
-        #     label=name,
-        #     capsize=3,
-        #     elinewidth=2
-        #     )
-        binmean, binerr , _ = _std_dev_binned(data)
+    for idx, data in enumerate(weights.T):
+        binmean, binerr , _ = _std_dev_binned(np.nan_to_num(data))
         binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
         plt.errorbar(
             0.5 * bl + 0.5 * br,
             binmean,
             yerr=(binerr_low, binerr),
-            label=name+legendstr,
+            label=_name(idx)+legendstr,
             capsize=2,
             elinewidth=1,
-            alpha=alpha,
             ls=ls
             )
         plt.title(title_string)
@@ -830,9 +809,6 @@ def plot_noiselevel_binned(plt, noise: pd.DataFrame, lmax: int, title_string: st
         plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
         plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
     """
-    nbins=250
-    # bins = np.logspace(np.log2(1), np.log2(lmax+1), nbins)\
-    base = 2
 
     mean, std, _ = _std_dev_binned(noise)
     plt.errorbar(

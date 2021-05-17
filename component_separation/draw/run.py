@@ -112,7 +112,7 @@ def plot_weights(fname):
         freqdset = freqdset,
         split = split)
 
-    for spec in PLANCKSPECTRUM:
+    for idx,spec in enumerate(PLANCKSPECTRUM):
         if spec not in specfilter:
             fig, ax = plt.subplots(figsize=(8,6))
             base=2
@@ -120,7 +120,7 @@ def plot_weights(fname):
             plt.xscale("log", base=base)
             title_string = "{} weigthts - {}".format(spec, plotsubtitle)
             mp = cplt.plot_weights_binned(plt,
-                weights[spec],
+                weights[idx],
                 lmax = dcf['pa']['lmax'],
                 title_string = title_string,
                 )
