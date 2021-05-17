@@ -361,10 +361,11 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.title(title_string)
-    plt.xlim((850,950))
-    plt.ylim((-1e3,1e3))
-    # plt.xscale("log", nonpositive='clip')
-    # plt.yscale("log", nonpositive='clip')
+<<<<<<< HEAD
+    plt.xlim((10,4000))
+    plt.ylim((-100,1e2))
+    plt.xscale("log", nonpositive='clip')
+#     plt.yscale("log", nonpositive='clip')
 
     for freqc, val in data.items():
         idx_max+=len(freqc)
@@ -379,7 +380,7 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
                 # yerr=(binerr_low, binerr),
                 # 0.5 * bl + 0.5 * br,
                 # binmean,
-                # yerr=binerr,
+                yerr=binerr,
                 label=freqc,
                 capsize=2,
                 elinewidth=1,

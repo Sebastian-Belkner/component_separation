@@ -20,7 +20,6 @@ import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
 import numpy as np
-import seaborn as sns
 from component_separation.cs_util import Planckf, Plancks
 from component_separation.draw import plot as cplt
 import matplotlib.gridspec as gridspec
@@ -373,7 +372,7 @@ def plot_spectrum_new(fname):
     
     dc = dcf["plot"]["spectrum"]
     def _inpathname(freqc,spec):
-        return  dc["indir_root"]+dc["indir_rel"]+freqdset+"/"+spec+freqc+"-"+dc["in_desc"]+fname
+        return  "/global/u2/s/sebibel/tmp/spectrum/"+freqdset+"/"+spec+freqc+"-"+dc["in_desc"]+fname
     speccs =  [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
     spec_data = {spec: {
         freqc: np.array(io.load_cl(_inpathname(freqc,spec)))
@@ -385,7 +384,7 @@ def plot_spectrum_new(fname):
         mskset = mskset,
         freqdset = freqdset,
         split = split)
-    spectrum_truth = io.load_truthspectrum(abs_path=cf['pa']["abs_path"])
+    spectrum_truth = io.load_truthspectrum()
     for specc, data in spec_data.items():
         # for freq in PLANCKMAPFREQ:
             title_string = "{} spectrum - {}".format(specc, plotsubtitle)

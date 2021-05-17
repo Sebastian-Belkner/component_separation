@@ -134,7 +134,7 @@ def spec_weight2weighted_spec(spectrum, weights):
 def postprocess_spectrum(data, freqcomb):
     spec_sc = pw.apply_scale(data, llp1=llp1)
     if bf:
-        beamf = io.load_beamf(freqcomb=freqcomb, abs_path=cf['pa']["abs_path"])
+        beamf = io.load_beamf(freqcomb=freqcomb)
         spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
     else:
         spec_scbf = spec_sc
