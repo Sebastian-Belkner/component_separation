@@ -420,7 +420,6 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
                                     cov[spec][ifreq2][ifreq] = a
     return cov
 
-
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
 def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[str], specfilter: List[str]):
