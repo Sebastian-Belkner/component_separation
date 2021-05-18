@@ -361,7 +361,6 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     idx=0
     idx_max = len(next(iter(data.keys())))
     plt.title(title_string)
-<<<<<<< HEAD
     plt.xlim((10,4000))
     plt.ylim((-100,1e2))
     plt.xscale("log", nonpositive='clip')
