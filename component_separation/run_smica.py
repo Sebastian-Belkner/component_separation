@@ -52,7 +52,7 @@ lmax = cf['pa']["lmax"]
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
-mask = io.load_one_mask_forallfreq()
+_, mask, _ = io.load_one_mask_forallfreq()
 
 noise_inpath_name = os.path.dirname(component_separation.__file__) +"/"+ io.noise_sc_path_name
 noise_spec = io.load_data(noise_inpath_name)

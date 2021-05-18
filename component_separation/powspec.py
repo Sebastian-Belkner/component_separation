@@ -265,8 +265,7 @@ def apply_scale(data: Dict, scale: str = 'C_l') -> Dict:
 
     Args:
         df (Dict): powerspectra with spectrum and frequency-combinations in the columns
-        df (llp1, Optional): Set to False, if :math:`l(l+1)/(2\pi)` should not be applied. Default: True
-
+        
     Returns:
         Dict: scaled powerspectra with spectrum and frequency-combinations in the columns
     """

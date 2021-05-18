@@ -148,7 +148,7 @@ if __name__ == '__main__':
     if cf['pa']['new_spectrum']:
         data = io.load_plamap_new(cf, field=(0,1,2))
         data = prep.preprocess_all(data)
-        tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"])
+        tmask, pmask, pmask = io.load_one_mask_forallfreq()
 
         spectrum = map2spec(data, tmask, pmask, csu.freqcomb)
         io.save_data(spectrum, io.spec_unsc_path_name)
