@@ -27,11 +27,6 @@ from scipy import stats
 import component_separation
 from component_separation.cs_util import Planckf, Planckr, Plancks
 
-
-PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-PLANCKMAPNSIDE = [1024, 2048]
-PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
     mch = "XPS"
@@ -41,6 +36,31 @@ else:
 compath = os.path.dirname(component_separation.__file__)[:-21]
 with open('{}/config.json'.format(compath), "r") as f:
     cf = json.load(f)
+
+PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+PLANCKMAPNSIDE = cf["pa"]['nside']
+PLANCKSPECTRUM = [p.value for p in list(Plancks)]
+abs_path = cf[mch]['abs_path']
+indir_path = cf[mch]['indir']
+freqdset = cf["pa"]['freqdset']
+PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
+    if FREQ not in cf['pa']["freqfilter"]]
+
+
+def read(mask_path, mask_filename):
+    return {FREQ: hp.read_map(
+        '{abs_path}{path}{mask_path}{mask_filename}'
+        .format(
+            abs_path = abs_path,
+            path = indir_path,
+            mask_path = mask_path,
+            mask_filename = mask_filename
+                .replace("{freqdset}", freqdset)
+                .replace("{freq}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
+                .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
+            ), dtype=np.bool)
+            for FREQ in PLANCKMAPFREQ_f
+        }
 
 
 def make_filenamestring(cf):
@@ -174,7 +194,7 @@ def load_mask_per_freq(pa: Dict, dg_to=1024):
     return tmask, pmask, pmask
 
 
-def load_one_mask_forallfreq(pa: Dict, udgrade=None):
+def load_one_mask_forallfreq(udgrade=None):
     indir_path = cf[mch]['indir']
     maskset = cf['pa']['mskset']
     freqfilter = cf['pa']["freqfilter"]
@@ -555,4 +575,19 @@ def load_cl(path_name: str, verbose=False):
     if verbose:
         print('loaded {}'.format(path_name))
     return hp.read_cl(path_name)
-   
+
+
+total_filename = make_filenamestring(cf)
+spec_path = cf[mch]['outdir_spectrum']+cf['pa']["freqdset"]+"/"
+weight_path = cf[mch]['outdir_weight']
+spec_unsc_path_name = spec_path + 'raw' + total_filename
+spec_sc_path_name = spec_path + cf['pa']["Spectrum_scale"] + total_filename
+weight_path_name = weight_path+cf['pa']["Tscale"]+total_filename
+
+buff = cf['pa']['freqdset']
+cf['pa']['freqdset'] = 'DX12-diff'
+noise_filename = make_filenamestring(cf)
+noise_unsc_path_name = spec_path + 'raw' + noise_filename
+noise_sc_path_name = spec_path + cf['pa']["Spectrum_scale"] + noise_filename
+
+cf['pa']['freqdset'] = buff

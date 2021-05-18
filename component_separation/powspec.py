@@ -45,17 +45,22 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 import functools
+import json
 import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
 
 import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks, Planckr
 import component_separation.preprocess as prep
+from component_separation.cs_util import Helperfunctions as hpf
+
+with open('config.json', "r") as f:
+    cf = json.load(f)
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 PLANCKMAPAR = [p.value for p in list(Planckr)]
-PLANCKMAPNSIDE = [1024, 2048]
+PLANCKMAPNSIDE = cf["pa"]['nside']
 
 """ Doctest:
 The following constants be needed because functions are called with globals()
@@ -94,9 +99,9 @@ def tqupowerspec(tqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int, fr
     """
     def _ud_grade(data, FREQ):
         if int(FREQ)<100:
-            return hp.pixelfunc.ud_grade(data, nside_out=1024)
+            return hp.pixelfunc.ud_grade(data, nside_out=PLANCKMAPNSIDE[0])
         else:
-            return hp.pixelfunc.ud_grade(data, nside_out=2048)
+            return hp.pixelfunc.ud_grade(data, nside_out=PLANCKMAPNSIDE[1])
     buff = {
         FREQC:
             ps.map2cls(
@@ -254,40 +259,9 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
     return [tmap, qmap, umap]
 
 
-@log_on_start(INFO, "Starting to create powerspectrum dataframe with {spectrum}")
-@log_on_end(DEBUG, "Dataframe created successfully: '{result}' ")
-def create_df(spectrum: Dict[str, Dict[str, List]], offdiag: bool, freqfilter: List[str], specfilter: List[str]) -> Dict:
-    """For easier parallelisation, tracking, and plotting
-
-    Args:
-        spectrum (Dict[str, Dict[str, List]]): Powerspectra as provided from MSC.pospace
-        freqfilter (List[str]): Frequency channels which are to be ignored
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-
-    Returns:
-        Dict: powerspectra with spectrum and frequency-combinations in the columns
-    """
-    df = {
-        spec: 
-            pd.DataFrame(
-                data={"{}-{}".format(FREQ,FREQ2): spectrum[FREQ+'-'+FREQ2][spec]
-                    for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter
-                    for FREQ2 in PLANCKMAPFREQ if (FREQ2 not in freqfilter) and _crosscomb(offdiag, FREQ, FREQ2)
-            }) 
-        for spec in PLANCKSPECTRUM if spec not in specfilter
-    }
-
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter:
-            for fkey, _ in df[spec].items():
-                df[spec][fkey].index.name = 'multipole'
-
-    return df
-
-
 @log_on_start(INFO, "Starting to apply scaling onto data {data}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
-def apply_scale(data: Dict, llp1: bool = True) -> Dict:
+def apply_scale(data: Dict, scale: str = 'C_l') -> Dict:
     """Multiplies powerspectra by :math:`l(l+1)/(2\pi)1e12` and the pixwindowfunction
 
     Args:
@@ -299,21 +273,20 @@ def apply_scale(data: Dict, llp1: bool = True) -> Dict:
     """
     for freqc, spec in data.items():
         for specID, val in spec.items():
-            if llp1:
-                lmax = len(next(iter((next(iter(data.values()))).values())))
-                ll = lambda x: x*(x+1)*1e12/(2*np.pi)
-                sc = np.array([ll(idx) for idx in range(lmax)])
-                data[freqc][specID] *= sc
-                if int(freqc.split("-")[0]) < 100:
-                    data[freqc][specID] /= hp.pixwin(1024)[:lmax]
-                else:
-                    data[freqc][specID] /= hp.pixwin(2048)[:lmax]
-                if int(freqc.split("-")[1]) < 100:
-                    data[freqc][specID] /= hp.pixwin(1024)[:lmax]
-                else:
-                    data[freqc][specID] /= hp.pixwin(2048)[:lmax]
+            lmax = len(next(iter((next(iter(data.values()))).values())))
+            if scale == "C_l":
+                sc = np.array([hpf.ll(idx) for idx in range(lmax)])
+            elif scale == "D_l":
+                sc = np.array([1e12 for idx in range(lmax)])
+            data[freqc][specID] *= sc
+            if int(freqc.split("-")[0]) < 100:
+                data[freqc][specID] /= hp.pixwin(1024)[:lmax]
             else:
-                print("Nothing has been scaled.")
+                data[freqc][specID] /= hp.pixwin(2048)[:lmax]
+            if int(freqc.split("-")[1]) < 100:
+                data[freqc][specID] /= hp.pixwin(1024)[:lmax]
+            else:
+                data[freqc][specID] /= hp.pixwin(2048)[:lmax]
     return data
 
 
@@ -490,14 +463,6 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
             return np.array([prep.tcmb2trj_sc(FREQ) for FREQ in PLANCKMAPFREQ if FREQ not in freqfilter])[:-shp]
         else:
             return np.ones((shp))
-
-    # weighting = {
-    #     spec:
-    #         np.array([
-    #     (cov[spec][l] @ _elaw(cov[spec][l].shape[0])) / (_elaw(cov[spec][l].shape[0]).T @ cov[spec][l] @ _elaw(cov[spec][l].shape[0]))
-    #         for l in range(lmax)])
-    #     for spec in PLANCKSPECTRUM if spec not in specfilter}
-
     weight_arr = np.array([
             [(cov[spec][l] @ _elaw(cov[spec][l].shape[0])) / (_elaw(cov[spec][l].shape[0]).T @ cov[spec][l] @ _elaw(cov[spec][l].shape[0]))
                 for l in range(lmax)]

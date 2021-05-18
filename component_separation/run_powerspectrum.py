@@ -16,14 +16,13 @@ __author__ = "S. Belkner"
 import json
 import logging
 import logging.handlers
-import os
+from component_separation.cs_util import Config as csu
 import platform
 import sys
 from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 import component_separation.io as io
@@ -52,19 +51,15 @@ else:
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-llp1 = cf['pa']["llp1"]
-bf = cf['pa']["bf"]
 
 num_sim = cf['pa']["num_sim"]
-
-spec_path = cf[mch]['outdir_spectrum']+cf['pa']["freqdset"]+"/"
-weight_path = cf[mch]['outdir_weight']
 indir_path = cf[mch]['indir']
 
 lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
+
 
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(logging.DEBUG)
@@ -105,8 +100,8 @@ def synmaps2average(fname):
 
     # sum all syn spectra
     spectrum_avg = dict()
-    for FREQC in freqcomb:
-        for spec in speccomb:
+    for FREQC in csu.freqcomb:
+        for spec in csu.speccomb:
             if FREQC in spectrum_avg.keys():
                 pass
             else:
@@ -132,86 +127,39 @@ def spec_weight2weighted_spec(spectrum, weights):
 
 
 def postprocess_spectrum(data, freqcomb):
-    spec_sc = pw.apply_scale(data, llp1=llp1)
-    if bf:
-        beamf = io.load_beamf(freqcomb=freqcomb)
-        spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
-    else:
-        spec_scbf = spec_sc
+    spec_sc = pw.apply_scale(data, scale=cf['pa']["Spectrum_scale"])
+    beamf = io.load_beamf(freqcomb=freqcomb)
+    spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
     return spec_scbf
 
-def mapmask2maskedarray(data):
-    pass
-
-def _reorder_spectrum_dict(spectrum):
-    spec_data = dict()
-    for f in spectrum.keys():
-        for s in spectrum[f].keys():
-            if s in spec_data:
-                spec_data[s].update({
-                    f: spectrum[f][s]})
-            else:
-                spec_data.update({s:{}})
-                spec_data[s].update({
-                    f: spectrum[f][s]
-                })
-    return spec_data
 
 if __name__ == '__main__':
+    filename = io.make_filenamestring(cf)
     print(40*"$")
     print("Starting run with the following settings:")
     print(cf['pa'])
+    print("Generated filename for this session: {}".format(filename))
     print(40*"$")
-
     set_logger(DEBUG)
-
-    freqcomb =  [
-        "{}-{}".format(FREQ,FREQ2)
-            for FREQ in PLANCKMAPFREQ
-            if FREQ not in freqfilter
-            for FREQ2 in PLANCKMAPFREQ
-            if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
-    speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
-
-    filename = io.make_filenamestring(cf)
-    print("generated filename for this session: {}".format(filename))
 
     if cf['pa']['new_spectrum']:
         data = io.load_plamap_new(cf, field=(0,1,2))
         data = prep.preprocess_all(data)
         tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"])
-        # data = mapmask2maskedarray()
 
-        spectrum = map2spec(data, tmask, pmask, freqcomb)
-        io.save_data(spectrum, spec_path+'unscaled'+filename)
-
-        spectrum_save = _reorder_spectrum_dict(spectrum)
-        for specc, val in spectrum_save.items():
-            for freqc in freqcomb:
-                # buff=np.array([val[freqc] for freqc in freqcomb])
-                io.save_spectrum(val[freqc], spec_path+specc+freqc+"-"+'unscaled'+filename)
+        spectrum = map2spec(data, tmask, pmask, csu.freqcomb)
+        io.save_data(spectrum, io.spec_unsc_path_name)
     else:
-        path_name = spec_path + 'unscaled' + filename
-        spectrum = io.load_spectrum(path_name=path_name)
+        spectrum = io.load_data(path_name=io.spec_unsc_path_name)
+
     if spectrum is None:
-        print("couldn't find spectrum with given specifications at {}. Exiting..".format(path_name))
+        print("couldn't find spectrum with given specifications at {}. Exiting..".format(io.spec_unsc_path_name))
         sys.exit()
 
-    spectrum_scaled = postprocess_spectrum(spectrum, freqcomb)
-    io.save_data(spectrum_scaled, spec_path+'scaled'+filename)
-    spectrum_save_scaled = _reorder_spectrum_dict(spectrum_scaled)
-    
-    for specc, val in spectrum_save_scaled.items():
-        for freqc in freqcomb:
-            # buff=np.array([val[freqc] for freqc in freqcomb])
-            io.save_spectrum(val[freqc], spec_path+specc+freqc+"-"+'scaled'+filename)
-    
-    # for specc, val in spectrum_save.items():
-    #     buff=np.array([val[freqc] for freqc in freqcomb])
-    #     print(buff.shape)
-    #     io.save_spectrum(buff, spec_path+specc+'scaled'+filename)
+    spectrum_scaled = postprocess_spectrum(spectrum, csu.freqcomb)
+    io.save_data(spectrum_scaled, io.spec_sc_path_name)
 
     weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
-    io.save_data(weights, weight_path+cf['pa']["Tscale"]+filename)
+    io.save_data(weights, io.weight_path_name)
 
     # weighted_spec = spec_weight2weighted_spec(spectrum, weights)
