@@ -574,16 +574,17 @@ def load_cl(path_name: str, verbose=False):
 
 
 total_filename = make_filenamestring(cf)
-spec_path = cf[mch]['outdir_spectrum']+cf['pa']["freqdset"]+"/"
-weight_path = cf[mch]['outdir_weight']
-spec_unsc_path_name = spec_path + 'raw' + total_filename
-spec_sc_path_name = spec_path + cf['pa']["Spectrum_scale"] + total_filename
-weight_path_name = weight_path+cf['pa']["Tscale"]+total_filename
+spec_path = cf[mch]['outdir_spectrum'] + cf['pa']["freqdset"] + "/"
+spec_unsc_path_name = spec_path + '-raw-' + total_filename
+spec_sc_path_name = spec_path + "-" + cf['pa']["Spectrum_scale"] + "-" + total_filename
+
+weight_path = cf[mch]['outdir_weight'] + cf['pa']["freqdset"] + "/"
+weight_path_name = weight_path + "-" + cf['pa']["Tscale"] + "-" + total_filename
 
 buff = cf['pa']['freqdset']
 cf['pa']['freqdset'] = 'DX12-diff'
 noise_filename = make_filenamestring(cf)
-noise_unsc_path_name = spec_path + 'raw' + noise_filename
-noise_sc_path_name = spec_path + cf['pa']["Spectrum_scale"] + "-" + noise_filename
+noise_unsc_path_name = spec_path + '-raw-' + noise_filename
+noise_sc_path_name = spec_path + "-" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
 
 cf['pa']['freqdset'] = buff
