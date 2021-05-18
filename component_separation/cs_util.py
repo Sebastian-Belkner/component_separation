@@ -4,8 +4,10 @@ from enum import Enum
 import json
 import itertools
 import numpy as np
+import os
+import component_separation
 
-with open('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
 
 

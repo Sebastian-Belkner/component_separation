@@ -5,6 +5,12 @@
 smcia_fit.py: script for using SMICA. It expects scaled powerspectra for each instrument and a noise estimate.
 Both is fed to SMICA, which uses these for generating a model, which eventually gives estimates for foregrounds and CMB signal.
 
+# TODO 
+ - check empirical transfer function at low ell. derive by cross spectra  between input and synmap. use testing suit on NERSC
+simulation of cmb sky + noise + residual foreground « /global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20%s_sim/%04d/npipe6v20%s_%03d_map.fits
+Noisefix maps « /global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20%s_sim/%04d/noisefix/noisefix_%03d%s_%04d.fits
+account for low noise coming from simulation maps.
+ - smooth spectra, and see if spikes remain, and if weights change
 """
 __author__ = "S. Belkner"
 
@@ -17,19 +23,18 @@ from component_separation.cs_util import Planckf, Planckr, Plancks
 import matplotlib.pyplot as plt
 import healpy as hp
 import numpy as np
+import os
 
 from component_separation.cs_util import Config as csu, Constants as const, Helperfunctions as hpf
 import component_separation.io as io
 import component_separation.powspec as pw
 from component_separation.cs_util import Planckf, Plancks
-
 import smica
+import component_separation
 
-with open('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
-with open('/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/component_separation/draw/draw.json', "r") as f:
-    dcf = json.load(f)
-dc = dcf["plot"]["spectrum"]
+
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
     mch = "XPS"
@@ -47,30 +52,11 @@ lmax = cf['pa']["lmax"]
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
-
 mask = io.load_one_mask_forallfreq()
 
-cs_abs_path = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/"
-
-noise_inpath_name = cs_abs_path+io.noise_sc_path_name
+noise_inpath_name = os.path.dirname(component_separation.__file__) +"/"+ io.noise_sc_path_name
 noise_spec = io.load_data(noise_inpath_name)
 spectrum = io.load_data(io.spec_sc_path_name)
-
-# TODO: only needed if spectrum scale is being switched
-# for key, val in noise_spec.items():
-#     for k, v in val.items():
-#         noise_spec[key][k] = v/(hpf.ll*(hpf.ll+1))*2*np.pi
-
-# TODO: replace with io.load_data()
-# cf["pa"]['freqdset'] = "DX12"
-# fname = io.make_filenamestring(cf)
-# inpath_name = cs_abs_path + cf[mch]["outdir_spectrum"] + "scaled" + fname
-# def _inpathname(freqc,spec):
-#     return  cs_abs_path+"data/tmp/spectrum/"+spec+freqc+"-"+"scaled"+fname
-# {freqc: {
-#     spec: np.array(io.load_cl(_inpathname(freqc,spec)))/(hpf.ll*(hpf.ll+1))*2*np.pi
-#     for spec in csu.speccomb}  
-#     for freqc in csu.freqcomb}
 
 cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
 bins = const.SMICA_lowell_bins
@@ -103,7 +89,7 @@ def build_smica_model(nmap, Q, N):
     acmb = np.ones((nmap,1)) # if cov in cmb unit
     cmb.set_mixmat(acmb, fixed='null')
     signal = pd.read_csv(
-        "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/"+cf[mch]['powspec_truthfile'],
+        os.path.dirname(component_separation.__file__) +"/"+ +cf[mch]['powspec_truthfile'],
         header=0,
         sep='    ',
         index_col=0)

@@ -24,6 +24,7 @@ from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+import os
 
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
@@ -31,10 +32,12 @@ import component_separation.powspec as pw
 import component_separation.preprocess as prep
 from component_separation.cs_util import Planckf, Plancks
 
-with open('config.json', "r") as f:
+import component_separation
+
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
 
-LOGFILE = 'data/tmp/messages.log'
+LOGFILE = 'data/tmp/logging/messages.log'
 logger = logging.getLogger("")
 handler = logging.handlers.RotatingFileHandler(
         LOGFILE, maxBytes=(1048576*5), backupCount=0
@@ -93,7 +96,7 @@ def specsc2weights(spectrum, Tscale):
 def synmaps2average(fname):
     # Load all syn spectra
     def _synpath_name(i):
-        return spec_path + 'syn/scaled-{}_synmap-'.format(str(i)) + filename
+        return io.spec_path + 'syn/scaled-{}_synmap-'.format(str(i)) + filename
     spectrum = {
         i: io.load_spectrum(path_name=_synpath_name(i))
         for i in range(num_sim)}

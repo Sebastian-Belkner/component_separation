@@ -1,6 +1,3 @@
-# pixel window function needs to be taken into account,  see Healpy.pixwin()
-
-
 """
 The ``powspec`` module
 ======================
@@ -46,6 +43,7 @@ import pandas as pd
 from pandas import DataFrame
 import functools
 import json
+import os
 import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
 
@@ -53,8 +51,9 @@ import component_separation.MSC.MSC.pospace as ps
 from component_separation.cs_util import Planckf, Plancks, Planckr
 import component_separation.preprocess as prep
 from component_separation.cs_util import Helperfunctions as hpf
+import component_separation
 
-with open('config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
@@ -485,3 +484,4 @@ def alms2cls(alms_w):
 if __name__ == '__main__':
     import doctest
     # doctest.run_docstring_examples(get_data, globals(), verbose=True)
+# %%

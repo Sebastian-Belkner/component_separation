@@ -10,19 +10,16 @@ __author__ = "S. Belkner"
 import functools
 import json
 import os
-import os.path
 import platform
 import sys
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
 import healpy as hp
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
-from scipy import stats
 
 import component_separation
 from component_separation.cs_util import Planckf, Planckr, Plancks
@@ -33,8 +30,7 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-compath = os.path.dirname(component_separation.__file__)[:-21]
-with open('{}/config.json'.format(compath), "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
@@ -588,6 +584,6 @@ buff = cf['pa']['freqdset']
 cf['pa']['freqdset'] = 'DX12-diff'
 noise_filename = make_filenamestring(cf)
 noise_unsc_path_name = spec_path + 'raw' + noise_filename
-noise_sc_path_name = spec_path + cf['pa']["Spectrum_scale"] + noise_filename
+noise_sc_path_name = spec_path + cf['pa']["Spectrum_scale"] + "-" + noise_filename
 
 cf['pa']['freqdset'] = buff
