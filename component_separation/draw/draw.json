@@ -26,17 +26,7 @@
         "outdir_root": "vis/spectrum/",
         "outdir_rel": "",
         "in_desc": "scaled",
-        "out_desc": "",
-
-        "style": {
-            "grid": {
-    
-            },
-            "subplot": {
-                "xlim": null,
-                "ylim": null
-            }
-        }
+        "out_desc": ""
     },
     "variance": {
         "do_plot": false,
@@ -66,16 +56,7 @@
         "outdir_rel": "bias/",
         "in_desc": "scaled",
         "in_desc_syn": "scaled-synavg-",
-        "out_desc": "scaled-synavg-",
-        "style": {
-            "grid": {
-    
-            },
-            "subplot": {
-                "xlim": null,
-                "ylim": null
-            }
-        }
+        "out_desc": "scaled-synavg-"
     },
     "weights_bias": {
         "do_plot": false,

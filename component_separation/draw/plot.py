@@ -793,7 +793,7 @@ def plot_weights_binned(plt, weights: pd.DataFrame, lmax: int, title_string: str
             )
         plt.title(title_string)
         plt.xlim((100,4000))
-        plt.ylim((-1.0,1.5))
+        plt.ylim((-.2,1.1))
 
     plt.grid(which='both', axis='x')
     plt.grid(which='major', axis='y')

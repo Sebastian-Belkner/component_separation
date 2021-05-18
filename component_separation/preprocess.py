@@ -1,7 +1,6 @@
 import logging
 #%%
-import os
-import sys
+
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 import warnings
@@ -9,7 +8,6 @@ import numpy as np
 import functools
 import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
-from component_separation.cs_util import Planckf, Plancks, Planckr
 import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 

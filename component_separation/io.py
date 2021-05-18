@@ -10,27 +10,19 @@ __author__ = "S. Belkner"
 import functools
 import json
 import os
-import os.path
 import platform
 import sys
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
 import healpy as hp
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
-from scipy import stats
 
 import component_separation
 from component_separation.cs_util import Planckf, Planckr, Plancks
-
-
-PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-PLANCKMAPNSIDE = [1024, 2048]
-PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
@@ -38,9 +30,49 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-compath = os.path.dirname(component_separation.__file__)[:-21]
-with open('{}/config.json'.format(compath), "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
+
+PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+PLANCKMAPNSIDE = cf["pa"]['nside']
+PLANCKSPECTRUM = [p.value for p in list(Plancks)]
+abs_path = cf[mch]['abs_path']
+indir_path = cf[mch]['indir']
+freqdset = cf["pa"]['freqdset']
+PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
+    if FREQ not in cf['pa']["freqfilter"]]
+
+indir_path = cf[mch]['indir']
+freqfilter = cf['pa']["freqfilter"]
+abs_path = cf[mch]['abs_path']
+
+
+def _multi(a, b):
+    return a*b
+
+def read_pf(mask_path, mask_filename):
+    return {FREQ: hp.read_map(
+        '{abs_path}{path}{mask_path}{mask_filename}'
+        .format(
+            abs_path = abs_path,
+            path = indir_path,
+            mask_path = mask_path,
+            mask_filename = mask_filename
+                .replace("{freqdset}", freqdset)
+                .replace("{freq}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
+                .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
+            ), dtype=np.bool)
+            for FREQ in PLANCKMAPFREQ_f
+        }
+
+def read_single(mask_path, mask_filename):
+    return hp.read_map(
+        '{abs_path}{path}{mask_path}{mask_filename}'
+        .format(
+            abs_path = abs_path,
+            path = indir_path,
+            mask_path = mask_path,
+            mask_filename = mask_filename))
 
 
 def make_filenamestring(cf):
@@ -72,7 +104,11 @@ def make_filenamestring(cf):
 def load_data(path_name: str) -> Dict[str, Dict]:
     if os.path.isfile(path_name):
         data = np.load(path_name, allow_pickle=True)
-        return data
+        print('loaded {}'.format(path_name))
+        if type(data) == np.ndarray:
+            return data.item()
+        else:
+            return data
     else:
         print("no existing data at {}".format(path_name))
         return None
@@ -131,27 +167,15 @@ def load_plamap_new(cf: Dict, field):
     return maps
 
 
-def load_mask_per_freq(pa: Dict, dg_to=1024):
-    indir_path = cf[mch]['indir']
+def load_mask_per_freq(dg_to=1024):
     maskset = cf['pa']['mskset']
     freqfilter = cf['pa']["freqfilter"]
-    def _read(mask_path, mask_filename):
-        return {FREQ: hp.read_map(
-            '{path}{mask_path}{mask_filename}'
-            .format(
-                path = indir_path,
-                mask_path = mask_path,
-                mask_filename = mask_filename))
-                for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter
-            }
-    def _multi(a,b):
-        return a*b
+
     pmask_path = cf[mch][maskset]['pmask']["path"]
     pmask_filename = cf[mch][maskset]['pmask']['filename']
     pmasks = [
-                _read(pmask_path, a)
-                for a in pmask_filename]
+        read_pf(pmask_path, a)
+        for a in pmask_filename]
     pmask = {
         FREQ: functools.reduce(
             _multi,
@@ -166,7 +190,7 @@ def load_mask_per_freq(pa: Dict, dg_to=1024):
     
     tmask_path = cf[mch][maskset]['tmask']["path"]
     tmask_filename = cf[mch][maskset]['tmask']['filename']
-    tmask = _read(tmask_path, tmask_filename)
+    tmask = read_pf(tmask_path, tmask_filename)
     tmask = {FREQ: hp.pixelfunc.ud_grade(tmask[FREQ], nside_out=dg_to)
                     for FREQ in PLANCKMAPFREQ
                     if FREQ not in freqfilter
@@ -174,27 +198,13 @@ def load_mask_per_freq(pa: Dict, dg_to=1024):
     return tmask, pmask, pmask
 
 
-def load_one_mask_forallfreq(pa: Dict, udgrade=None):
-    indir_path = cf[mch]['indir']
+def load_one_mask_forallfreq(udgrade=False):
     maskset = cf['pa']['mskset']
-    freqfilter = cf['pa']["freqfilter"]
-    abs_path = cf[mch]['abs_path']
-    def _read(mask_path, mask_filename):
-        return hp.read_map(
-            '{abs_path}{path}{mask_path}{mask_filename}'
-            .format(
-                abs_path = abs_path,
-                path = indir_path,
-                mask_path = mask_path,
-                mask_filename = mask_filename))
-
-    def _multi(a,b):
-        return a*b
     pmask_path = cf[mch][maskset]['pmask']["path"]
     pmask_filename = cf[mch][maskset]['pmask']['filename']
     print('loading mask {}'.format(pmask_filename))
     pmasks = [
-                _read(pmask_path, a)
+                read_single(pmask_path, a)
                 for a in pmask_filename]
     pmask = functools.reduce(
             _multi,
@@ -202,190 +212,12 @@ def load_one_mask_forallfreq(pa: Dict, udgrade=None):
 
     tmask_path = cf[mch][maskset]['tmask']["path"]
     tmask_filename = cf[mch][maskset]['tmask']['filename']
-    tmask = _read(tmask_path, tmask_filename)
+    tmask = read_single(tmask_path, tmask_filename)
     if udgrade:
         tmask = hp.ud_grade(tmask, nside_out=udgrade)
         pmask = hp.ud_grade(pmask, nside_out=udgrade)
 
     return tmask, pmask, pmask
-
-
-#%% Collect maps
-@log_on_start(INFO, "Starting to load pla maps")
-@log_on_end(DEBUG, "pla maps loaded successfully")
-def load_plamap(pa: Dict) -> List[Dict]:
-    """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
-    Map data in `PATH/map/`.
-    Args:
-        cf (Dict): Configuration as coming from conf.json
-        mch (str): ID of the machine the code is executed. Depending on the ID, a different set of configurations is used.
-        
-    Returns:
-        List[Dict]: Planck maps (data and masks) and some header information
-
-    Doctest:
-    >>> get_data(cf: Dict, mch: str) 
-    NotSureWhatToExpect
-    """
-
-    ### Grab all necessary parameters from config
-
-    mskset = pa['mskset'] # smica or lens
-    lownoise_patch = pa['lownoise_patch']
-    freqdset = pa['freqdset'] # NPIPE or DX12
-    freqfilter = pa["freqfilter"]
-    specfilter = pa["specfilter"]
-    nside = pa["nside"]
-
-    indir_path = cf[mch]['indir']
-    freq_path = cf[mch][freqdset]['path']
-    
-    if mskset == 'hitshist':
-        tmask_path = cf[mch][mskset]['mask']["path"]
-        pmask_path = cf[mch][mskset]['mask']["path"]
-    
-        tmask_filename = cf[mch][mskset]['mask']['filename']
-        pmask_filename = cf[mch][mskset]['mask']['filename']
-    else:
-        tmask_path = cf[mch][mskset]['tmask']["path"]
-        pmask_path = cf[mch][mskset]['pmask']["path"]
-
-        tmask_filename = cf[mch][mskset]['tmask']['filename']
-        pmask_filename = cf[mch][mskset]['pmask']['filename']
-
-    freq_filename = cf[mch][freqdset]['filename']
-
-    def _read(mask_path, mask_filename):
-        tresh_low, tresh_up = 0.0, 0.1
-        return {FREQ: hp.read_map(
-                '{path}{mask_path}{mask_filename}'
-                .format(
-                    path = indir_path,
-                    mask_path = mask_path,
-                    mask_filename = mask_filename
-                        .replace("{freqdset}", freqdset)
-                        .replace("{freq}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
-                        .replace("{tresh_low}", str(tresh_low))
-                        .replace("{tresh_up}", str(tresh_up))
-                        .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
-                    ), dtype=np.bool)
-                    for FREQ in PLANCKMAPFREQ
-                    if FREQ not in freqfilter
-                }
-    def _multi(a,b):
-        return a*b
-
-    def _read_noisevarmask(FREQ):
-        f = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/map/frequency/HFI_SkyMap_{}-field_2048_R3.01_full.fits".format(FREQ)
-        boundary = None #such that it covers about 25% of pixels for all masks
-        boundary= {
-            "030": 2*1e-9,
-            "044": 2*1e-9,
-            "070": 2*1e-9,
-            "100": 2*1e-9,
-            "143": 2*1e-9,
-            "217": 2*1e-9,
-            "353": 2*1e-9
-        }
-        noise_level = hp.read_map(f, field=7)
-        noisevarmask = np.where(noise_level<boundary[FREQ],True, False)
-    ### Build paths and filenames from config information
-    mappath = {
-        FREQ:'{path}{freq_path}{freq_filename}'
-            .format(
-                path = indir_path,
-                freq_path = freq_path,
-                freq_filename = freq_filename
-                    .replace("{freq}", FREQ)
-                    .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
-                    .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
-                    .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")
-                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")
-                    .replace("{even/half1}", "even" if int(FREQ)>=100 else "half1")
-                    .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "half2")
-                )
-            for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter}
-
-    if tmask_filename is None:
-        tmask = None
-        tmask_d = None
-    else:
-        tmask = _read(tmask_path, tmask_filename)
-        tmask_d = {FREQ: hp.pixelfunc.ud_grade(tmask[FREQ], nside_out=nside[0])
-                    for FREQ in PLANCKMAPFREQ
-                    if FREQ not in freqfilter
-                }
-
-    if pmask_filename is None:
-        pmask = None
-        pmask_d = None
-    else:
-        pmasks = [_read(pmask_path, a) for a in pmask_filename]
-        pmask = {FREQ: functools.reduce(_multi, [a[FREQ] for a in pmasks])
-                    for FREQ in PLANCKMAPFREQ
-                    if FREQ not in freqfilter
-                }
-        if lownoise_patch == True: #this is only for masking high noise variance area
-            for FREQ in PLANCKMAPFREQ:
-                if FREQ not in freqfilter:
-                    pmask[FREQ] = pmask[FREQ]*_read_noisevarmask(FREQ)
-        pmask_d = {FREQ: hp.pixelfunc.ud_grade(pmask[FREQ], nside_out=nside[0])
-                    for FREQ in PLANCKMAPFREQ
-                    if FREQ not in freqfilter
-                }
-
-
-    ## Decide which maps to load 
-    def _load_data(path_name):
-        return load_data(path_name)
-
-    diff_data = {}
-    for FREQ in PLANCKMAPFREQ:
-        if FREQ not in freqfilter:
-            if mappath[FREQ].endswith('npy'):
-                diff_data.update({FREQ: _load_data(mappath[FREQ])})
-                
-    flag = False
-    for spec in PLANCKSPECTRUM:
-        if spec not in specfilter and ("T" in spec):
-            flag = True
-            break
-    if flag and (tmask is not None):
-        tmap = {
-            FREQ: {
-                "map": hp.read_map(mappath[FREQ], field=0)
-                        if mappath[FREQ].endswith('fits')
-                        else diff_data[FREQ][0][FREQ]["map"],
-                "mask": tmask_d[FREQ] if int(FREQ)<100 else tmask[FREQ]
-                }for FREQ in PLANCKMAPFREQ
-                    if FREQ not in freqfilter
-        }
-    elif flag and (tmask is None):
-        print("Temperature spectra requested, but no Temperature mask provided. Spectra including temperature are skipped")
-        tmap = None
-    elif flag == False:
-        tmap = None
-
-    qmap = {
-        FREQ: {
-            "map": hp.read_map(mappath[FREQ], field=1)
-                    if mappath[FREQ].endswith('fits')
-                    else diff_data[FREQ][1][FREQ]["map"],
-            "mask": pmask_d[FREQ] if int(FREQ)<100 else pmask[FREQ]
-            }for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter
-    }
-    umap = {
-        FREQ: {
-            "map": hp.read_map(mappath[FREQ], field=2)
-                    if mappath[FREQ].endswith('fits')
-                    else diff_data[FREQ][2][FREQ]["map"],
-            "mask": pmask_d[FREQ] if int(FREQ)<100 else pmask[FREQ]
-            }for FREQ in PLANCKMAPFREQ
-                if FREQ not in freqfilter
-    }
-    return [tmap, qmap, umap]
 
 
 def load_truthspectrum(abs_path=""):
@@ -430,24 +262,9 @@ def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, i
         return None
 
 
-@log_on_start(INFO, "Starting to load spectrum from {path_name}")
-@log_on_end(DEBUG, "Spectrum loaded successfully")
-def load_spectrum(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
-    if path_name == None:
-        fending = ".npy"
-        path_name = indir_root+indir_rel+in_desc+fname+fending
-    if os.path.isfile(path_name):
-        data = np.load(path_name, allow_pickle=True)
-        print( "loaded {}".format(path_name))
-        return data.item()
-    else:
-        print("no existing spectrum at {}".format(path_name))
-        return None
-        
-
 @log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb}")
 @log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
-def load_beamf(freqcomb: List, abs_path: str = "") -> Dict:
+def load_beamf(freqcomb: List, abs_path: str = abs_path) -> Dict:
     """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
     Args:
@@ -542,17 +359,18 @@ def save_map(data, path_name: str):
     print("saved map to {}".format(path_name))
 
 
-@log_on_start(INFO, "Saving to {path_name}")
-@log_on_end(DEBUG, "Data saved successfully to {path_name}")
-def save_spectrum(data, path_name: str):
-    hp.write_cl(path_name, data, overwrite=True)
-    print("saved spectrum to {}".format(path_name))
+total_filename = make_filenamestring(cf)
+spec_path = cf[mch]['outdir_spectrum'] + cf['pa']["freqdset"] + "/"
+spec_unsc_path_name = spec_path + '-raw-' + total_filename
+spec_sc_path_name = spec_path + "-" + cf['pa']["Spectrum_scale"] + "-" + total_filename
 
+weight_path = cf[mch]['outdir_weight'] + cf['pa']["freqdset"] + "/"
+weight_path_name = weight_path + "-" + cf['pa']["Tscale"] + "-" + total_filename
 
-@log_on_start(INFO, "Saving to {path_name}")
-@log_on_end(DEBUG, "Data saved successfully to {path_name}")
-def load_cl(path_name: str, verbose=False):
-    if verbose:
-        print('loaded {}'.format(path_name))
-    return hp.read_cl(path_name)
-   
+buff = cf['pa']['freqdset']
+cf['pa']['freqdset'] = 'DX12-diff'
+noise_filename = make_filenamestring(cf)
+noise_unsc_path_name = spec_path + '-raw-' + noise_filename
+noise_sc_path_name = spec_path + "-" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
+
+cf['pa']['freqdset'] = buff

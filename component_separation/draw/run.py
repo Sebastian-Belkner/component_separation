@@ -6,29 +6,27 @@ run.py: script for executing main functionality of component_separation.draw mod
 __author__ = "S. Belkner"
 
 import json
-import logging
 import itertools
 import matplotlib
-import logging.handlers
+
 import os
 import platform
 import sys
-from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
 import component_separation.io as io
-import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
 import numpy as np
 from component_separation.cs_util import Planckf, Plancks
 from component_separation.draw import plot as cplt
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
+import component_separation
 
-with open('config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
 
-with open('component_separation/draw/draw.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/draw/draw.json', "r") as f:
     dcf = json.load(f)
 
 uname = platform.uname()
@@ -39,20 +37,12 @@ else:
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-LOGFILE = 'data/tmp/messages.log'
-logger = logging.getLogger("")
-handler = logging.handlers.RotatingFileHandler(
-        LOGFILE, maxBytes=(1048576*5), backupCount=7
-)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+
 
 mskset = dcf['pa']['mskset'] # smica or lens
 freqdset = dcf['pa']['freqdset'] # DX12 or NERSC
 
 lmax = dcf['pa']["lmax"]
-lmax_mask = dcf['pa']["lmax_mask"]
 
 freqfilter = dcf['pa']["freqfilter"]
 specfilter = dcf['pa']["specfilter"]
@@ -72,10 +62,6 @@ def _reorder_spectrum_dict(spectrum):
                     f: spectrum[f][s]
                 })
     return spec_data
-
-
-def set_logger(loglevel=logging.INFO):
-    logger.setLevel(logging.DEBUG)
 
 
 def plot_maps(fname):
@@ -102,9 +88,10 @@ def plot_maps(fname):
 
 def plot_weights(fname):
     dc = dcf["plot"]["weights"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-        
-    weights = io.load_weights(inpath_name, fname)
+    total_filename = io.make_filenamestring(dcf)
+    weight_path = cf[mch]['outdir_weight'] + cf['pa']["freqdset"] + "/"
+    weight_path_name = weight_path + "-" + cf['pa']["Tscale"] + "-" + total_filename
+    weights = io.load_weights(weight_path_name, fname)
 
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
@@ -536,7 +523,6 @@ def plot_compare_optimalspectrum(fname):
     print("spectrum saved to {}".format(outpath_name))
     
         
-
 def plot_noise_comparison():
     import matplotlib.ticker as mticker
     dc = dcf["plot"]["noise_comparison"]
@@ -795,6 +781,7 @@ def plot_spec_nonoise():
             mp = mp,
             path_name = outpath_name)    
 
+
 def plot_variance():
     ylim = {
         "TT": (1e2, 1e5),
@@ -896,13 +883,11 @@ def plot_variance():
 
 
 if __name__ == '__main__':
-    set_logger(DEBUG)
     fname = io.make_filenamestring(dcf)
 
     if dcf["plot"]["maps"]["do_plot"]:
-        plot_maps(
-            fname = fname
-            )
+        print("plotting maps")
+        plot_maps(fname = fname)
     
     if dcf["plot"]["beamf"]["do_plot"]:
         print("plotting beam windowfunctions")
@@ -936,7 +921,6 @@ if __name__ == '__main__':
     if dcf["plot"]["spec_w/noise"]["do_plot"]:
         print("plotting spectrum with noise subtracted")
         plot_spec_nonoise()
-
 
     if dcf["plot"]["variance"]["do_plot"]:
         print("plotting variance")
