@@ -105,7 +105,7 @@ class Constants:
 
 class Helperfunctions:
 
-    ll = lambda x: x*(x+1)*1e12/(2*np.pi)
+    llp1e12 = lambda x: x*(x+1)*1e12/(2*np.pi)
 
     @staticmethod
     def bin_it(data, bins=Constants.SMICA_lowell_bins, offset=0):
@@ -113,12 +113,27 @@ class Helperfunctions:
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
                 for k in range(bins.shape[0]):
-                    ret[i,j,k] = np.mean(np.nan_to_num(data[i,j,offset+int(bins[k][0]):offst+int(bins[k][1])]))
+                    ret[i,j,k] = np.mean(np.nan_to_num(data[i,j,offset+int(bins[k][0]):offset+int(bins[k][1])]))
         return np.nan_to_num(ret)
 
     @staticmethod
     def multi(a,b):
         return a*b
+    
+    @staticmethod
+    def reorder_spectrum_dict(spectrum):
+        spec_data = dict()
+        for f in spectrum.keys():
+            for s in spectrum[f].keys():
+                if s in spec_data:
+                    spec_data[s].update({
+                        f: spectrum[f][s]})
+                else:
+                    spec_data.update({s:{}})
+                    spec_data[s].update({
+                        f: spectrum[f][s]
+                    })
+        return spec_data
 
 # K_CMB to K_RJ conversion factors
 

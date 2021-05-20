@@ -16,7 +16,6 @@ __author__ = "S. Belkner"
 
 import json
 import platform
-import functools
 import pandas as pd
 from component_separation.cs_util import Planckf, Planckr, Plancks
 
@@ -53,13 +52,13 @@ freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
 _, mask, _ = io.load_one_mask_forallfreq()
-
-noise_inpath_name = os.path.dirname(component_separation.__file__) +"/"+ io.noise_sc_path_name
-noise_spec = io.load_data(noise_inpath_name)
-spectrum = io.load_data(io.spec_sc_path_name)
-
-cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
-bins = const.SMICA_lowell_bins
+# %%
+noise_inpath_name = os.path.dirname(component_separation.__file__)[:-21] +"/"+ io.noise_sc_path_name
+spectrum_inpath_name = os.path.dirname(component_separation.__file__)[:-21] +"/"+ io.spec_sc_path_name
+C_lN = io.load_data(noise_inpath_name)
+C_ltot = io.load_data(spectrum_inpath_name)
+cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
+bins = const.SMICA_highell_bins
 offset = 0
 
 
@@ -89,12 +88,12 @@ def build_smica_model(nmap, Q, N):
     acmb = np.ones((nmap,1)) # if cov in cmb unit
     cmb.set_mixmat(acmb, fixed='null')
     signal = pd.read_csv(
-        os.path.dirname(component_separation.__file__) +"/"+ +cf[mch]['powspec_truthfile'],
+        os.path.dirname(component_separation.__file__)[:-21] +"/"+ cf[mch]['powspec_truthfile'],
         header=0,
         sep='    ',
         index_col=0)
     spectrum_trth = signal["Planck-"+"EE"].to_numpy()
-    C_lS_bn =  hpf.bin_it(np.ones((7,7,3001))* spectrum_trth[:3001]/(hpf.ll*(hpf.ll+1))*2*np.pi, bins=bins, offset=offset)
+    C_lS_bn =  hpf.bin_it(np.ones((7,7,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)]))*1e12, bins=bins, offset=offset)
 
     cmbcq = C_lS_bn[0,0,:]
     cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
@@ -120,7 +119,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
     # find a starting point
     acmb = model.get_comp_by_name("cmb").mixmat()
-    fixed = False
+    fixed = True
     if fixed:
         afix = 1-cmb._mixmat.get_mask() #0:free 1:fixed
         cfix = 1-cmb._powspec.get_mask() #0:free 1:fixed
@@ -197,28 +196,28 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
 # %% Bin cov matrix
 nmodes = calc_nmodes(bins, mask)
-cov_bn = hpf.bin_it(cov, bins=bins, offset=offset)
+cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
 
 # %% Plot empirical cov matrix
 plt.yscale('log')
-for var in range(cov_bn.shape[0]):
-    plt.plot(np.mean(bins, axis=1), cov_bn[var,var,:])
+for var in range(cov_ltot_bnd.shape[0]):
+    plt.plot(np.mean(bins, axis=1), cov_ltot_bnd[var,var,:])
     # plt.plot(cov[var,var,offst:int(bins[-1][1])+offst])
 plt.show()
 
 
 # %%
-smica_model, gal, N_cov_bn, C_lS_bn = build_smica_model(cov_bn.shape[0], len(nmodes), noise_spec)
+smica_model, gal, cov_lN_bnd, C_lS_bnd = build_smica_model(cov_ltot_bnd.shape[0], len(nmodes), C_lN)
 
 
 # %%
 fit_model_to_cov(
     smica_model,
-    cov_bn,
+    cov_ltot_bnd,
     nmodes,
     maxiter=50,
     noise_fix=True,
-    noise_template=N_cov_bn,
+    noise_template=cov_lN_bnd,
     afix=None, qmin=0,
     asyn=None,
     logger=None,
@@ -230,12 +229,12 @@ fit_model_to_cov(
 label = ["030", "044", "070", "100", "143", "217", "353"]
 plt.title('Empiric EE-Powerspectrum (noise + signal + foreground)')
 plt.yscale('log')
-for var1 in range(C_lS_bn.shape[0]):
-    for var2 in range(C_lS_bn.shape[0]):
+for var1 in range(C_lS_bnd.shape[0]):
+    for var2 in range(C_lS_bnd.shape[0]):
         if var1==var2:
-            plt.plot(np.mean(bins, axis=1), np.abs(cov_bn[var1,var2,:]), label="{}-{}".format(label[var1], label[var2]))
+            plt.plot(np.mean(bins, axis=1), np.abs(cov_ltot_bnd[var1,var2,:]), label="{}-{}".format(label[var1], label[var2]))
 plt.plot(np.mean(bins, axis=1), smica_model.get_comp_by_name('cmb').powspec()[0][0], label= 'smica CMB')
-plt.plot(np.mean(bins, axis=1), C_lS_bn[0, 0, :], label='EE Planck best estimate')
+plt.plot(np.mean(bins, axis=1), C_lS_bnd[0, 0, :], label='EE Planck best estimate')
 plt.xlabel('Multipole')
 plt.legend()
 plt.ylabel('Powerspectrum')
@@ -245,15 +244,17 @@ plt.savefig("Empiric_EE-Spectra.jpg")
 # %%
 plt.yscale('log')
 plt.title('EE-Noise from diffmap + CMB EE-Signal from Planck-best-fit')
-for var1 in range(C_lS_bn.shape[0]):
-    for var2 in range(C_lS_bn.shape[0]):
+for var1 in range(C_lS_bnd.shape[0]):
+    for var2 in range(C_lS_bnd.shape[0]):
+        plt.plot(np.mean(bins, axis=1), C_lS_bnd[var1, var1, :] + cov_lN_bnd[var1], label="{}-{}".format(label[var1], label[var2]))
+        # plt.plot(np.mean(bins, axis=1), cov_lN_bnd[var1], label="{}-{}".format(label[var1], label[var2]))
+        # plt.plot(cov_ltot[var1,var2], label="{}-{}".format(label[var1], label[var2]))
         
-            plt.plot(np.mean(bins, axis=1), C_lS_bn[var1, var2, :] + N_cov_bn[var1], label="{}-{}".format(label[var1], label[var2]))
-        # else:
-        #     plt.plot(np.mean(bins, axis=1), C_lS_bn[var1, var2, :], label="{}-{}".format(label[var1], label[var2]))
-    # plt.plot(np.mean(bins, axis=1), cov_bn[var,var,:])
+        plt.plot(np.mean(bins, axis=1), C_lS_bnd[var1, var2, :])#, label="{}-{}".format(label[var1], label[var2]))
+       
 plt.xlabel('Multipole')
 plt.legend()
+
 plt.ylabel('Powerspectrum')
 
 

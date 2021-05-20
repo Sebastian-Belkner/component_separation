@@ -3,27 +3,21 @@ plot.py: Plotting functions
 
 """
 
-import functools
-import itertools
 import json
 import os
 import os.path
 import platform
-import sys
 from logging import DEBUG, ERROR, INFO
-import matplotlib
 from typing import Dict, List, Optional, Tuple
+
+from cs_util import Config as conf
 
 import healpy as hp
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from astropy.io import fits
 from component_separation.cs_util import Planckf, Planckr, Plancks
-from logdecorator import log_on_end, log_on_error, log_on_start
-from scipy import stats
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = [1024, 2048]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
@@ -346,6 +340,7 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
 
 
 def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple = (1e-3,1e6), truthfile = None, truth_label: str = None, filter=None) -> None:
+    from scipy.signal import savgol_filter
     """Plotting
 
     Args:
@@ -362,15 +357,15 @@ def plot_powspec_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple =
     idx_max = len(next(iter(data.keys())))
     plt.title(title_string)
     plt.xlim((10,4000))
-    plt.ylim((-100,1e2))
+    plt.ylim(ylim)
     plt.xscale("log", nonpositive='clip')
-#     plt.yscale("log", nonpositive='clip')
+    plt.yscale("log", nonpositive='clip')
 
     for freqc, val in data.items():
         idx_max+=len(freqc)
         freqs = freqc.split("-")
         # if "100" in freqs:
-        if True:#freqs[0] == filter:# and freqs[1] > '100':
+        if freqs[0] == freqs[1]:# and freqs[1] > '100':True:#
             binmean, binerr , _ = _std_dev_binned(np.nan_to_num(val[:lmax]))
             # binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
             plt.errorbar(
@@ -652,7 +647,7 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     return plt
 
 
-def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_string: str) -> None:
+def plot_compare_weights_binned(plt, data1: np.array, data2: np.array, lmax: int, title_string: str) -> None:
     """Plotting
 
     Args:
@@ -678,29 +673,30 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     plt.ylim((-0.1,1))
     plt.xlim((20, 4000))
 
-
     # plt.xlabel("Multipole l")
+    PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
+        if FREQ not in cf['pa']["freqfilter"]]
 
-    for freqc, val in data1.items():
+    for idx, freq in enumerate(PLANCKMAPFREQ_f):
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
-            mean, std, _ = _std_dev_binned(data1[freqc])
+            mean, std, _ = _std_dev_binned(np.nan_to_num(data1[:,idx]))
             plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
-                label="DX12-smica mask - "+ freqc,
+                label="data1 - "+ freq,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
                 alpha=0.9,
                 color = CB_color_cycle[idx])
 
-            mean, std, _ = _std_dev_binned(data2[idx])
+            mean, std, _ = _std_dev_binned(np.nan_to_num(data2[:,idx]))
             if idx == 0:
                 plt.plot(
                     (_[1:] + _[:-1])/2,
                     mean,
-                    label="smica public weights",
+                    label="data2",
                     alpha=0.8,
                     color = 'black')
             else:
@@ -710,7 +706,6 @@ def plot_compare_weights_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                     alpha=0.8,
                     color = 'black')
 
-            idx+=1
     # plt.errorbar(0,0,yerr=0, label="smica public weights", capsize=3,
     #             elinewidth=2,
     #             fmt='x', color="black")
@@ -742,21 +737,27 @@ def plot_weights_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
 
     plt.grid(which='both', axis='x')
     idx=0
-    idx_max = len(next(iter(data.keys())))
+    if type(data) == dict:
+        idx_max = len(next(iter(data.keys())))
+    else:
+        idx_max = data.shape[1]
     plt.xlim((100,4000))
     plt.ylim((-0.2,0.2))
     plt.grid(which='both', axis='y')
 
-    for freqc, val in data.items():
+    PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
+        if FREQ not in cf['pa']["freqfilter"]]
+
+    for idx, freq in enumerate(PLANCKMAPFREQ_f):
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
         # if "070" in freqc or "030" in freqc or "044" in freqc:
-            idx_max+=len(freqc)
-            binmean, binerr , _ = _std_dev_binned(data[freqc])
+            idx_max+=len(freq)
+            binmean, binerr , _ = _std_dev_binned(data[:,idx])
             plt.plot(
                 0.5 * bl + 0.5 * br,
                 binmean,
                 # yerr=binerr,
-                label=freqc,
+                label=freq,
                 # capsize=2,
                 # elinewidth=1,
                 # fmt='x',

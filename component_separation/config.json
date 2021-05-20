@@ -2,13 +2,15 @@
 "pa":{
     "new_spectrum": true,
     "Tscale": "K_CMB",
-    "mskset": "lens",
+    "mskset": "smica",
     "freqdset": "DX12",
     "Spectrum_scale": "C_l",
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
     "run_sim": false,
+    "smoothing_window": 5,
+    "max_polynom": 2,
     "num_sim": 5,
 
     "freqfilter": [
@@ -115,7 +117,7 @@
     },
     "DX12-diff":{
         "path": "map/frequency/",
-        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-evenoddhalfdifference_unscaled-preprocessed.fits.npy"
+        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"
     },
     "lens":{
         "tmask":{

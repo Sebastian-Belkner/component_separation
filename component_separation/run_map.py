@@ -29,7 +29,8 @@ import component_separation.powspec as pw
 import component_separation.preprocess as prep
 from component_separation.cs_util import Planckf, Plancks
 
-with open('config.json', "r") as f:
+import component_separation
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
 
 
@@ -41,8 +42,6 @@ else:
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-llp1 = cf['pa']["llp1"]
-bf = cf['pa']["bf"]
 
 num_sim = cf['pa']["num_sim"]
 
@@ -54,7 +53,7 @@ indir_path = cf[mch]['indir']
 lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
 
-def create_difference_map(FREQ):
+def create_difference_map(data_hm1, data_hm2):
     def _difference(data1, data2):
         ret = dict()
         for freq, val in data1.items():
@@ -72,8 +71,8 @@ if __name__ == '__main__':
     print(cf['pa'])
     print(60*"$")
 
-    empiric_noisemap = False
-    make_mask = True
+    empiric_noisemap = True
+    make_mask = False
 
     if empiric_noisemap:
         """This routine loads the even-odd planck maps, takes the half-difference and
@@ -95,9 +94,9 @@ if __name__ == '__main__':
             cf['pa']["freqfilter"] = freqf
             print(freqf)
             cf['pa']["freqdset"] = "DX12-split1"
-            data_hm1 = io.load_plamap_new(cf['pa'], field=(0,1,2))
+            data_hm1 = io.load_plamap(cf, field=(0,1,2))
             cf['pa']["freqdset"] = "DX12-split2"
-            data_hm2 = io.load_plamap_new(cf['pa'], field=(0,1,2))
+            data_hm2 = io.load_plamap(cf, field=(0,1,2))
             data_diff = create_difference_map(data_hm1, data_hm2)
             filename = "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"\
                 .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
@@ -133,9 +132,9 @@ if __name__ == '__main__':
             noise_level = io.load_plamap_new(cf["pa"], field=7)
             noisevarmask = np.where(noise_level[FREQ]<treshold,True, False)
             if int(FREQ)<100:
-                tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"], 1024)
+                tmask, pmask, pmask = io.load_one_mask_forallfreq(1024)
             else:
-                tmask, pmask, pmask = io.load_one_mask_forallfreq(cf["pa"])
+                tmask, pmask, pmask = io.load_one_mask_forallfreq()
             comb_pmask =  pmask * noisevarmask
             comb_pmask_negated = pmask * ~noisevarmask
 

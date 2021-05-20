@@ -37,15 +37,12 @@ PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = cf["pa"]['nside']
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 abs_path = cf[mch]['abs_path']
-indir_path = cf[mch]['indir']
 freqdset = cf["pa"]['freqdset']
 PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
     if FREQ not in cf['pa']["freqfilter"]]
 
 indir_path = cf[mch]['indir']
 freqfilter = cf['pa']["freqfilter"]
-abs_path = cf[mch]['abs_path']
-
 
 def _multi(a, b):
     return a*b
@@ -75,7 +72,7 @@ def read_single(mask_path, mask_filename):
             mask_filename = mask_filename))
 
 
-def make_filenamestring(cf):
+def make_filenamestring(cf, desc='scaled'):
     """Helper function for generating unique filenames given te current configuration
 
     Args:
@@ -90,22 +87,34 @@ def make_filenamestring(cf):
     lmax_mask = cf['pa']["lmax_mask"]
     freqfilter = cf['pa']["freqfilter"]
     specfilter = cf['pa']["specfilter"]
-    
-    return '{freqdset}-msk_{mskset}-lmax_{lmax}-lmaxmsk_{lmax_mask}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
-        freqdset = freqdset,
-        mskset = mskset,
-        lmax = lmax,
-        lmax_mask = lmax_mask,
-        spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-        freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-
+    smoothing_window = cf['pa']["smoothing_window"]
+    max_polynom = cf['pa']["max_polynom"]
+    if desc == 'raw':
+        return '{freqdset}-msk_{mskset}-lmax_{lmax}-lmaxmsk_{lmax_mask}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+            freqdset = freqdset,
+            mskset = mskset,
+            lmax = lmax,
+            lmax_mask = lmax_mask,
+            spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+            freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+            split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    else:
+        return '{freqdset}-msk_{mskset}-lmax_{lmax}-lmaxmsk_{lmax_mask}-smoothing_{smoothing_window}_{max_polynom}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+            freqdset = freqdset,
+            mskset = mskset,
+            lmax = lmax,
+            lmax_mask = lmax_mask,
+            spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+            freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+            split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"],
+            smoothing_window = smoothing_window,
+            max_polynom = max_polynom)
 
 def load_data(path_name: str) -> Dict[str, Dict]:
     if os.path.isfile(path_name):
         data = np.load(path_name, allow_pickle=True)
         print('loaded {}'.format(path_name))
-        if type(data) == np.ndarray:
+        if data.shape == ():
             return data.item()
         else:
             return data
@@ -114,7 +123,7 @@ def load_data(path_name: str) -> Dict[str, Dict]:
         return None
 
 
-def load_plamap_new(cf: Dict, field):
+def load_plamap(cf: Dict, field):
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
@@ -134,9 +143,7 @@ def load_plamap_new(cf: Dict, field):
     nside = cf["pa"]["nside"]
 
     freq_filename = cf[mch][freqdset]['filename']
-    print(mch, freqdset, freq_filename)
-    
-    abs_path = cf[mch]['abs_path']
+
     indir_path = cf[mch]['indir']
     freq_path = cf[mch][freqdset]['path']
 
@@ -358,19 +365,24 @@ def save_map(data, path_name: str):
     hp.write_map(path_name, data, overwrite=True)
     print("saved map to {}".format(path_name))
 
+component_separation_path = 'project/component_separation/'
 
 total_filename = make_filenamestring(cf)
+total_filename_raw = make_filenamestring(cf, 'raw')
 spec_path = cf[mch]['outdir_spectrum'] + cf['pa']["freqdset"] + "/"
-spec_unsc_path_name = spec_path + '-raw-' + total_filename
-spec_sc_path_name = spec_path + "-" + cf['pa']["Spectrum_scale"] + "-" + total_filename
+spec_unsc_path_name = spec_path + '-raw-' + total_filename_raw
+spec_sc_filename = "-" + cf['pa']["Spectrum_scale"] + "-" + total_filename
+spec_sc_path_name = spec_path + spec_sc_filename
 
-weight_path = cf[mch]['outdir_weight'] + cf['pa']["freqdset"] + "/"
+weight_path = abs_path + component_separation_path + cf[mch]['outdir_weight'] + cf['pa']["freqdset"] + "/"
 weight_path_name = weight_path + "-" + cf['pa']["Tscale"] + "-" + total_filename
 
 buff = cf['pa']['freqdset']
-cf['pa']['freqdset'] = 'DX12-diff'
+cf['pa']['freqdset'] = buff+'-diff'
 noise_filename = make_filenamestring(cf)
-noise_unsc_path_name = spec_path + '-raw-' + noise_filename
-noise_sc_path_name = spec_path + "-" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
+noise_filename_raw = make_filenamestring(cf, 'raw')
+noise_path = cf[mch]['outdir_spectrum'] + cf['pa']["freqdset"] + "/"
+noise_unsc_path_name = noise_path + '-raw-' + noise_filename
+noise_sc_path_name = noise_path + "-" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
 
 cf['pa']['freqdset'] = buff

@@ -70,6 +70,7 @@ specfilter = [Plancks.TE, Plancks.TB, Plancks.ET, Plancks.BT]
 lmax = 20
 lmax_mask = 80
 
+
 def set_logger(loglevel=logging.INFO):
     logging.basicConfig(format='   %(levelname)s:      %(message)s', level=loglevel)
 
@@ -272,9 +273,9 @@ def apply_scale(data: Dict, scale: str = 'C_l') -> Dict:
     for freqc, spec in data.items():
         for specID, val in spec.items():
             lmax = len(next(iter((next(iter(data.values()))).values())))
-            if scale == "C_l":
-                sc = np.array([hpf.ll(idx) for idx in range(lmax)])
-            elif scale == "D_l":
+            if scale == "D_l":
+                sc = np.array([hpf.llp1e12(idx) for idx in range(lmax)])
+            elif scale == "C_l":
                 sc = np.array([1e12 for idx in range(lmax)])
             data[freqc][specID] *= sc
             if int(freqc.split("-")[0]) < 100:
@@ -357,7 +358,7 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
     def LFI_cutoff(fr):
         # KEEP. Cutting off LFI channels for ell=700 as they cause numerical problems
         return {
-            '030': 600,
+            '030': 2000,
             '044': 2000,
             '070': 2000,
             '100': lmax,
@@ -390,6 +391,7 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
                                     cov[spec][ifreq][ifreq2] = a
                                     cov[spec][ifreq2][ifreq] = a
     return cov
+
 
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
@@ -466,6 +468,14 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
                 for l in range(lmax)]
         for spec in PLANCKSPECTRUM if spec not in specfilter])
     return weight_arr
+
+
+def smoothC_l(data, smoothing_window=5, max_polynom=2):
+    from scipy.signal import savgol_filter
+    for key, val in data.items():
+        for k, v in val.items():
+            data[key][k] = savgol_filter(v, smoothing_window, max_polynom)
+    return data
 
 
 def spec2alms(spectrum):

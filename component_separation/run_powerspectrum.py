@@ -22,6 +22,7 @@ import sys
 from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
+from healpy.sphtfunc import smoothing
 
 import numpy as np
 import os
@@ -129,7 +130,9 @@ def spec_weight2weighted_spec(spectrum, weights):
     return spec
 
 
-def postprocess_spectrum(data, freqcomb):
+def postprocess_spectrum(data, freqcomb, smoothing_window, max_polynom):
+    if smoothing_window > 0 or max_polynom > 0:
+        spec_sc = pw.smoothC_l(data, smoothing_window=smoothing_window, max_polynom=max_polynom)
     spec_sc = pw.apply_scale(data, scale=cf['pa']["Spectrum_scale"])
     beamf = io.load_beamf(freqcomb=freqcomb)
     spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
@@ -137,16 +140,18 @@ def postprocess_spectrum(data, freqcomb):
 
 
 if __name__ == '__main__':
+    filename_raw = io.make_filenamestring(cf, 'raw')
     filename = io.make_filenamestring(cf)
     print(40*"$")
     print("Starting run with the following settings:")
     print(cf['pa'])
-    print("Generated filename for this session: {}".format(filename))
+    print("Generated filename(s) for this session: {}".format(filename_raw))
+    print(filename)
     print(40*"$")
     set_logger(DEBUG)
 
     if cf['pa']['new_spectrum']:
-        data = io.load_plamap_new(cf, field=(0,1,2))
+        data = io.load_plamap(cf, field=(0,1,2))
         data = prep.preprocess_all(data)
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
 
@@ -159,7 +164,7 @@ if __name__ == '__main__':
         print("couldn't find spectrum with given specifications at {}. Exiting..".format(io.spec_unsc_path_name))
         sys.exit()
 
-    spectrum_scaled = postprocess_spectrum(spectrum, csu.freqcomb)
+    spectrum_scaled = postprocess_spectrum(spectrum, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
     io.save_data(spectrum_scaled, io.spec_sc_path_name)
 
     weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
