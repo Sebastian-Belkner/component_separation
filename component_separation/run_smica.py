@@ -10,26 +10,29 @@ Both is fed to SMICA, which uses these for generating a model, which eventually 
 simulation of cmb sky + noise + residual foreground « /global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20%s_sim/%04d/npipe6v20%s_%03d_map.fits
 Noisefix maps « /global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20%s_sim/%04d/noisefix/noisefix_%03d%s_%04d.fits
 account for low noise coming from simulation maps.
+
+ - apply scarf to lensscarf
+ 
  - smooth spectra, and see if spikes remain, and if weights change
 """
 __author__ = "S. Belkner"
 
 import json
+import os
 import platform
-import pandas as pd
-from component_separation.cs_util import Planckf, Planckr, Plancks
 
 import matplotlib.pyplot as plt
-import healpy as hp
 import numpy as np
-import os
+import pandas as pd
+import smica
 
-from component_separation.cs_util import Config as csu, Constants as const, Helperfunctions as hpf
+import component_separation
 import component_separation.io as io
 import component_separation.powspec as pw
-from component_separation.cs_util import Planckf, Plancks
-import smica
-import component_separation
+from component_separation.cs_util import Config as csu
+from component_separation.cs_util import Constants as const
+from component_separation.cs_util import Helperfunctions as hpf
+from component_separation.cs_util import Planckf, Planckr, Plancks
 
 with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
@@ -198,13 +201,6 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 nmodes = calc_nmodes(bins, mask)
 cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
 
-# %% Plot empirical cov matrix
-plt.yscale('log')
-for var in range(cov_ltot_bnd.shape[0]):
-    plt.plot(np.mean(bins, axis=1), cov_ltot_bnd[var,var,:])
-    # plt.plot(cov[var,var,offst:int(bins[-1][1])+offst])
-plt.show()
-
 
 # %%
 smica_model, gal, cov_lN_bnd, C_lS_bnd = build_smica_model(cov_ltot_bnd.shape[0], len(nmodes), C_lN)
@@ -232,8 +228,10 @@ plt.yscale('log')
 for var1 in range(C_lS_bnd.shape[0]):
     for var2 in range(C_lS_bnd.shape[0]):
         if var1==var2:
-            plt.plot(np.mean(bins, axis=1), np.abs(cov_ltot_bnd[var1,var2,:]), label="{}-{}".format(label[var1], label[var2]))
+            plt.plot(np.mean(bins, axis=1), np.abs(cov_ltot_bnd[var1,var2,:]))#, label="{}-{}".format(label[var1], label[var2]))
 plt.plot(np.mean(bins, axis=1), smica_model.get_comp_by_name('cmb').powspec()[0][0], label= 'smica CMB')
+plt.plot(np.mean(bins, axis=1), smica_model.get_comp_by_name('gal').powspec()[0][0], label= 'gal foreground')
+plt.plot(np.mean(bins, axis=1), smica_model.get_comp_by_name('noise').powspec()[0], label= 'noise foreground')
 plt.plot(np.mean(bins, axis=1), C_lS_bnd[0, 0, :], label='EE Planck best estimate')
 plt.xlabel('Multipole')
 plt.legend()
@@ -241,21 +239,8 @@ plt.ylabel('Powerspectrum')
 plt.savefig("Empiric_EE-Spectra.jpg")
 
 
-# %%
+# %% Plot empirical cov matrix
 plt.yscale('log')
-plt.title('EE-Noise from diffmap + CMB EE-Signal from Planck-best-fit')
-for var1 in range(C_lS_bnd.shape[0]):
-    for var2 in range(C_lS_bnd.shape[0]):
-        plt.plot(np.mean(bins, axis=1), C_lS_bnd[var1, var1, :] + cov_lN_bnd[var1], label="{}-{}".format(label[var1], label[var2]))
-        # plt.plot(np.mean(bins, axis=1), cov_lN_bnd[var1], label="{}-{}".format(label[var1], label[var2]))
-        # plt.plot(cov_ltot[var1,var2], label="{}-{}".format(label[var1], label[var2]))
-        
-        plt.plot(np.mean(bins, axis=1), C_lS_bnd[var1, var2, :])#, label="{}-{}".format(label[var1], label[var2]))
-       
-plt.xlabel('Multipole')
-plt.legend()
-
-plt.ylabel('Powerspectrum')
-
-
-# %%
+for var in range(cov_ltot_bnd.shape[0]):
+    plt.plot(np.mean(bins, axis=1), cov_ltot_bnd[var,var,:])
+plt.show()
