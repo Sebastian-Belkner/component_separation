@@ -93,7 +93,7 @@
         
         },
     "NPIPE-diff":{
-            "path": "/global/u2/s/sebibel/tmp/map/frequency/npipe6v20{split}_sim/{sim_id}/",
+            "path": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/",
             "outfilename": "npipe6v20{split}_{freq}_halfdifferencemap.fits",
             "filename": "half_ring/npipe6v20{split}_{freq}_map_sub{n_of_2}.fits",
             "sim_id": "0200",
