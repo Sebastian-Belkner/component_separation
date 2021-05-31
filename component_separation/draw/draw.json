@@ -1,11 +1,14 @@
 {
 "pa": {
-    "mskset": "lens",
+    "mskset": "smica",
     "Tscale": "K_CMB",
     "freqdset": "NPIPE",
+    "Spectrum_scale": "C_l",
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
+    "smoothing_window": 5,
+    "max_polynom": 2,
     "freqfilter": [
         "545",
         "857"
@@ -28,6 +31,7 @@
         "in_desc": "scaled",
         "out_desc": ""
     },
+
     "variance": {
         "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
@@ -37,6 +41,7 @@
         "in_desc": "scaled",
         "out_desc": ""
     },
+
     "noise": {
         "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
@@ -46,6 +51,7 @@
         "in_desc": "scaled-difference",
         "out_desc": "scaled-difference"
     },
+
     "spectrum_bias": {
         "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
@@ -58,6 +64,7 @@
         "in_desc_syn": "scaled-synavg-",
         "out_desc": "scaled-synavg-"
     },
+
     "weights_bias": {
         "do_plot": false,
         "indir_root": "data/tmp/weights/",
@@ -67,14 +74,33 @@
         "in_desc": "K_CMB",
         "out_desc": "K_CMB"
     },
+
     "weights": {
-        "do_plot": true,
+        "do_plot": false,
         "indir_root": "data/tmp/weights/",
         "indir_rel": "",
         "outdir_root": "vis/weights/",
         "outdir_rel": "",
         "in_desc": "K_CMB",
         "out_desc": "K_CMB"
+    },
+
+    "weights_comparison": {
+        "do_plot": true,
+        "indir_root": "data/tmp/weights/",
+        "indir_rel": "",
+        "outdir_root": "vis/weights/",
+        "outdir_rel": "",
+        "in_desc": "K_CMB",
+        "out_desc": "K_CMB",
+        "mskset1": "smica",
+        "freqdset1": "DX12",
+        "smoothing_window1": 5,
+        "max_polynom1": 2,
+        "mskset2": "smica",
+        "freqdset2": "DX12",
+        "smoothing_window2": 0,
+        "max_polynom2": 0
     },
 
     "noise_comparison": {
@@ -103,6 +129,7 @@
         "outdir_rel": "",
         "out_desc": ""
     },
+
     "maps": {
         "do_plot": false,
         "type": "syn",

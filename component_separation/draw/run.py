@@ -17,7 +17,7 @@ from typing import Dict, List, Optional, Tuple
 import component_separation.io as io
 import component_separation.powspec as pw
 import numpy as np
-from component_separation.cs_util import Planckf, Plancks
+from component_separation.cs_util import Planckf, Plancks, Helperfunctions as hpf
 from component_separation.draw import plot as cplt
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -49,21 +49,6 @@ specfilter = dcf['pa']["specfilter"]
 split = "Full" if dcf['pa']["freqdatsplit"] == "" else dcf['pa']["freqdatsplit"]
 
 
-def _reorder_spectrum_dict(spectrum):
-    spec_data = dict()
-    for f in spectrum.keys():
-        for s in spectrum[f].keys():
-            if s in spec_data:
-                spec_data[s].update({
-                    f: spectrum[f][s]})
-            else:
-                spec_data.update({s:{}})
-                spec_data[s].update({
-                    f: spectrum[f][s]
-                })
-    return spec_data
-
-
 def plot_maps(fname):
     dc = dcf["plot"]["maps"]
     if dc["type"] == "syn":
@@ -89,8 +74,8 @@ def plot_maps(fname):
 def plot_weights(fname):
     dc = dcf["plot"]["weights"]
     total_filename = io.make_filenamestring(dcf)
-    weight_path = cf[mch]['outdir_weight'] + cf['pa']["freqdset"] + "/"
-    weight_path_name = weight_path + "-" + cf['pa']["Tscale"] + "-" + total_filename
+    weight_path = cf[mch]['abs_path']+io.component_separation_path+cf[mch]['outdir_weight'] + dcf['pa']["freqdset"] + "/"
+    weight_path_name = weight_path + "-" + dcf['pa']["Tscale"] + "-" + total_filename
     weights = io.load_weights(weight_path_name, fname)
 
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
@@ -174,8 +159,8 @@ def plot_spectrum_bias(fname):
     spectrum = io.load_spectrum(inpath_name, fname)
     syn_spectrum = io.load_spectrum(inpath_name_syn, fname)
 
-    spectrum_re = _reorder_spectrum_dict(spectrum)
-    syn_spectrum_re = _reorder_spectrum_dict(syn_spectrum)
+    spectrum_re = hpf.reorder_spectrum_dict(spectrum)
+    syn_spectrum_re = hpf.reorder_spectrum_dict(syn_spectrum)
 
     lmax = dcf['pa']['lmax']
 
@@ -231,152 +216,53 @@ def plot_spectrum_bias(fname):
             path_name = outpath_name)
 
 
-def plot_weights_bias(fname):
-    lmax = dcf['pa']['lmax']
 
-
-    inpath_name_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/ext/smica_propagation/weights_EB_smica_R3.00.txt"
-    smica_weights = io.load_weights_smica(inpath_name_smica)[0,:,:lmax]
-    import healpy as hp
-    beam = [
-        hp.gauss_beam(val, 2999, pol = True)[:,1]
-        for val in [
-            0.00930842,
-            0.00785398,
-            0.00378155,
-            0.002807071,
-            0.002106031,
-            0.00145444,
-            0.00140499,
-        ]
-    ]
-    beam5 = hp.gauss_beam(0.00145444, 2999, pol = True)[:,1]
-
-    for idx, weight in enumerate(smica_weights):
-        # if idx>2:
-            weight *= beam[idx]
-            weight /= beam5
-
-
-    dc = dcf["plot"]["weights_bias"]
-
-    dcf["pa"]["mskset"] = "smica"
-    dcf["pa"]["freqdset"] = "DX12"
-    fname = io.make_filenamestring(dcf)
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    weights1 = io.load_weights(inpath_name, fname)
-
-    dcf["pa"]["mskset"] = "lens"
-    dcf["pa"]["freqdset"] = "NPIPE"
-    fname = io.make_filenamestring(dcf)
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    weights2 = io.load_weights(inpath_name, fname)
-    ret = [[np.nan_to_num(weights2[sp][freq].to_list()) for freq, val in weights2[sp].items()] for sp in ["TT", "EE", "BB", "TE"]]
-    import pickle
-    pickle.dump(ret, open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/tmp/weights/weightsK_CMBNPIPE-msk_lens-lmax_3000-lmaxmsk_6000-freqs_030,044,070,100,143,217,353_specs-TT,EE,BB,TE.pkl", 'wb'))
-    print(len(weights2['EE']['channel @070GHz'].to_numpy()))
-    np.save("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/data/tmp/weights/weightsK_CMBNPIPE-msk_lens-lmax_3000-lmaxmsk_6000-freqs_030,044,070,100,143,217,353_specs-TT,EE,BB,TE.npy", ret)
-    sys.exit()
-    # ["030", "044", "070", "100", "143", "217","353", "030", "044", "070", "100", "143", "217", "353"]
+def plot_spectrum(fname):
     
-    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = "public smica weights vs NPIPE-lens",
-        freqdset = freqdset,
-        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
-    
-    diff_weights = dict()
-    for specc, va in weights1.items():
-        if specc == "EE":
-            if specc not in diff_weights.keys():
-                diff_weights.update({specc: {}})
-            # diff_weights[specc] = (weights[specc] - smica_weights.T)/weights[specc]
-                diff_weights[specc] = (weights1[specc] - weights2[specc] )/weights1[specc]
-
-    for specc, diff_data in diff_weights.items():
-        if specc == "EE":
-            title_string = "Weights - " + plotsubtitle
-
-            plt.figure(figsize=(8,6))
-            gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
-            ax1 = plt.subplot(gs[0])
-
-            mp = cplt.plot_compare_weights_binned(plt,
-                weights2[specc],
-                smica_weights,
-                # weights1[specc],
-                # weights2[specc],
-                lmax,
-                title_string = title_string)
-            
-            # ax1.xaxis.set_major_locator(plt.MultipleLocator(np.log(2)))
-            # ax1.get_xaxis().get_major_formatter().labelOnlyBase = False
-            plt.gca().set_xticks([25, 100, 400, 900, 1600, 2500, 3600])
-            plt.gca().set_xticklabels(["25", "100", "400", "900", "1600", "2500", "3600"])
-            plt.gca().get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-            # plt.xlim((20,4000))
-
-            ax2 = mp.subplot(gs[1])
-            mp = cplt.plot_weights_diff_binned(
-                mp,
-                diff_weights[specc],
-                lmax)
-
-            plt.gca().set_xticks([25, 100, 400, 900, 1600, 2500, 3600])
-            plt.gca().set_xticklabels(["25", "100", "400", "900", "1600", "2500", "3600"])
-            plt.gca().get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
-            plt.xlim((20,4000))
-                
-            outpath_name = \
-                dc["outdir_root"] + \
-                dc["outdir_rel"] + \
-                specc+"_weights/" + \
-                specc+"_weightsbias-smicapublic-smica" + "-" + \
-                dc["out_desc"] + "-" + \
-                fname + ".jpg"
-            io.save_figure(
-                mp = mp,
-                path_name = outpath_name)
-
-
-def plot_spectrum_new(fname):
-    ylim = {
-        "TT": (1e2, 1e5),
-        "EE": (1e-3, 1e6),
-        "BB": (1e-5, 1e5),
-        "TE": (1e-2, 1e4),
-        "TB": (-1e-3, 1e3),
-        "EB": (-1e-3, 1e3),
-        "ET": (1e-2, 1e5),
-        "BT": (-1e-3, 1e3),
-        "BE": (-1e-3, 1e3)
-    }
-    freqcomb =  [
-        "{}-{}".format(FREQ,FREQ2)
-            for FREQ in PLANCKMAPFREQ
-            if FREQ not in freqfilter
-            for FREQ2 in PLANCKMAPFREQ
-            if (FREQ2 not in freqfilter) and (int(FREQ2)>=int(FREQ))]
+    if dcf['pa']["Spectrum_scale"] == "D_l":
+        ylim = {
+            "TT": (1e2, 1e5),
+            "EE": (1e-3, 1e6),
+            "BB": (1e-5, 1e5),
+            "TE": (1e-2, 1e4),
+            "TB": (-1e-3, 1e3),
+            "EB": (-1e-3, 1e3),
+            "ET": (1e-2, 1e5),
+            "BT": (-1e-3, 1e3),
+            "BE": (-1e-3, 1e3)
+        }
+    else:
+       ylim = {
+            "TT": (1e2, 1e5),
+            "EE": (1e-6, 1e1),
+            "BB": (1e-5, 1e5),
+            "TE": (1e-2, 1e4),
+            "TB": (-1e-3, 1e3),
+            "EB": (-1e-3, 1e3),
+            "ET": (1e-2, 1e5),
+            "BT": (-1e-3, 1e3),
+            "BE": (-1e-3, 1e3) 
+       }
     
     dc = dcf["plot"]["spectrum"]
-    def _inpathname(freqc,spec):
-        return  "/global/u2/s/sebibel/tmp/spectrum/"+freqdset+"/"+spec+freqc+"-"+dc["in_desc"]+fname
-    speccs =  [spec for spec in PLANCKSPECTRUM if spec not in specfilter]
-    spec_data = {spec: {
-        freqc: np.array(io.load_cl(_inpathname(freqc,spec)))
-        for freqc in freqcomb} for 
-        spec in speccs}
     lmax = dcf['pa']['lmax']
 
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
         split = split)
+    spec_data = io.load_data(io.spec_sc_path_name)
     spectrum_truth = io.load_truthspectrum()
+    spec_data = hpf.reorder_spectrum_dict(spec_data)
     for specc, data in spec_data.items():
         # for freq in PLANCKMAPFREQ:
             title_string = "{} spectrum - {}".format(specc, plotsubtitle)
             if "Planck-"+specc in spectrum_truth.columns:
                 spectrum_trth = spectrum_truth["Planck-"+specc]
+                if dcf['pa']["Spectrum_scale"] == "D_l":
+                    pass
+                else:
+                    spectrum_trth = spectrum_trth/hpf.llp1e12(np.array([l for l in range(len(spectrum_trth))]))*1e12
             else:
                 spectrum_trth = None
 
@@ -395,65 +281,12 @@ def plot_spectrum_new(fname):
                 specc+"_spectrum/" + \
                 specc+"_spectrum" + "-" + \
                 dc["out_desc"] + "-" + \
+                dcf['pa']["Spectrum_scale"] + "-" + \
                 fname + ".jpg"
             io.save_figure(
                 mp = mp,
                 path_name = outpath_name)
             print("spectrum saved to {}".format(outpath_name))  
-
-
-def plot_spectrum(fname):
-    ylim = {
-        "TT": (1e2, 1e5),
-        "EE": (1e-3, 1e6),
-        "BB": (1e-5, 1e5),
-        "TE": (1e-2, 1e4),
-        "TB": (-1e-3, 1e3),
-        "EB": (-1e-3, 1e3),
-        "ET": (1e-2, 1e5),
-        "BT": (-1e-3, 1e3),
-        "BE": (-1e-3, 1e3)
-    }
-    dc = dcf["plot"]["spectrum"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    spectrum = io.load_spectrum(inpath_name, fname)
-    lmax = dcf['pa']['lmax']
-
-    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
-        mskset = mskset,
-        freqdset = freqdset,
-        split = split)
-   
-    spec_data = _reorder_spectrum_dict(spectrum)
-
-    spectrum_truth = io.load_truthspectrum()
-    for specc, data in spec_data.items():
-        title_string = "{} spectrum - {}".format(specc, plotsubtitle)
-        if "Planck-"+specc in spectrum_truth.columns:
-            spectrum_trth = spectrum_truth["Planck-"+specc]
-        else:
-            spectrum_trth = None
-
-        mp = cplt.plot_powspec_binned(
-            data,
-            lmax,
-            title_string = title_string,
-            ylim = ylim[specc],
-            truthfile = spectrum_trth,
-            truth_label = "Planck-"+specc
-            
-            )
-        outpath_name = \
-            dc["outdir_root"] + \
-            dc["outdir_rel"] + \
-            specc+"_spectrum/" + \
-            specc+"_spectrum" + "-" + \
-            dc["out_desc"] + "-" + \
-            fname + ".jpg"
-        io.save_figure(
-            mp = mp,
-            path_name = outpath_name)    
-        print("spectrum saved to {}".format(outpath_name))
 
 
 def plot_compare_optimalspectrum(fname):
@@ -488,12 +321,10 @@ def plot_compare_optimalspectrum(fname):
     cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
     icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
 
-    spec_data = _reorder_spectrum_dict(spectrum)
+    spec_data = hpf.reorder_spectrum_dict(spectrum)
     spec_data_wweighted = _weightspec(icov_l, spec_data)
 
     spectrum_truth = io.load_truthspectrum(abspath='/mnt/c/Users/sebas/OneDrive/Desktop/Uni/')
-
-    
 
     for specc, data in spec_data_wweighted.items():
         title_string = "{} spectrum - {}".format(specc, "optimal spectrum included")
@@ -689,7 +520,7 @@ def plot_noise(fname):
         freqdset = freqdset,
         split = split)
    
-    spec_data = _reorder_spectrum_dict(spectrum)
+    spec_data = hpf.reorder_spectrum_dict(spectrum)
 
     spectrum_truth = io.load_truthspectrum()
     for specc, data in spec_data.items():
@@ -747,7 +578,7 @@ def plot_spec_nonoise():
             if specc not in spectrum.keys():
                 spectrum[freqc][specc] = spectrum[freqc][specc] - noise[freqc][specc]
 
-    spec_data = _reorder_spectrum_dict(spectrum)
+    spec_data = hpf.reorder_spectrum_dict(spectrum)
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
         freqdset = freqdset,
@@ -834,7 +665,7 @@ def plot_variance():
     cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
     icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
 
-    spec_data = _reorder_spectrum_dict(spectrum)
+    spec_data = hpf.reorder_spectrum_dict(spectrum)
     spec_data_wweighted = _weightspec(icov_l, spec_data)
 
     def dl2cl(dl):
@@ -879,7 +710,184 @@ def plot_variance():
             fname + ".jpg"
         io.save_figure(
             mp = mp,
-            path_name = outpath_name)    
+            path_name = outpath_name) 
+
+
+def plot_weights_bias(fname):
+    lmax = dcf['pa']['lmax']
+    inpath_name_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/ext/smica_propagation/weights_EB_smica_R3.00.txt"
+    smica_weights = io.load_weights_smica(inpath_name_smica)[0,:,:lmax]
+    import healpy as hp
+    beam = [
+        hp.gauss_beam(val, 2999, pol = True)[:,1]
+        for val in [
+            0.00930842,
+            0.00785398,
+            0.00378155,
+            0.002807071,
+            0.002106031,
+            0.00145444,
+            0.00140499,
+        ]
+    ]
+    beam5 = hp.gauss_beam(0.00145444, 2999, pol = True)[:,1]
+
+    for idx, weight in enumerate(smica_weights):
+        # if idx>2:
+            weight *= beam[idx]
+            weight /= beam5
+
+
+    dc = dcf["plot"]["weights_bias"]
+
+    dcf["pa"]["mskset"] = "smica"
+    dcf["pa"]["freqdset"] = "DX12"
+    fname = io.make_filenamestring(dcf)
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    weights1 = io.load_weights(inpath_name, fname)
+
+    dcf["pa"]["mskset"] = "lens"
+    dcf["pa"]["freqdset"] = "NPIPE"
+    fname = io.make_filenamestring(dcf)
+    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
+    weights2 = io.load_weights(inpath_name, fname)
+    
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = "public smica weights vs NPIPE-lens",
+        freqdset = freqdset,
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    
+    diff_weights = dict()
+    for specc, va in weights1.items():
+        if specc == "EE":
+            if specc not in diff_weights.keys():
+                diff_weights.update({specc: {}})
+            # diff_weights[specc] = (weights[specc] - smica_weights.T)/weights[specc]
+                diff_weights[specc] = (weights1[specc] - weights2[specc] )/weights1[specc]
+
+    for specc, diff_data in diff_weights.items():
+        if specc == "EE":
+            title_string = "Weights - " + plotsubtitle
+
+            plt.figure(figsize=(8,6))
+            gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+            ax1 = plt.subplot(gs[0])
+
+            mp = cplt.plot_compare_weights_binned(plt,
+                weights2[specc],
+                smica_weights,
+                # weights1[specc],
+                # weights2[specc],
+                lmax,
+                title_string = title_string)
+            
+            # ax1.xaxis.set_major_locator(plt.MultipleLocator(np.log(2)))
+            # ax1.get_xaxis().get_major_formatter().labelOnlyBase = False
+            plt.gca().set_xticks([25, 100, 400, 900, 1600, 2500, 3600])
+            plt.gca().set_xticklabels(["25", "100", "400", "900", "1600", "2500", "3600"])
+            plt.gca().get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+            # plt.xlim((20,4000))
+
+            ax2 = mp.subplot(gs[1])
+            mp = cplt.plot_weights_diff_binned(
+                mp,
+                diff_weights[specc],
+                lmax)
+
+            plt.gca().set_xticks([25, 100, 400, 900, 1600, 2500, 3600])
+            plt.gca().set_xticklabels(["25", "100", "400", "900", "1600", "2500", "3600"])
+            plt.gca().get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+            plt.xlim((20,4000))
+                
+            outpath_name = \
+                dc["outdir_root"] + \
+                dc["outdir_rel"] + \
+                specc+"_weights/" + \
+                specc+"_weightsbias-smicapublic-smica" + "-" + \
+                dc["out_desc"] + "-" + \
+                fname + ".jpg"
+            io.save_figure(
+                mp = mp,
+                path_name = outpath_name)
+
+
+def plot_weights_comparison():
+    ylim = {
+        "TT": (1e2, 1e5),
+        "EE": (1e-6, 1e1),
+        "BB": (1e-5, 1e5),
+        "TE": (1e-2, 1e4),
+        "TB": (-1e-3, 1e3),
+        "EB": (-1e-3, 1e3),
+        "ET": (1e-2, 1e5),
+        "BT": (-1e-3, 1e3),
+        "BE": (-1e-3, 1e3) 
+    }
+    
+    dc = dcf["plot"]["weights_comparison"]
+    lmax = dcf['pa']['lmax']
+
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = split)
+
+    cf['pa']['mskset'] = dc['mskset1']
+    cf['pa']['freqdset'] = dc['freqdset1']
+    cf['pa']['smoothing_window'] = dc['smoothing_window1']
+    cf['pa']['max_polynom'] = dc['max_polynom1'] 
+    filename1 = io.make_filenamestring(cf)
+    weight_path1 = cf[mch]['abs_path'] + io.component_separation_path + cf[mch]['outdir_weight'] + dc["freqdset1"] + "/"
+    weight_path_name1 = weight_path1 + "-" + cf['pa']["Tscale"] + "-" + filename1
+    weight_data1 = io.load_data(weight_path_name1)
+
+    cf['pa']['mskset'] = dc['mskset2']
+    cf['pa']['freqdset'] = dc['freqdset2']
+    cf['pa']['smoothing_window'] = dc['smoothing_window2']
+    cf['pa']['max_polynom'] = dc['max_polynom2'] 
+    filename2 = io.make_filenamestring(cf)
+    weight_path2 = cf[mch]['abs_path'] + io.component_separation_path + cf[mch]['outdir_weight'] + dc["freqdset1"] + "/"
+    weight_path_name2 = weight_path2 + "-" + cf['pa']["Tscale"] + "-" + filename2
+    weight_data2 = io.load_data(weight_path_name2)
+
+    print(weight_data2)
+    
+    diff_weights = np.nan_to_num(np.array([(weight_data1[idx] - weight_data2[idx] )/weight_data1[idx] for idx,specc in enumerate(weight_data1)]))
+
+    for idx,spec in enumerate(PLANCKSPECTRUM):
+        if spec not in specfilter:
+            plt.figure(figsize=(8,6))
+            gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+            ax1 = plt.subplot(gs[0])
+          
+            base=2
+            plt.xlabel("Multipole l")
+            plt.xscale("log", base=base)
+            title_string = "{} weigthts - {}".format(spec, plotsubtitle)
+            mp = cplt.plot_compare_weights_binned(plt,
+                weight_data2[idx],
+                weight_data1[idx],
+                lmax,
+                title_string = title_string)
+            ax2 = mp.subplot(gs[1])
+            mp = cplt.plot_weights_diff_binned(
+                mp,
+                diff_weights[idx],
+                lmax)
+
+            outpath_name = \
+                dc["outdir_root"] + \
+                dc["outdir_rel"] + \
+                spec+"_weights/" + \
+                spec+"_weights_comparison" + "-" + \
+                dc["out_desc"] +"-" + \
+                (filename1+filename2)[::3] + ".jpg"        
+            print(spec + "processed " + outpath_name)
+            io.save_figure(
+                mp = mp,
+                path_name = outpath_name)
+
+
 
 
 if __name__ == '__main__':
@@ -904,7 +912,7 @@ if __name__ == '__main__':
 
     if dcf["plot"]["spectrum"]["do_plot"]:
         print("plotting spectrum")
-        plot_spectrum_new(fname = fname)
+        plot_spectrum(fname = fname)
 
     if dcf["plot"]["spectrum_bias"]["do_plot"]:
         print("plotting spectrum bias")
@@ -925,6 +933,10 @@ if __name__ == '__main__':
     if dcf["plot"]["variance"]["do_plot"]:
         print("plotting variance")
         plot_variance()
+
+    if dcf["plot"]["weights_comparison"]["do_plot"]:
+        print("plotting comparison between 2 sets of weights")
+        plot_weights_comparison()
 
     # if dcf["plot"]["S/N"]["do_plot"]:
     #     print("plotting S/N")
