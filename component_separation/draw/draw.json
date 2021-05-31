@@ -2,7 +2,7 @@
 "pa": {
     "mskset": "smica",
     "Tscale": "K_CMB",
-    "freqdset": "DX12",
+    "freqdset": "NPIPE",
     "Spectrum_scale": "C_l",
     "lmax": 3000,
     "lmax_mask": 6000,

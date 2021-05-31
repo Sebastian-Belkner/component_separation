@@ -36,6 +36,7 @@ with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = cf["pa"]['nside']
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
+
 abs_path = cf[mch]['abs_path']
 freqdset = cf["pa"]['freqdset']
 PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
@@ -43,6 +44,7 @@ PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
 
 indir_path = cf[mch]['indir']
 freqfilter = cf['pa']["freqfilter"]
+
 
 def _multi(a, b):
     return a*b
@@ -143,9 +145,17 @@ def load_plamap(cf: Dict, field, split_desc=''):
     nside = cf["pa"]["nside"]
 
     freq_filename = cf[mch][freqdset]['filename']
-
+    
+   
     indir_path = cf[mch]['indir']
     freq_path = cf[mch][freqdset]['path']
+    if mch == "XPS":
+         abs_path = cf[mch]['abs_path']
+    else:
+        abs_path = ""
+
+
+
     if 'sim_id' in cf[mch][freqdset]:
         sim_id = cf[mch][freqdset]["sim_id"]
     else:
