@@ -1,34 +1,30 @@
 #!/usr/local/bin/python
-
-# %% Load packages, and mostly nonchanging parameters
 """
-smcia_fit.py: script for using SMICA. It expects scaled powerspectra for each instrument and a noise estimate.
-Both is fed to SMICA, which uses these for generating a model, which eventually gives estimates for foregrounds and CMB signal.
+run_powerspectrum.py: script for executing main functionality of component_separation
 
-# TODO 
- - check empirical transfer function at low ell. 
- derive by cross spectra between input and synmap. use testing suit on NERSC
-simulation of cmb sky + noise + residual foreground « 
-/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20%s_sim/%04d/npipe6v20%s_%03d_map.fits
-Noisefix maps « 
-/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20%s_sim/%04d/noisefix/noisefix_%03d%s_%04d.fits
-account for low noise coming from simulation maps. 
 """
+
 __author__ = "S. Belkner"
 
 import json
+import logging
+import logging.handlers
 import os
 import platform
+import sys
+from functools import reduce
+from logging import CRITICAL, DEBUG, ERROR, INFO
+from typing import Dict, List, Optional, Tuple
 
-import healpy as hp
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import smica
 
 import component_separation
 import component_separation.io as io
+import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
+import component_separation.preprocess as prep
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
@@ -43,29 +39,92 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
+    cf = json.load(f)
+
+LOGFILE = 'data/tmp/logging/messages.log'
+logger = logging.getLogger("")
+handler = logging.handlers.RotatingFileHandler(
+        LOGFILE, maxBytes=(1048576*5), backupCount=0
+)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
                     if FREQ not in cf['pa']["freqfilter"]]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 PLANCKSPECTRUM_f = [SPEC for SPEC in PLANCKSPECTRUM
                     if SPEC not in cf['pa']["specfilter"]]
-lmax = cf['pa']["lmax"]
 
+num_sim = cf['pa']["num_sim"]
+indir_path = cf[mch]['indir']
+
+lmax = cf['pa']["lmax"]
+lmax_mask = cf['pa']["lmax_mask"]
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
-_, mask, _ = io.load_one_mask_forallfreq()
-# %%
-noise_inpath_name = os.path.dirname(component_separation.__file__)[:-21] +"/"+ io.noise_sc_path_name
-spectrum_inpath_name = os.path.dirname(component_separation.__file__)[:-21] +"/"+ io.spec_sc_path_name
-C_lN = io.load_data(noise_inpath_name)
-C_ltot = io.load_data(spectrum_inpath_name)
-cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
-bins = const.SMICA_highell_bins
-offset = 0
+def set_logger(loglevel=logging.INFO):
+    logger.setLevel(logging.DEBUG)
+    logging.StreamHandler(sys.stdout)
 
 
-# %% Load changing parameters and functions
+def spec2synmap(spectrum, freqcomb):
+    return pw.create_synmap(spectrum, cf, mch, freqcomb, specfilter) 
+
+
+def map2spec(data, tmask, pmask, freqcomb):
+    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+    return spectrum
+
+
+def specsc2weights(spectrum, Tscale):
+    cov = pw.build_covmatrices(spectrum, lmax, freqfilter, specfilter, Tscale)
+    cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
+    weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter, Tscale)
+    return weights
+
+
+def synmaps2average(fname):
+    # Load all syn spectra
+    def _synpath_name(i):
+        return io.spec_path + 'syn/scaled-{}_synmap-'.format(str(i)) + filename
+    spectrum = {
+        i: io.load_spectrum(path_name=_synpath_name(i))
+        for i in range(num_sim)}
+
+    # sum all syn spectra
+    spectrum_avg = dict()
+    for FREQC in csu.freqcomb:
+        for spec in csu.speccomb:
+            if FREQC in spectrum_avg.keys():
+                pass
+            else:
+                spectrum_avg.update({FREQC: {}})
+            if spec in spectrum_avg[FREQC].keys():
+                pass
+            else:
+                spectrum_avg[FREQC].update({spec: []})
+                    
+            spectrum_avg[FREQC][spec] = np.array(list(reduce(lambda x, y: x+y, [
+                spectrum[idx][FREQC][spec]
+                    for idx, _ in spectrum.items()
+                ])))
+            spectrum_avg[FREQC][spec] /= num_sim
+    return spectrum_avg
+
+
+def postprocess_spectrum(data, freqcomb, smoothing_window, max_polynom):
+    if smoothing_window > 0 or max_polynom > 0:
+        spec_sc = pw.smoothC_l(data, smoothing_window=smoothing_window, max_polynom=max_polynom)
+    spec_sc = pw.apply_scale(data, scale=cf['pa']["Spectrum_scale"])
+    beamf = io.load_beamf(freqcomb=freqcomb)
+    spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
+    return spec_scbf
+
+
 def calc_nmodes(bins, mask):
     nmode = np.ones((bins.shape[0]))
     for idx,q in enumerate(bins):
@@ -197,66 +256,93 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     return model
 
 
-# %% Bin cov matrix
-nmodes = calc_nmodes(bins, mask)
-cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
+if __name__ == '__main__':
+    filename_raw = io.make_filenamestring(cf, 'raw')
+    filename = io.make_filenamestring(cf)
+    print(40*"$")
+    print("Starting run with the following settings:")
+    print(cf['pa'])
+    print("Generated filename(s) for this session: {}".format(filename_raw))
+    print(filename)
+    print(40*"$")
+    set_logger(DEBUG)
+    freqdset = cf['pa']["freqdset"]
+    freqdatsplit = cf['pa']["freqdatsplit"]
+    sim_id = cf[mch][freqdset]["sim_id"]
+
+    noise_inpath_name = cf[mch][freqdset]["path"]\
+            .replace("{split}", freqdatsplit)\
+            .replace("{sim_id}", sim_id) + cf[mch][freqdset]["filename"]\
+                .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
+                .replace("{freq}", FREQ)\
+                .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
+                .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
+                .replace("{split}", freqdatsplit)
+
+    noise_inpath_name = os.path.dirname(component_separation.__file__)[:-21] +"/"+ io.noise_sc_path_name
+
+    spectrum_inpath_name = os.path.dirname(component_separation.__file__)[:-21] +"/"+ io.spec_sc_path_name
+
+    C_lN = io.load_data(noise_inpath_name)
+    
+        ### Let smica component separate
 
 
-# %%
-print(C_lN)
-
-# %%
-smica_model, gal, cov_lN_bnd, C_lS_bnd = build_smica_model(cov_ltot_bnd.shape[0], len(nmodes), C_lN)
+        ### transform smica_cmb into smica_cmb_map
 
 
-# %%
-fit_model_to_cov(
-    smica_model,
-    cov_ltot_bnd,
-    nmodes,
-    maxiter=50,
-    noise_fix=True,
-    noise_template=cov_lN_bnd,
-    afix=None, qmin=0,
-    asyn=None,
-    logger=None,
-    qmax=len(nmodes),
-    no_starting_point=False)
+        ### check cross correlation between smica_cmb_map and input_cmb_map
 
 
-# %%
-label = ["030", "044", "070", "100", "143", "217", "353"]
-plt.title('Empiric EE-Powerspectrum (noise + signal + foreground)')
-plt.yscale('log')
-for var1 in range(C_lS_bnd.shape[0]):
-    for var2 in range(C_lS_bnd.shape[0]):
-        if var1==var2:
-            plt.plot(np.mean(bins, axis=1), np.abs(cov_ltot_bnd[var1,var2,:]))#, label="{}-{}".format(label[var1], label[var2]))
-plt.plot(np.mean(bins, axis=1), smica_model.get_comp_by_name('cmb').powspec()[0][0], label= 'smica CMB')
-plt.plot(np.mean(bins, axis=1), smica_model.get_comp_by_name('gal').powspec()[0][0], label= 'gal foreground')
-plt.plot(np.mean(bins, axis=1), smica_model.get_comp_by_name('noise').powspec()[0], label= 'noise foreground')
-plt.plot(np.mean(bins, axis=1), C_lS_bnd[0, 0, :], label='EE Planck best estimate')
-plt.xlabel('Multipole')
-plt.legend()
-plt.ylabel('Powerspectrum')
-plt.savefig("Empiric_EE-Spectra.jpg")
+        ### Load simulation maps
+        ### combine simulation maps
+    if cf['pa']['new_spectrum']:
+        data = io.load_plamap(cf, field=(0,1,2))
+        data = prep.preprocess_all(data)
+        tmask, pmask, pmask = io.load_one_mask_forallfreq()
+
+        ### Calculate powerspectra
+
+        spectrum = map2spec(data, tmask, pmask, csu.freqcomb)
+        io.save_data(spectrum, io.spec_unsc_path_name)
+    else:
+        spectrum = io.load_data(path_name=io.spec_unsc_path_name)
+
+    if spectrum is None:
+        print("couldn't find spectrum with given specifications at {}. Exiting..".format(io.spec_unsc_path_name))
+        sys.exit()
+
+    C_ltot = postprocess_spectrum(spectrum, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
+    io.save_data(C_ltot, io.spec_sc_path_name)
+
+    weights = specsc2weights(C_ltot, cf['pa']["Tscale"])
+    io.save_data(weights, io.weight_path_name)
+
+    _, mask, _ = io.load_one_mask_forallfreq()
+    bins = const.SMICA_highell_bins
+    offset = 0
+    nmodes = calc_nmodes(bins, mask)
+    cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
+    cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
+
+    # %%
+    smica_model, gal, cov_lN_bnd, C_lS_bnd = build_smica_model(cov_ltot_bnd.shape[0], len(nmodes), C_lN)
 
 
-# %% Plot empirical cov matrix
-plt.yscale('log')
-for var in range(cov_ltot_bnd.shape[0]):
-    plt.plot(np.mean(bins, axis=1), cov_ltot_bnd[var,var,:])
-plt.show()
+    # %%
+    fit_model_to_cov(
+        smica_model,
+        cov_ltot_bnd,
+        nmodes,
+        maxiter=50,
+        noise_fix=True,
+        noise_template=cov_lN_bnd,
+        afix=None, qmin=0,
+        asyn=None,
+        logger=None,
+        qmax=len(nmodes),
+        no_starting_point=False)
 
-
-# %% Generate maps from smica cls -> synmap
-
-print(smica_model.get_comp_by_name('cmb').powspec().shape)
-# hp.mollview(hp.synfast(cls=)
-
-
-
-# %% take inputmap
-
-
+    
+    ### Now, compare smica_cmb with input_cmb
 

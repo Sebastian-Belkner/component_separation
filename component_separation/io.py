@@ -123,7 +123,7 @@ def load_data(path_name: str) -> Dict[str, Dict]:
         return None
 
 
-def load_plamap(cf: Dict, field):
+def load_plamap(cf: Dict, field, split_desc=''):
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
@@ -146,6 +146,10 @@ def load_plamap(cf: Dict, field):
 
     indir_path = cf[mch]['indir']
     freq_path = cf[mch][freqdset]['path']
+    if 'sim_id' in cf[mch][freqdset]:
+        sim_id = cf[mch][freqdset]["sim_id"]
+    else:
+        sim_id = ""
 
     mappath = {
         FREQ:'{abs_path}{path}{freq_path}{freq_filename}'
@@ -161,6 +165,8 @@ def load_plamap(cf: Dict, field):
                     .replace("{00/1}", "00" if int(FREQ)<100 else "01")
                     .replace("{even/half1}", "even" if int(FREQ)>=100 else "half1")
                     .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "half2")
+                    .replace("{sim_id}", sim_id)
+                    .replace("{n_of_2}", "1of2" if split_desc == "1" else "2of2")
                 )
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter}

@@ -6,13 +6,6 @@ run_powerspectrum.py: script for executing main functionality of component_separ
 
 __author__ = "S. Belkner"
 
-
-# TODO
-# pospace: is the second mask added correctly?
-# how does binning work? do i have to take 2l+1 into account as described in https://arxiv.org/pdf/0803.1814.pdf on page9?
-# monopole and dipole regression on apodized galmask (available in healpy ?) (healpy.pixelfunc.remove_dipole)
-# use jackknives to compute a noise estimate (half mission)
-
 import json
 import logging
 import logging.handlers

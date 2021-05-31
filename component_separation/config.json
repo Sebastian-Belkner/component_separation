@@ -1,6 +1,6 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "Tscale": "K_CMB",
     "mskset": "smica",
     "freqdset": "DX12",
@@ -79,6 +79,23 @@
                 ]
             }
         },
+    "NPIPE-sim":{
+        "path": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/",
+        "filename": "npipe6v20{split}_{freq}_map.fits",
+        "noisefix_filename": "noisefix/noisefix_{freq}{split}_{sim_id}.fits",
+        "halfring_pathfilename": "half_ring/npipe6v20{split}_{freq}_map_sub{n_of_2}.fits",
+        "sim_id": "0200",
+        "split": [
+            "A",
+            "B",
+            ""
+            ]
+        
+        },
+    "NPIPE-diff":{
+            "path": "/global/u2/s/sebibel/tmp/map/frequency/npipe6v20{split}_sim/{sim_id}/",
+            "filename": "npipe6v20{split}_{freq}_halfdifferencemap.fits"
+    },
     "outdir": "/global/u2/s/sebibel/tmp/",
     "abs_path" :  "/global/u2/s/sebibel/",
     "outdir_spectrum": "/global/u2/s/sebibel/tmp/spectrum/",
