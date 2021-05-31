@@ -2,7 +2,7 @@
 "pa":{
     "new_spectrum": true,
     "Tscale": "K_CMB",
-    "mskset": "smica",
+    "mskset": "lens",
     "freqdset": "NPIPE-sim",
     "Spectrum_scale": "C_l",
     "lmax": 3000,
