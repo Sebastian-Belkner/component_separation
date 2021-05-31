@@ -166,7 +166,9 @@ def load_plamap(cf: Dict, field, split_desc=''):
             .format(
                 abs_path = abs_path,
                 path = indir_path,
-                freq_path = freq_path,
+                freq_path = freq_path
+                    .replace("{sim_id}", sim_id)
+                    .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else ""),
                 freq_filename = freq_filename
                     .replace("{freq}", FREQ)
                     .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
