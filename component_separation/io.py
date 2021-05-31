@@ -11,6 +11,8 @@ import functools
 import json
 import os
 import platform
+import os.path
+from os import path
 import sys
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
@@ -383,16 +385,29 @@ def save_map(data, path_name: str):
     hp.write_map(path_name, data, overwrite=True)
     print("saved map to {}".format(path_name))
 
+def iff_make_dir(outpath_name):
+    if path.exists(outpath_name):
+        pass
+    else:
+        os.makedirs(outpath_name)
+
 component_separation_path = 'project/component_separation/'
 
 total_filename = make_filenamestring(cf)
 total_filename_raw = make_filenamestring(cf, 'raw')
+
 spec_path = cf[mch]['outdir_spectrum'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(spec_path)
+
 spec_unsc_path_name = spec_path + '-raw-' + total_filename_raw
+
+
 spec_sc_filename = "-" + cf['pa']["Spectrum_scale"] + "-" + total_filename
 spec_sc_path_name = spec_path + spec_sc_filename
 
 weight_path = abs_path + component_separation_path + cf[mch]['outdir_weight'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(weight_path)
+
 weight_path_name = weight_path + "-" + cf['pa']["Tscale"] + "-" + total_filename
 
 buff = cf['pa']['freqdset']
@@ -400,6 +415,8 @@ cf['pa']['freqdset'] = buff+'-diff'
 noise_filename = make_filenamestring(cf)
 noise_filename_raw = make_filenamestring(cf, 'raw')
 noise_path = cf[mch]['outdir_spectrum'] + cf['pa']["freqdset"] + "/"
+
+iff_make_dir(noise_path)
 noise_unsc_path_name = noise_path + '-raw-' + noise_filename
 noise_sc_path_name = noise_path + "-" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
 
