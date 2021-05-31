@@ -3,7 +3,7 @@
     "new_spectrum": false,
     "Tscale": "K_CMB",
     "mskset": "smica",
-    "freqdset": "DX12",
+    "freqdset": "NPIPE-sim",
     "Spectrum_scale": "C_l",
     "lmax": 3000,
     "lmax_mask": 6000,
@@ -94,7 +94,8 @@
         },
     "NPIPE-diff":{
             "path": "/global/u2/s/sebibel/tmp/map/frequency/npipe6v20{split}_sim/{sim_id}/",
-            "filename": "npipe6v20{split}_{freq}_halfdifferencemap.fits"
+            "outfilename": "npipe6v20{split}_{freq}_halfdifferencemap.fits",
+            "filename": "half_ring/npipe6v20{split}_{freq}_map_sub{n_of_2}.fits"
     },
     "outdir": "/global/u2/s/sebibel/tmp/",
     "abs_path" :  "/global/u2/s/sebibel/",

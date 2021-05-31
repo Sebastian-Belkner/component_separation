@@ -94,24 +94,29 @@ if __name__ == '__main__':
         for FREQ in PLANCKMAPFREQ_f:
             freqf = [f for f in freqfilter if f != FREQ]
             cf['pa']["freqfilter"] = freqf
-            cf['pa']["freqdset"] = "NPIPE-sim"
+            cf['pa']["freqdset"] = "NPIPE-diff"
+            
             freqdset = cf['pa']["freqdset"]
             freqdatsplit = cf['pa']["freqdatsplit"]
             sim_id = cf[mch][freqdset]["sim_id"]
 
-            pathname = cf[mch][freqdset]["path"]\
+            inpath_name = cf[mch][freqdset]["path"]\
                 .replace("{split}", freqdatsplit)\
                 .replace("{sim_id}", sim_id)
-            if path.exists(pathname):
-                pass
-            else:
-                os.makedirs(pathname)
-            cf[mch][freqdset]['filename'] = cf[mch][freqdset]['halfring_pathfilename']
+            
             data_hm1 = io.load_plamap(cf, field=(0,1,2), split_desc="1")
             # cf['pa']["freqdset"] = "DX12-split2"
             data_hm2 = io.load_plamap(cf, field=(0,1,2), split_desc="2")
             data_diff = create_difference_map(data_hm1, data_hm2)
-            pathfile_name = pathname+cf[mch][freqdset]["filename"]\
+
+
+            outpath_name = cf[mch]["outdir_map"]
+
+            if path.exists(outpath_name):
+                pass
+            else:
+                os.makedirs(outpath_name)
+            pathfile_name = outpath_name+cf[mch][freqdset]["outfilename"]\
                 .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
                 .replace("{freq}", FREQ)\
                 .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
