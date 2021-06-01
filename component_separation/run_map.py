@@ -136,11 +136,16 @@ if __name__ == '__main__':
             data_hm2 = io.load_plamap(cf, field=(0,1,2))
             data_diff = create_difference_map(data_hm1, data_hm2)
 
-            outpath_name = scratch+"/" # +cf[mch]["outdir_map_ap"]
-            # if path.exists(outpath_name):
-            #     pass
-            # else:
-            #     os.makedirs(outpath_name)
+
+            if mch=="NERSC":
+                outpath_name = scratch+"/" +cf[mch]["outdir_map"]
+            else:
+                outpath_name = cf[mch]["outdir_map_ap"]
+            
+            if path.exists(outpath_name):
+                pass
+            else:
+                os.makedirs(outpath_name)
 
             outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
                 .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
