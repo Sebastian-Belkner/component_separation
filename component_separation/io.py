@@ -361,7 +361,7 @@ def save_figure(mp, path_name: str, outdir_root: str = None, outdir_rel: str = N
 @log_on_start(INFO, "Saving to {path_name}")
 @log_on_end(DEBUG, "Data saved successfully to {path_name}")
 def save_map(data, path_name: str):
-    hp.write_map(path_name, data, overwrite=False)
+    hp.write_map(path_name, data, overwrite=True)
     print("saved map to {}".format(path_name))
 
 def iff_make_dir(outpath_name):
