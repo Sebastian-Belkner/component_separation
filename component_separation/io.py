@@ -150,12 +150,15 @@ def load_plamap(cf_local, field):
 
     abs_path = cf_local[mch][freqdset]['ap']
     freq_filename = cf_local[mch][freqdset]['filename']
-
+    if "sim_id" in cf[mch][freqdset]:
+        sim_id = cf[mch][freqdset]["sim_id"]
+    else:
+        sim_id = ""
     mappath = {
         FREQ:'{abs_path}{freq_filename}'
             .format(
                 abs_path = abs_path\
-                    .replace("{sim_id}", cf['pa']['sim_id'])\
+                    .replace("{sim_id}", sim_id)\
                     .replace("{split}", cf['pa']['freqdatsplit'] if "split" in cf[mch][freqdset] else ""),
                 freq_filename = freq_filename
                     .replace("{freq}", FREQ)
@@ -164,7 +167,7 @@ def load_plamap(cf_local, field):
                     .replace("{00/1}", "00" if int(FREQ)<100 else "01")
                     .replace("{even/half1}", "even" if int(FREQ)>=100 else "half1")
                     .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "half2")
-                    .replace("{sim_id}", cf['pa']['sim_id'])\
+                    .replace("{sim_id}", sim_id)\
                     .replace("{split}", cf['pa']['freqdatsplit'] if "split" in cf[mch][freqdset] else "")
                 )
             for FREQ in PLANCKMAPFREQ
