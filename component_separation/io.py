@@ -39,12 +39,10 @@ PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = cf["pa"]['nside']
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
-abs_path = cf[mch]['abs_path']
 freqdset = cf["pa"]['freqdset']
 PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
     if FREQ not in cf['pa']["freqfilter"]]
 
-indir_path = cf[mch]['indir']
 freqfilter = cf['pa']["freqfilter"]
 
 
@@ -53,10 +51,8 @@ def _multi(a, b):
 
 def read_pf(mask_path, mask_filename):
     return {FREQ: hp.read_map(
-        '{abs_path}{path}{mask_path}{mask_filename}'
+        '{mask_path}{mask_filename}'
         .format(
-            abs_path = abs_path,
-            path = indir_path,
             mask_path = mask_path,
             mask_filename = mask_filename
                 .replace("{freqdset}", freqdset)
@@ -68,10 +64,8 @@ def read_pf(mask_path, mask_filename):
 
 def read_single(mask_path, mask_filename):
     return hp.read_map(
-        '{abs_path}{path}{mask_path}{mask_filename}'
+        '{mask_path}{mask_filename}'
         .format(
-            abs_path = abs_path,
-            path = indir_path,
             mask_path = mask_path,
             mask_filename = mask_filename))
 
@@ -85,6 +79,7 @@ def make_filenamestring(cf_local, desc='scaled'):
     Returns:
         str: unique filename which may be used for spectra, weights, maps, etc..
     """    
+    spectrum_scale = cf['pa']["Spectrum_scale"]
     mskset = cf_local['pa']['mskset'] # smica or lens
     freqdset = cf_local['pa']['freqdset'] # DX12 or NERSC
     lmax = cf_local['pa']["lmax"]
@@ -94,7 +89,8 @@ def make_filenamestring(cf_local, desc='scaled'):
     smoothing_window = cf_local['pa']["smoothing_window"]
     max_polynom = cf_local['pa']["max_polynom"]
     if desc == 'raw':
-        return '{freqdset}-msk_{mskset}-lmax_{lmax}-lmaxmsk_{lmax_mask}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+        return '{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(
+            spectrum_scale = spectrum_scale,
             freqdset = freqdset,
             mskset = mskset,
             lmax = lmax,
@@ -103,7 +99,7 @@ def make_filenamestring(cf_local, desc='scaled'):
             freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
             split = "Full" if cf_local['pa']["freqdatsplit"] == "" else cf_local['pa']["freqdatsplit"])
     else:
-        return '{freqdset}-msk_{mskset}-lmax_{lmax}-lmaxmsk_{lmax_mask}-smoothing_{smoothing_window}_{max_polynom}-freqs_{freqs}_specs-{spec}_split-{split}.npy'.format(
+        return '{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{freqs}_{spec}_{split}.npy'.format(
             freqdset = freqdset,
             mskset = mskset,
             lmax = lmax,
@@ -177,7 +173,7 @@ def load_mask_per_freq(dg_to=1024):
     maskset = cf['pa']['mskset']
     freqfilter = cf['pa']["freqfilter"]
 
-    pmask_path = cf[mch][maskset]['pmask']["path"]
+    pmask_path = cf[mch][maskset]['pmask']["ap"]
     pmask_filename = cf[mch][maskset]['pmask']['filename']
     pmasks = [
         read_pf(pmask_path, a)
@@ -194,7 +190,7 @@ def load_mask_per_freq(dg_to=1024):
             if FREQ not in freqfilter
         }
     
-    tmask_path = cf[mch][maskset]['tmask']["path"]
+    tmask_path = cf[mch][maskset]['tmask']["ap"]
     tmask_filename = cf[mch][maskset]['tmask']['filename']
     tmask = read_pf(tmask_path, tmask_filename)
     tmask = {FREQ: hp.pixelfunc.ud_grade(tmask[FREQ], nside_out=dg_to)
@@ -206,7 +202,7 @@ def load_mask_per_freq(dg_to=1024):
 
 def load_one_mask_forallfreq(udgrade=False):
     maskset = cf['pa']['mskset']
-    pmask_path = cf[mch][maskset]['pmask']["path"]
+    pmask_path = cf[mch][maskset]['pmask']["ap"]
     pmask_filename = cf[mch][maskset]['pmask']['filename']
     print('loading mask {}'.format(pmask_filename))
     pmasks = [
@@ -216,7 +212,7 @@ def load_one_mask_forallfreq(udgrade=False):
             _multi,
             [a for a in pmasks])
 
-    tmask_path = cf[mch][maskset]['tmask']["path"]
+    tmask_path = cf[mch][maskset]['tmask']["ap"]
     tmask_filename = cf[mch][maskset]['tmask']['filename']
     tmask = read_single(tmask_path, tmask_filename)
     if udgrade:
@@ -270,7 +266,7 @@ def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, i
 
 @log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb}")
 @log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
-def load_beamf(freqcomb: List, abs_path: str = abs_path) -> Dict:
+def load_beamf(freqcomb: List) -> Dict:
     """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
     Args:
@@ -288,11 +284,9 @@ def load_beamf(freqcomb: List, abs_path: str = abs_path) -> Dict:
             beamf.update({
                 freqc: {
                     "HFI": fits.open(
-                        "{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        "{bf_path}{bf_filename}"
                         .format(
-                            abs_path = abs_path,
-                            indir_path = cf[mch]['indir'],
-                            bf_path = cf[mch]["beamf"]["HFI"]['path'],
+                            bf_path = cf[mch]["beamf"]["HFI"]['ap'],
                             bf_filename = cf[mch]["beamf"]["HFI"]['filename']
                                 .replace("{freq1}", freqs[0])
                                 .replace("{freq2}", freqs[1])
@@ -303,11 +297,9 @@ def load_beamf(freqcomb: List, abs_path: str = abs_path) -> Dict:
             beamf.update({
                 freqc: {
                     "HFI": fits.open(
-                        "{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        "{bf_path}{bf_filename}"
                         .format(
-                            abs_path = abs_path,
-                            indir_path = cf[mch]['indir'],
-                            bf_path = cf[mch]["beamf"]["HFI"]['path'],
+                            bf_path = cf[mch]["beamf"]["HFI"]['ap'],
                             bf_filename = cf[mch]["beamf"]["HFI"]['filename']
                                 .replace("{freq1}", freqs[1])
                                 .replace("{freq2}", freqs[1])
@@ -316,11 +308,9 @@ def load_beamf(freqcomb: List, abs_path: str = abs_path) -> Dict:
             })
             beamf[freqc].update({
                 "LFI": fits.open(
-                        "{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        "{bf_path}{bf_filename}"
                         .format(
-                            abs_path = abs_path,
-                            indir_path = cf[mch]['indir'],
-                            bf_path = cf[mch]["beamf"]["LFI"]['path'],
+                            bf_path = cf[mch]["beamf"]["LFI"]['ap'],
                             bf_filename = cf[mch]["beamf"]["LFI"]['filename']
                     ))
             })
@@ -328,10 +318,8 @@ def load_beamf(freqcomb: List, abs_path: str = abs_path) -> Dict:
              beamf.update({
                 freqc: {
                     "LFI": fits.open(
-                        "{abs_path}{indir_path}{bf_path}{bf_filename}"
+                        "{{bf_path}{bf_filename}"
                         .format(
-                            abs_path = abs_path,
-                            indir_path = cf[mch]['indir'],
                             bf_path = cf[mch]["beamf"]["LFI"]['path'],
                             bf_filename = cf[mch]["beamf"]["LFI"]['filename']
                     ))
@@ -375,35 +363,38 @@ def iff_make_dir(outpath_name):
 """
 
 if mch == "XPS":
-    
-    component_separation_path = 'project/component_separation/'
+    # import component_separation
+    # abs_path = component_separation.__file__[:-32]
+    # component_separation_path = 'project/component_separation/'
 
     total_filename = make_filenamestring(cf)
     total_filename_raw = make_filenamestring(cf, 'raw')
 
-    spec_path = cf[mch]['outdir_spectrum'] + cf['pa']["freqdset"] + "/"
-    iff_make_dir(spec_path)
+    out_spec_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
+    iff_make_dir(out_spec_path)
 
-    spec_unsc_path_name = spec_path + '_raw-' + total_filename_raw
+    spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
+    out_spec_unsc_path_name = out_spec_path + spec_unsc_filename
 
+    spec_sc_filename = "SPEC" + total_filename
+    spec_sc_path_name = out_spec_path + spec_sc_filename
 
-    spec_sc_filename = "-" + cf['pa']["Spectrum_scale"] + "-" + total_filename
-    spec_sc_path_name = spec_path + spec_sc_filename
-
-    weight_path = abs_path + component_separation_path + cf[mch]['outdir_weight'] + cf['pa']["freqdset"] + "/"
+    weight_path = cf[mch]['outdir_weight_ap'] + cf['pa']["freqdset"] + "/"
     iff_make_dir(weight_path)
 
-    weight_path_name = weight_path + "-" + cf['pa']["Tscale"] + "-" + total_filename
+    weight_path_name = weight_path + "WEIG_" + cf['pa']["Tscale"] + "_" + total_filename
 
+
+    # TODO check the following lines once we use smica
     buff = cf['pa']['freqdset']
     cf['pa']['freqdset'] = buff+'-diff'
     noise_filename = make_filenamestring(cf)
     noise_filename_raw = make_filenamestring(cf, 'raw')
-    noise_path = cf[mch]['outdir_spectrum'] + cf['pa']["freqdset"] + "/"
+    noise_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
 
     iff_make_dir(noise_path)
     noise_unsc_path_name = noise_path + '_raw-' + noise_filename
-    noise_sc_path_name = noise_path + "-" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
+    noise_sc_path_name = noise_path + "_" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
 
     cf['pa']['freqdset'] = buff
 

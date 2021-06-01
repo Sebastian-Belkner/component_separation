@@ -47,10 +47,13 @@ else:
     mch = "NERSC"
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
+    if FREQ not in cf['pa']["freqfilter"]]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
+PLANCKSPECTRUM_f = [SPEC for SPEC in PLANCKSPECTRUM
+    if SPEC not in cf['pa']["specfilter"]]
 
 num_sim = cf['pa']["num_sim"]
-indir_path = cf[mch]['indir']
 
 lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
@@ -90,7 +93,7 @@ def specsc2weights(spectrum, Tscale):
 def synmaps2average(fname):
     # Load all syn spectra
     def _synpath_name(i):
-        return io.spec_path + 'syn/scaled-{}_synmap-'.format(str(i)) + filename
+        return io.out_spec_path + 'syn/scaled-{}_synmap-'.format(str(i)) + filename
     spectrum = {
         i: io.load_spectrum(path_name=_synpath_name(i))
         for i in range(num_sim)}
@@ -133,8 +136,8 @@ def postprocess_spectrum(data, freqcomb, smoothing_window, max_polynom):
 
 
 if __name__ == '__main__':
-    filename_raw = io.make_filenamestring(cf, 'raw')
-    filename = io.make_filenamestring(cf)
+    filename_raw = io.total_filename_raw
+    filename = io.total_filename
     print(40*"$")
     print("Starting run with the following settings:")
     print(cf['pa'])
@@ -149,12 +152,12 @@ if __name__ == '__main__':
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
 
         spectrum = map2spec(data, tmask, pmask, csu.freqcomb)
-        io.save_data(spectrum, io.spec_unsc_path_name)
+        io.save_data(spectrum, io.out_spec_unsc_path_name)
     else:
-        spectrum = io.load_data(path_name=io.spec_unsc_path_name)
+        spectrum = io.load_data(path_name=io.out_spec_unsc_path_name)
 
     if spectrum is None:
-        print("couldn't find spectrum with given specifications at {}. Exiting..".format(io.spec_unsc_path_name))
+        print("couldn't find spectrum with given specifications at {}. Exiting..".format(io.out_spec_unsc_path_name))
         sys.exit()
 
     spectrum_scaled = postprocess_spectrum(spectrum, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])

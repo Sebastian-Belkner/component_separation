@@ -24,21 +24,6 @@ from typing import Dict, List, Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-LOGFILE = 'data/tmp/logging/messages.log'
-logger = logging.getLogger("")
-handler = logging.handlers.RotatingFileHandler(
-        LOGFILE, maxBytes=(1048576*5), backupCount=0
-)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
-logging.StreamHandler(sys.stdout)
-
-
-scratch = sys.argv[1]
-
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
@@ -124,6 +109,14 @@ if __name__ == '__main__':
             .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")\
             .replace("{even/odd/half1/half2}", "{odd/half2}")\
             .replace("{n_of_2}", "2of2")
+        
+        # scratch = sys.argv[1]
+        outpath_name = cf[mch]["outdir_map_ap"]
+        
+        if path.exists(outpath_name):
+            pass
+        else:
+            os.makedirs(outpath_name)
 
         for FREQ in PLANCKMAPFREQ_f:
             freqf = [f for f in freqfilter if f != FREQ]
@@ -135,17 +128,6 @@ if __name__ == '__main__':
             cf[mch][freqdset]['filename'] = filename_2of2
             data_hm2 = io.load_plamap(cf, field=(0,1,2))
             data_diff = create_difference_map(data_hm1, data_hm2)
-
-
-            if mch=="NERSC":
-                outpath_name = scratch+"/" +cf[mch]["outdir_map"]
-            else:
-                outpath_name = cf[mch]["outdir_map_ap"]
-            
-            if path.exists(outpath_name):
-                pass
-            else:
-                os.makedirs(outpath_name)
 
             outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
                 .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
