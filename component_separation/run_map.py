@@ -133,7 +133,8 @@ if __name__ == '__main__':
                 .replace("{freq}", FREQ)\
                 .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
                 .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
-                .replace("{split}", freqdatsplit)
+                .replace("{split}", freqdatsplit)\
+                .replace("{sim_id}", sim_id)
             io.save_map(data_diff[FREQ], outpathfile_name)
             del data_diff
 
