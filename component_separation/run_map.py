@@ -136,7 +136,7 @@ if __name__ == '__main__':
             data_hm2 = io.load_plamap(cf, field=(0,1,2))
             data_diff = create_difference_map(data_hm1, data_hm2)
 
-            outpath_name = scratch+"/" + #cf[mch]["outdir_map_ap"]
+            outpath_name = scratch+"/" # +cf[mch]["outdir_map_ap"]
             # if path.exists(outpath_name):
             #     pass
             # else:
