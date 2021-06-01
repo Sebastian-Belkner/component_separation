@@ -372,42 +372,40 @@ def iff_make_dir(outpath_name):
 """The following lines define naming conventions for the files and directories
 """
 
-if mch == "XPS":
-    # import component_separation
-    # abs_path = component_separation.__file__[:-32]
-    # component_separation_path = 'project/component_separation/'
 
-    total_filename = make_filenamestring(cf)
-    total_filename_raw = make_filenamestring(cf, 'raw')
+# import component_separation
+# abs_path = component_separation.__file__[:-32]
+# component_separation_path = 'project/component_separation/'
 
-    out_spec_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
-    iff_make_dir(out_spec_path)
+total_filename = make_filenamestring(cf)
+total_filename_raw = make_filenamestring(cf, 'raw')
 
-    spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
-    out_spec_unsc_path_name = out_spec_path + spec_unsc_filename
-    out_spec_unsc_path_name = out_spec_unsc_path_name
+out_spec_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(out_spec_path)
 
-    spec_sc_filename = "SPEC" + total_filename
-    spec_sc_path_name = out_spec_path + spec_sc_filename
+spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
+out_spec_unsc_path_name = out_spec_path + spec_unsc_filename
+out_spec_unsc_path_name = out_spec_unsc_path_name
 
-    weight_path = cf[mch]['outdir_weight_ap'] + cf['pa']["freqdset"] + "/"
-    iff_make_dir(weight_path)
+spec_sc_filename = "SPEC" + total_filename
+spec_sc_path_name = out_spec_path + spec_sc_filename
 
-    weight_path_name = weight_path + "WEIG_" + cf['pa']["Tscale"] + "_" + total_filename
+weight_path = cf[mch]['outdir_weight_ap'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(weight_path)
+
+weight_path_name = weight_path + "WEIG_" + cf['pa']["Tscale"] + "_" + total_filename
 
 
-    # TODO check the following lines once we use smica
-    buff = cf['pa']['freqdset']
-    cf['pa']['freqdset'] = buff+'-diff'
-    noise_filename = make_filenamestring(cf)
-    noise_filename_raw = make_filenamestring(cf, 'raw')
-    noise_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
+# TODO check the following lines once we use smica
+buff = cf['pa']['freqdset']
+cf['pa']['freqdset'] = buff+'-diff'
+noise_filename = make_filenamestring(cf)
+noise_filename_raw = make_filenamestring(cf, 'raw')
+noise_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
 
-    iff_make_dir(noise_path)
-    noise_unsc_path_name = noise_path + '_raw-' + noise_filename
-    noise_sc_path_name = noise_path + "_" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
+iff_make_dir(noise_path)
+noise_unsc_path_name = noise_path + '_raw-' + noise_filename
+noise_sc_path_name = noise_path + "_" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
 
-    cf['pa']['freqdset'] = buff
+cf['pa']['freqdset'] = buff
 
-elif mch == "NERSC":
-    pass
