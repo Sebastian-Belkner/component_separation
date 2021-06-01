@@ -397,15 +397,15 @@ weight_path_name = weight_path + "WEIG_" + cf['pa']["Tscale"] + "_" + total_file
 
 
 # TODO check the following lines once we use smica
-buff = cf['pa']['freqdset']
-cf['pa']['freqdset'] = buff+'-diff'
-noise_filename = make_filenamestring(cf)
-noise_filename_raw = make_filenamestring(cf, 'raw')
-noise_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
+# buff = cf['pa']['freqdset']
+# cf['pa']['freqdset'] = buff+'-diff'
+# noise_filename = make_filenamestring(cf)
+# noise_filename_raw = make_filenamestring(cf, 'raw')
+# noise_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
 
-iff_make_dir(noise_path)
-noise_unsc_path_name = noise_path + '_raw-' + noise_filename
-noise_sc_path_name = noise_path + "_" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
+# iff_make_dir(noise_path)
+# noise_unsc_path_name = noise_path + '_raw-' + noise_filename
+# noise_sc_path_name = noise_path + "_" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
 
-cf['pa']['freqdset'] = buff
+# cf['pa']['freqdset'] = buff
 
