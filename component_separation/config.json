@@ -34,14 +34,14 @@
     ]
 },
 "NERSC":{
-    "powspec_truthfile": "/global/homes/sebibel/git/component_separation/data/powspecplanck.txt",
+    "powspec_truthfile": "/global/homes/s/sebibel/git/component_separation/data/powspecplanck.txt",
     "beamf":{
         "HFI": {     
-            "ap": "/global/homes/sebibel/data/beamf/",
+            "ap": "/global/homes/s/sebibel/data/beamf/",
             "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
         },
         "LFI": {     
-            "ap": "/global/homes/sebibel/data/beamf/",
+            "ap": "/global/homes/s/sebibel/data/beamf/",
             "filename": "LFI_RIMO_R3.31.fits"
         }
     },
@@ -78,11 +78,11 @@
     },
     "lens":{
         "tmask":{
-            "ap": "/global/homes/sebibel/data/mask/",
+            "ap": "/global/homes/s/sebibel/data/mask/",
             "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
-            "ap": "/global/homes/sebibel/data/mask/",
+            "ap": "/global/homes/s/sebibel/data/mask/",
             "filename": [
                 "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             ]
@@ -90,11 +90,11 @@
         },
     "smica":{
         "tmask":{
-            "ap": "/global/homes/sebibel/data/mask/",
+            "ap": "/global/homes/s/sebibel/data/mask/",
             "filename": "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             },
         "pmask":{
-            "ap": "/global/homes/sebibel/data/mask/",
+            "ap": "/global/homes/s/sebibel/data/mask/",
             "filename": [
                 "psmaskP_2048.fits.gz",
                 "gmaskP_apodized_0_2048.fits.gz"
