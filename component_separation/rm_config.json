@@ -43,9 +43,9 @@
             ""
         ]
     },
-    "outdir_ap": "/global/u2/s/sebibel/tmp/",
-    "outdir_map_ap": "/global/u2/s/sebibel/tmp/map/frequency/",
-    "outdir_mask_ap": "/global/u2/s/sebibel/tmp/mask/frequency/",
+    "outdir_ap": "/global/homes/sebibel/data/tmp/",
+    "outdir_map_ap": "/global/homes/sebibel/data/tmp/map/frequency/",
+    "outdir_mask_ap": "/global/homes/sebibel/data/tmp/mask/frequency/",
     "outdir_map": "map/frequency/",
     "outdir_mask": "mask/frequency/"
     },
