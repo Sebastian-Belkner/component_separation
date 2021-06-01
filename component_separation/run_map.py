@@ -25,6 +25,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+LOGFILE = 'data/tmp/logging/messages.log'
+logger = logging.getLogger("")
+handler = logging.handlers.RotatingFileHandler(
+        LOGFILE, maxBytes=(1048576*5), backupCount=0
+)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+logging.StreamHandler(sys.stdout)
+
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
