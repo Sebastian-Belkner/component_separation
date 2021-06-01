@@ -92,10 +92,11 @@ def specsc2weights(spectrum, Tscale):
 
 def synmaps2average(fname):
     # Load all syn spectra
+    # TODO check if its right
     def _synpath_name(i):
         return io.out_spec_path + 'syn/scaled-{}_synmap-'.format(str(i)) + filename
     spectrum = {
-        i: io.load_spectrum(path_name=_synpath_name(i))
+        i: io.load_data(path_name=_synpath_name(i))
         for i in range(num_sim)}
 
     # sum all syn spectra

@@ -88,8 +88,13 @@ def make_filenamestring(cf_local, desc='scaled'):
     specfilter = cf_local['pa']["specfilter"]
     smoothing_window = cf_local['pa']["smoothing_window"]
     max_polynom = cf_local['pa']["max_polynom"]
+    if "sim_id" in cf[mch][freqdset]:
+        sim_id = cf[mch][freqdset]["sim_id"]
+    else:
+        sim_id = ""
     if desc == 'raw':
-        return '{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(
+        return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(
+            sim_id = sim_id,
             spectrum_scale = spectrum_scale,
             freqdset = freqdset,
             mskset = mskset,
@@ -99,7 +104,8 @@ def make_filenamestring(cf_local, desc='scaled'):
             freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
             split = "Full" if cf_local['pa']["freqdatsplit"] == "" else cf_local['pa']["freqdatsplit"])
     else:
-        return '{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{freqs}_{spec}_{split}.npy'.format(
+        return '{sim_id}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{freqs}_{spec}_{split}.npy'.format(
+            sim_id = sim_id,
             freqdset = freqdset,
             mskset = mskset,
             lmax = lmax,
@@ -148,7 +154,9 @@ def load_plamap(cf_local, field):
     mappath = {
         FREQ:'{abs_path}{freq_filename}'
             .format(
-                abs_path = abs_path,
+                abs_path = abs_path\
+                    .replace("{sim_id}", cf['pa']['sim_id'])\
+                    .replace("{split}", cf['pa']['freqdatsplit'] if "split" in cf[mch][freqdset] else ""),
                 freq_filename = freq_filename
                     .replace("{freq}", FREQ)
                     .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
@@ -156,6 +164,8 @@ def load_plamap(cf_local, field):
                     .replace("{00/1}", "00" if int(FREQ)<100 else "01")
                     .replace("{even/half1}", "even" if int(FREQ)>=100 else "half1")
                     .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "half2")
+                    .replace("{sim_id}", cf['pa']['sim_id'])\
+                    .replace("{split}", cf['pa']['freqdatsplit'] if "split" in cf[mch][freqdset] else "")
                 )
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter}
@@ -375,6 +385,7 @@ if mch == "XPS":
 
     spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
     out_spec_unsc_path_name = out_spec_path + spec_unsc_filename
+    out_spec_unsc_path_name = out_spec_unsc_path_name
 
     spec_sc_filename = "SPEC" + total_filename
     spec_sc_path_name = out_spec_path + spec_sc_filename

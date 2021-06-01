@@ -3,7 +3,7 @@
     "new_spectrum": true,
     "Tscale": "K_CMB",
     "mskset": "lens",
-    "freqdset": "DX12_diff",
+    "freqdset": "NPIPE_sim_diff",
     "Spectrum_scale": "C_l",
     "lmax": 30,
     "lmax_mask": 60,
