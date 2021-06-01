@@ -36,6 +36,9 @@ logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 logging.StreamHandler(sys.stdout)
 
+
+scratch = sys.argv[1]
+
 import component_separation.io as io
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
@@ -133,11 +136,11 @@ if __name__ == '__main__':
             data_hm2 = io.load_plamap(cf, field=(0,1,2))
             data_diff = create_difference_map(data_hm1, data_hm2)
 
-            outpath_name = cf[mch]["outdir_map_ap"]
-            if path.exists(outpath_name):
-                pass
-            else:
-                os.makedirs(outpath_name)
+            outpath_name = scratch+"/" + #cf[mch]["outdir_map_ap"]
+            # if path.exists(outpath_name):
+            #     pass
+            # else:
+            #     os.makedirs(outpath_name)
 
             outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
                 .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
