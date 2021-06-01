@@ -1,6 +1,8 @@
 #!/usr/local/bin/python
 """
-run_map.py: script for generating maps
+run_map.py: script for generating empiric noisemaps or masks, which are based on maps.
+Input are maps, input directory to be specified in the `rm_config.json`
+output are maps or masks. output directory to be specified in `rm_config.json`
 
 """
 
@@ -30,7 +32,7 @@ import component_separation.preprocess as prep
 from component_separation.cs_util import Planckf, Plancks
 
 import component_separation
-with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/rm_config.json', "r") as f:
     cf = json.load(f)
 
 
@@ -45,15 +47,9 @@ PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
                     if FREQ not in cf['pa']["freqfilter"]]
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
-num_sim = cf['pa']["num_sim"]
-
-spec_path = cf[mch]['outdir_spectrum']
 map_path = cf[mch]['outdir_map']
 mask_path = cf[mch]['outdir_mask']
-indir_path = cf[mch]['indir']
 
-lmax = cf['pa']["lmax"]
-lmax_mask = cf['pa']["lmax_mask"]
 
 def create_difference_map(data_hm1, data_hm2):
     def _difference(data1, data2):
@@ -75,6 +71,9 @@ if __name__ == '__main__':
     empiric_noisemap = True
     make_mask = False
 
+    freqdset = cf['pa']["freqdset"]
+    buff = cf[mch][freqdset]['filename']
+
 
     if empiric_noisemap:
         """This routine loads the even-odd planck maps, takes the half-difference and
@@ -91,38 +90,51 @@ if __name__ == '__main__':
                 '545',
                 '857',
             ]
+
+        if "sim_id" in cf[mch][freqdset]:
+                sim_id = cf[mch][freqdset]["sim_id"]
+        else:
+            sim_id = ""
+
+        freqdatsplit = cf['pa']["freqdatsplit"]
+        cf[mch][freqdset]['ap'] = cf[mch][freqdset]['ap']\
+                .replace("{sim_id}", sim_id)\
+                .replace("{split}", freqdatsplit if "split" in cf[mch][freqdset] else "")
+        
+        filename_1of2 = buff\
+            .replace("{split}", freqdatsplit if "split" in cf[mch][freqdset] else "")\
+            .replace("{even/odd/half1/half2}", "{even/half1}")\
+            .replace("{n_of_2}", "1of2")
+
+        filename_2of2 = cf[mch][freqdset]['filename'] = buff\
+            .replace("{split}", cf['pa']["freqdatsplit"] if "split" in cf[mch][freqdset] else "")\
+            .replace("{even/odd/half1/half2}", "{odd/half2}")\
+            .replace("{n_of_2}", "2of2")
+
         for FREQ in PLANCKMAPFREQ_f:
             freqf = [f for f in freqfilter if f != FREQ]
             cf['pa']["freqfilter"] = freqf
-            cf['pa']["freqdset"] = "NPIPE-diff"
             
-            freqdset = cf['pa']["freqdset"]
-            freqdatsplit = cf['pa']["freqdatsplit"]
-            sim_id = cf[mch][freqdset]["sim_id"]
+            cf[mch][freqdset]['filename'] = filename_1of2
+            data_hm1 = io.load_plamap(cf, field=(0,1,2))
 
-            inpath_name = cf[mch][freqdset]["path"]\
-                .replace("{split}", freqdatsplit)\
-                .replace("{sim_id}", sim_id)
-            
-            data_hm1 = io.load_plamap(cf, field=(0,1,2), split_desc="1")
-            # cf['pa']["freqdset"] = "DX12-split2"
-            data_hm2 = io.load_plamap(cf, field=(0,1,2), split_desc="2")
+            cf[mch][freqdset]['filename'] = filename_2of2
+            data_hm2 = io.load_plamap(cf, field=(0,1,2))
             data_diff = create_difference_map(data_hm1, data_hm2)
 
-
-            outpath_name = cf[mch]["outdir_map"]
-
+            outpath_name = cf[mch]["outdir_map_ap"]
             if path.exists(outpath_name):
                 pass
             else:
                 os.makedirs(outpath_name)
-            pathfile_name = outpath_name+cf[mch][freqdset]["outfilename"]\
+
+            outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
                 .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
                 .replace("{freq}", FREQ)\
                 .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
                 .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
                 .replace("{split}", freqdatsplit)
-            io.save_map(data_diff[FREQ], pathfile_name)
+            io.save_map(data_diff[FREQ], outpathfile_name)
             del data_diff
 
     if make_mask:

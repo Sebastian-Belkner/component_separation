@@ -2,6 +2,15 @@
 """
 run_powerspectrum.py: script for executing main functionality of component_separation
 
+
+Do in the following order:
+    0. get jupyter fixed - otherwise running jobs on nersc will be tough
+    1. create difference spectra using npipe-diff - for the noise spectra (smica input)
+    2. create spectra from npipe-sim - for the full spectra (smica input)
+    3. call smica with the above to get smica-cmb-powerspectrum
+    4. transform smica-cmb-powerspectrum into map?
+    5. get cmb only map from npipe simulation, where?
+    6. determine crosscorrelation between (4.) and (5.)
 """
 
 __author__ = "S. Belkner"
