@@ -5,4 +5,4 @@
 #SBATCH --tasks-per-node=32
 #SBATCH --constraint=haswell
 
-python3 component_separation/run_maps.py
+python3 run_map.py
