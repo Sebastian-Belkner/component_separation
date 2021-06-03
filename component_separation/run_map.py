@@ -10,13 +10,12 @@ __author__ = "S. Belkner"
 
 
 import json
-import logging
 import os.path
 from os import path
 import logging.handlers
 import os
 import platform
-import sys
+
 from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
@@ -72,7 +71,6 @@ if __name__ == '__main__':
 
     freqdset = cf['pa']["freqdset"]
     buff = cf[mch][freqdset]['filename']
-
 
     if empiric_noisemap:
         """This routine loads the even-odd planck maps, takes the half-difference and

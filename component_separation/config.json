@@ -1,12 +1,12 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "Tscale": "K_CMB",
     "mskset": "lens",
-    "freqdset": "NPIPE_sim_diff",
+    "freqdset": "NPIPE_sim",
     "Spectrum_scale": "C_l",
-    "lmax": 30,
-    "lmax_mask": 60,
+    "lmax": 3000,
+    "lmax_mask": 6000,
     "freqdatsplit": "",
     "run_sim": false,
     "smoothing_window": 0,
@@ -14,10 +14,6 @@
     "num_sim": 5,
 
     "freqfilter": [
-        "030",
-        "044",
-        "070",
-        "100",
         "545",
         "857"
     ],

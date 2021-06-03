@@ -150,8 +150,8 @@ def load_plamap(cf_local, field):
 
     abs_path = cf_local[mch][freqdset]['ap']
     freq_filename = cf_local[mch][freqdset]['filename']
-    if "sim_id" in cf[mch][freqdset]:
-        sim_id = cf[mch][freqdset]["sim_id"]
+    if "sim_id" in cf_local[mch][freqdset]:
+        sim_id = cf_local[mch][freqdset]["sim_id"]
     else:
         sim_id = ""
     mappath = {
@@ -159,7 +159,7 @@ def load_plamap(cf_local, field):
             .format(
                 abs_path = abs_path\
                     .replace("{sim_id}", sim_id)\
-                    .replace("{split}", cf['pa']['freqdatsplit'] if "split" in cf[mch][freqdset] else ""),
+                    .replace("{split}", cf_local['pa']['freqdatsplit'] if "split" in cf_local[mch][freqdset] else ""),
                 freq_filename = freq_filename
                     .replace("{freq}", FREQ)
                     .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
@@ -168,7 +168,7 @@ def load_plamap(cf_local, field):
                     .replace("{even/half1}", "even" if int(FREQ)>=100 else "half1")
                     .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "half2")
                     .replace("{sim_id}", sim_id)\
-                    .replace("{split}", cf['pa']['freqdatsplit'] if "split" in cf[mch][freqdset] else "")
+                    .replace("{split}", cf_local['pa']['freqdatsplit'] if "split" in cf_local[mch][freqdset] else "")
                 )
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter}
@@ -331,9 +331,9 @@ def load_beamf(freqcomb: List) -> Dict:
              beamf.update({
                 freqc: {
                     "LFI": fits.open(
-                        "{{bf_path}{bf_filename}"
+                        "{bf_path}{bf_filename}"
                         .format(
-                            bf_path = cf[mch]["beamf"]["LFI"]['path'],
+                            bf_path = cf[mch]["beamf"]["LFI"]['ap'],
                             bf_filename = cf[mch]["beamf"]["LFI"]['filename']
                     ))
                 }})
@@ -399,16 +399,23 @@ iff_make_dir(weight_path)
 weight_path_name = weight_path + "WEIG_" + cf['pa']["Tscale"] + "_" + total_filename
 
 
-# TODO check the following lines once we use smica
-# buff = cf['pa']['freqdset']
-# cf['pa']['freqdset'] = buff+'-diff'
-# noise_filename = make_filenamestring(cf)
-# noise_filename_raw = make_filenamestring(cf, 'raw')
-# noise_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
+import copy
+cf_copy = copy.deepcopy(cf)
 
-# iff_make_dir(noise_path)
-# noise_unsc_path_name = noise_path + '_raw-' + noise_filename
-# noise_sc_path_name = noise_path + "_" + cf['pa']["Spectrum_scale"] + "-" + noise_filename
 
-# cf['pa']['freqdset'] = buff
+### the following lines are only needed for run_smica part of the code
+buff = cf['pa']['freqdset']
+if "diff" in buff:
+    pass
+else:
+    cf_copy['pa']['freqdset'] = buff+'_diff'
+noise_filename = make_filenamestring(cf_copy)
+noise_filename_raw = make_filenamestring(cf_copy, 'raw')
+noise_path = cf_copy[mch]['outdir_spectrum_ap'] + cf_copy['pa']["freqdset"] + "/"
+
+iff_make_dir(noise_path)
+noise_unsc_path_name = noise_path + 'SPEC-RAW_' + noise_filename_raw
+noise_sc_path_name = noise_path + "SPEC" + noise_filename
+
+cf_copy['pa']['freqdset'] = buff
 
