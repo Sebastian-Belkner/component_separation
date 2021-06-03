@@ -285,13 +285,11 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
 
 def calc_transferfunction():
-    emp_map = load_plamap(cf, field=(0,1,2))
-    # print(emp_map.shape, type(emp_map))
-    syn_map = io.synmap_sc_path_name
-    # print(syn_map.shape, type(syn_map))
-    print(syn_map)
+    emp_map = io.load_plamap(cf, field=(0,1,2))
+    syn_map = io.load_data(io.synmap_sc_path_name+'_0')
     tf = np.cov(emp_map['100'], syn_map['100'])
     print(tf)
+    io.save_data(tf, cf[mch]['outdir_ap']+"inout_cov.npy")
 
 
 if __name__ == '__main__':
