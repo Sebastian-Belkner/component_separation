@@ -284,11 +284,33 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     return model
 
 
-def calc_transferfunction():
-    emp_map = io.load_plamap(cf, field=(0,1,2))
-    syn_map = io.load_data(io.synmap_sc_path_name+'_0')
-    tf = np.cov(emp_map, syn_map)
+def calc_transferfunction(smica_cmb):
+    # emp_map = io.load_plamap(cf, field=(0,1,2))
+    # Tsyn_map, Psyn_map, Psyn_map = io.load_data(io.synmap_sc_path_name+'_0.npy')
+    import healpy as hp
+    ## either this, and use synfast for the smica output?
+    C_lin = hp.read_map("/global/cfs/cdirs/cmb/data/planck2018/pr3/cmbmaps/dx12_v3_smica_cmb_raw.fits", field=0)
+
+    # or load cmb sim map for each frequency and combine using mv,
+    # 
+    # 
+    C_lin_all = [hp.read_map("<path_to_sim_cmb_cls>{}".format(freq)) for freq in PLANCKMAPFREQ_f]
+    cov_lin_all = pw.build_covmatrices(C_lin_all, lmax, freqfilter, specfilter)
+    icov_lin_all = pw.invert_covmatrices(cov_lin_all)
+    spec_pick = "EE"
+    def _weightspec(icov_l):
+        for specc, data in icov_l.items():
+            if specc == spec_pick:
+                icovsum = np.array([np.sum(icov_l[specc][l]) for l in range(lmax)])
+                retspec = {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
+        return retspec
+    c_lin_mv = _weightspec(icov_lin_all)
+    
+    # now, calculate transferfunction from c_lin_mv to smica_cmb
+    tf = np.cov(smica_cmb, c_lin_mv)
     print(tf)
+    # perhaps, use eq (9) from diffuse comp sep paper
+    # tf = 1/(beamf * pixwindow) * sqrt(mean(c_lin_mv/smica_cmb))
     io.save_data(tf, cf[mch]['outdir_ap']+"inout_cov.npy")
 
 
@@ -333,7 +355,7 @@ if __name__ == '__main__':
     # io.save_data(weights, io.weight_path_name)
     cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
 
-    transferfunction = calc_transferfunction()
+    # transferfunction = calc_transferfunction()
 
     """
     Here starts the SMICA part
@@ -367,3 +389,4 @@ if __name__ == '__main__':
     
     ### Now, compare smica_cmb with input_cmb
 
+    tf = calc_transferfunction(smica_model.get_comp_by_name('cmb').powspec())

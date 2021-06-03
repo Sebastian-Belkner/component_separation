@@ -389,7 +389,7 @@ map_sc_path_name = out_map_path + map_sc_filename
 
 out_synmap_path = cf[mch]['outdir_map_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(out_synmap_path)
-synmap_sc_filename = "SYNMAP" + cf[mch][freqdset]['sim_id'] + "_" + total_filename
+synmap_sc_filename = "SYNMAP" + total_filename
 synmap_sc_path_name = out_synmap_path + synmap_sc_filename
 
 
