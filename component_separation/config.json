@@ -8,7 +8,6 @@
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
-    "run_sim": false,
     "smoothing_window": 0,
     "max_polynom": 0,
     "num_sim": 5,
@@ -128,7 +127,7 @@
     },
     "NPIPE_sim":{
         "sim_id": "0200"
-    },
+        },
     "lens":{
         "tmask":{
             "ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/mask/",

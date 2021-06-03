@@ -171,13 +171,12 @@ def qupowerspec(qumap: List[Dict[str, Dict]], lmax: int, lmax_mask: int, freqcom
 
 
 def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[str], specfilter: List[str]) -> List[Dict[str, Dict]]:
-    indir_path = cf[mch]['indir']
     mskset = cf['pa']['mskset'] # smica or lens
     freqfilter = cf['pa']["freqfilter"]
     specfilter = cf['pa']["specfilter"]
 
-    tmask_path = cf[mch][mskset]['tmask']["path"]
-    pmask_path = cf[mch][mskset]['pmask']["path"]
+    tmask_ap = cf[mch][mskset]['tmask']["ap"]
+    pmask_ap = cf[mch][mskset]['pmask']["ap"]
 
     tmask_filename = cf[mch][mskset]['tmask']['filename']
     pmask_filename = cf[mch][mskset]['pmask']['filename']
@@ -201,10 +200,9 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
         tmask_d = None
     else:
         tmask = hp.read_map(
-            '{path}{tmask_path}{tmask_filename}'
+            '{abs_path}{tmask_filename}'
             .format(
-                path = indir_path,
-                tmask_path = tmask_path,
+                abs_path = tmask_ap,
                 tmask_filename = tmask_filename), field=0, dtype=np.bool)
         # tmask = np.array([True for t in tmask])
         tmask_d = hp.pixelfunc.ud_grade(tmask, nside_out=nside[0])
@@ -212,10 +210,9 @@ def create_synmap(spectrum: Dict[str, Dict], cf: Dict, mch: str, freqcomb: List[
     def multi(a,b):
         return a*b
     pmasks = [hp.read_map(
-        '{path}{pmask_path}{pmask_filename}'
+        '{abs_path}{pmask_filename}'
         .format(
-            path = indir_path,
-            pmask_path = pmask_path,
+            abs_path = pmask_ap,
             pmask_filename = a), dtype=np.bool) for a in pmask_filename]
     pmask = functools.reduce(multi, pmasks)
     # pmask = np.array([True for p in pmask])

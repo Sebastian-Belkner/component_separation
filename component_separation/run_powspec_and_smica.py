@@ -284,7 +284,11 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     return model
 
 
-def calc_transferfunction(map_in, cov_out):
+def calc_transferfunction():
+    emp_map = io.load_plamap(cf, field=(0,1,2))
+    syn_map = io.synmap_sc_path_name
+    tf = np.cov(emp_map, syn_map)
+    print(tf)
 
 
 
@@ -330,7 +334,8 @@ if __name__ == '__main__':
     # io.save_data(weights, io.weight_path_name)
     cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
 
-    transferfunction = calc_transferfunction(data, cov_ltot)
+    transferfunction = calc_transferfunction()
+
     """
     Here starts the SMICA part
     """
@@ -359,7 +364,6 @@ if __name__ == '__main__':
         qmax=len(nmodes),
         no_starting_point=False)
 
-    smica_model.
 
     
     ### Now, compare smica_cmb with input_cmb

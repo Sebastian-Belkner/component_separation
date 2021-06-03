@@ -42,9 +42,6 @@ freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
 
-with open('config.json', "r") as f:
-    cf = json.load(f)
-
 if __name__ == '__main__':
     freqcomb =  [
         "{}-{}".format(FREQ,FREQ2)
@@ -54,14 +51,12 @@ if __name__ == '__main__':
             if (FREQ2 not in freqfilter) and (int(FREQ2)==int(FREQ))]
 
     start = 0
-    if cf['pa']["run_sim"]:
-        for i in range(start, num_sim):
-            print("Starting simulation {} of {}.".format(i+1, num_sim))
-            C_ltot = io.load_data(path_name=io.spec_sc_path_name)
-            tmask, pmask, pmask = io.load_one_mask_forallfreq()
-            syn_map = pw.create_synmap(C_ltot, cf, mch, freqcomb, specfilter) 
-
-            io.save_data(syn_map, io.spec_sc_path_name+"_syn-"+str(i))
+    C_ltot = io.load_data(path_name=io.spec_sc_path_name)
+    tmask, pmask, pmask = io.load_one_mask_forallfreq()
+    for i in range(start, num_sim):
+        print("Starting simulation {} of {}.".format(i+1, num_sim))
+        syn_map = pw.create_synmap(C_ltot, cf, mch, freqcomb, specfilter) 
+        io.save_data(syn_map, io.synmap_sc_path_name)
 
         #     syn_spectrum = pw.tqupowerspec(syn_map, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
         #     io.save_data(syn_spectrum, io.out_spec_pathspec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
