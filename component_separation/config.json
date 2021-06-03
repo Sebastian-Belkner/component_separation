@@ -123,6 +123,12 @@
         "ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/map/frequency/",
         "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"
     },
+    "NPIPE_sim_diff":{
+        "sim_id": "0200"
+    },
+    "NPIPE_sim":{
+        "sim_id": "0200"
+    },
     "lens":{
         "tmask":{
             "ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/mask/",
@@ -149,9 +155,9 @@
             }
         },
     "outdir_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/",
-    "outdir_spectrum_ap": "data/tmp/spectrum/",
-    "outdir_weight_ap": "data/tmp/weights/",
-    "outdir_map_ap": "data/tmp/map/frequency/",
-    "outdir_mask_ap": "data/tmp/mask/frequency/"
+    "outdir_spectrum_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/spectrum/",
+    "outdir_weight_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/weights/",
+    "outdir_map_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/map/frequency/",
+    "outdir_mask_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/mask/frequency/"
     }
 }

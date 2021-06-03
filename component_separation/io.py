@@ -375,16 +375,23 @@ def iff_make_dir(outpath_name):
 """The following lines define naming conventions for the files and directories
 """
 
-
-# import component_separation
-# abs_path = component_separation.__file__[:-32]
-# component_separation_path = 'project/component_separation/'
-
 total_filename = make_filenamestring(cf)
 total_filename_raw = make_filenamestring(cf, 'raw')
 
 out_spec_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(out_spec_path)
+
+out_map_path = cf[mch]['outdir_map_ap'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(out_map_path)
+map_sc_filename = "MAP" + total_filename
+map_sc_path_name = out_map_path + map_sc_filename
+
+
+out_synmap_path = cf[mch]['outdir_map_ap'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(out_synmap_path)
+synmap_sc_filename = "SYNMAP" + cf[mch][freqdset]['sim_id'] + total_filename
+synmap_sc_path_name = out_synmap_path + map_sc_filename
+
 
 spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
 out_spec_unsc_path_name = out_spec_path + spec_unsc_filename

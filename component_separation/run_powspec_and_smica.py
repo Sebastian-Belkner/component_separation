@@ -284,6 +284,10 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     return model
 
 
+def calc_transferfunction(map_in, cov_out):
+
+
+
 
 if __name__ == '__main__':
     filename_raw = io.total_filename_raw
@@ -324,18 +328,22 @@ if __name__ == '__main__':
 
     # weights = specsc2weights(C_ltot, cf['pa']["Tscale"])
     # io.save_data(weights, io.weight_path_name)
+    cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
+
+    transferfunction = calc_transferfunction(data, cov_ltot)
+    """
+    Here starts the SMICA part
+    """
 
     bins = const.SMICA_lowell_bins
     offset = 0
     nmodes = calc_nmodes(bins, pmask)
-    cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
     cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
 
 
     # %%
     smica_model, gal, cov_lN_bnd, C_lS_bnd = build_smica_model(cov_ltot_bnd.shape[0], len(nmodes), C_lN)
 
-    print(cov_lN_bnd.shape)
 
     # %%
     fit_model_to_cov(
@@ -350,6 +358,8 @@ if __name__ == '__main__':
         logger=None,
         qmax=len(nmodes),
         no_starting_point=False)
+
+    smica_model.
 
     
     ### Now, compare smica_cmb with input_cmb

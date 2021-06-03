@@ -74,8 +74,7 @@ def plot_maps(fname):
 def plot_weights(fname):
     dc = dcf["plot"]["weights"]
     total_filename = io.make_filenamestring(dcf)
-    weight_path = cf[mch]['abs_path']+io.component_separation_path+cf[mch]['outdir_weight'] + dcf['pa']["freqdset"] + "/"
-    weight_path_name = weight_path + "-" + dcf['pa']["Tscale"] + "-" + total_filename
+    weight_path_name = io.weight_path_name
     weights = io.load_weights(weight_path_name, fname)
 
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
@@ -252,6 +251,7 @@ def plot_spectrum(fname):
         freqdset = freqdset,
         split = split)
     spec_data = io.load_data(io.spec_sc_path_name)
+    # print(spec_data)
     spectrum_truth = io.load_truthspectrum()
     spec_data = hpf.reorder_spectrum_dict(spec_data)
     for specc, data in spec_data.items():

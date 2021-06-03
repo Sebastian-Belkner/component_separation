@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 """
-synmaps.py: script for generating synthetic maps
+synmaps.py: script for generating synthetic maps from spectra
 
 """
 
@@ -13,9 +13,6 @@ import sys
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
-import matplotlib.pyplot as plt
-
-from functools import reduce
 import numpy as np
 
 import component_separation.io as io
@@ -34,15 +31,11 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-llp1 = cf['pa']["llp1"]
-bf = cf['pa']["bf"]
+import component_separation
+with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
+    cf = json.load(f)
 
 num_sim = cf['pa']["num_sim"]
-
-spec_path = cf[mch]['outdir']
-
-indir_path = cf[mch]['indir']
-
 lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
 freqfilter = cf['pa']["freqfilter"]
@@ -64,21 +57,21 @@ if __name__ == '__main__':
     if cf['pa']["run_sim"]:
         for i in range(start, num_sim):
             print("Starting simulation {} of {}.".format(i+1, num_sim))
-            path_name = spec_path + 'spectrum/unscaled' + filename
-            spectrum = io.load_spectrum(path_name=path_name)
+            C_ltot = io.load_data(path_name=io.spec_sc_path_name)
+            tmask, pmask, pmask = io.load_one_mask_forallfreq()
+            syn_map = pw.create_synmap(C_ltot, cf, mch, freqcomb, specfilter) 
 
-            synmap = spec2synmap(spectrum, freqcomb)
-            # io.save_map(synmap, spec_path, "syn/unscaled-"+str(i)+"_synmap-"+filename)
+            io.save_data(syn_map, io.spec_sc_path_name+"_syn-"+str(i))
 
-            syn_spectrum = map2spec(synmap, freqcomb)
-            io.save_spectrum(syn_spectrum, spec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
+        #     syn_spectrum = pw.tqupowerspec(syn_map, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+        #     io.save_data(syn_spectrum, io.out_spec_pathspec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
 
-            syn_spectrum_scaled = spec2specsc(syn_spectrum, freqcomb)
-            io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)
+        #     syn_spectrum_scaled = spec2specsc(syn_spectrum, freqcomb)
+        #     io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)
     
 
-        syn_spectrum_avgsc = synmaps2average(filename)
-        io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "synavg-"+ filename)
+        # syn_spectrum_avgsc = synmaps2average(filename)
+        # io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "synavg-"+ filename)
         
     # weights = specsc2weights(syn_spectrum_avg, False)
     # io.save_weights(weights, spec_path, "syn/"+"SYNweights"+filename)
