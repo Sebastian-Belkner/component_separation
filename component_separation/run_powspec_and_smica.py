@@ -284,10 +284,13 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     return model
 
 
-def calc_transferfunction():
-    emp_map = io.load_plamap(cf, field=(0,1,2))
-    syn_map = io.load_data(io.synmap_sc_path_name+'_0')
-    tf = np.cov(emp_map['100'], syn_map['100'])
+def calc_transferfunction(smica_cmb):
+    # emp_map = io.load_plamap(cf, field=(0,1,2))
+    # Tsyn_map, Psyn_map, Psyn_map = io.load_data(io.synmap_sc_path_name+'_0.npy')
+    import healpy as hp
+    C_lin = hp.read_map("/global/cfs/cdirs/cmb/data/planck2018/pr3/cmbmaps/dx12_v3_smica_cmb_raw.fits", field=0)
+    print(C_lin)
+    tf = np.cov(smica_cmb, C_lin)
     print(tf)
     io.save_data(tf, cf[mch]['outdir_ap']+"inout_cov.npy")
 
@@ -364,6 +367,5 @@ if __name__ == '__main__':
         no_starting_point=False)
 
 
-    
     ### Now, compare smica_cmb with input_cmb
-
+    tf = calc_transferfunction(smica_model.get_comp_by_name('cmb').powspec())
