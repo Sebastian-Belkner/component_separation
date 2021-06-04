@@ -4,6 +4,5 @@
 #SBATCH --time=5
 
 module load python
-module load 
 source activate myenv
 python hello-world.py

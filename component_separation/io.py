@@ -389,7 +389,7 @@ map_sc_path_name = out_map_path + map_sc_filename
 
 out_synmap_path = cf[mch]['outdir_map_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(out_synmap_path)
-synmap_sc_filename = "SYNMAP" + cf[mch][freqdset]['sim_id'] + "_" + total_filename
+synmap_sc_filename = "SYNMAP" + total_filename
 synmap_sc_path_name = out_synmap_path + synmap_sc_filename
 
 
@@ -402,13 +402,16 @@ spec_sc_path_name = out_spec_path + spec_sc_filename
 
 weight_path = cf[mch]['outdir_weight_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(weight_path)
-
 weight_path_name = weight_path + "WEIG_" + cf['pa']["Tscale"] + "_" + total_filename
 
+out_misc_path = cf[mch]['outdir_misc_ap']
+iff_make_dir(out_misc_path)
 
+
+
+#TODO the following part needs reviewing
 import copy
 cf_copy = copy.deepcopy(cf)
-
 
 ### the following lines are only needed for run_smica part of the code
 buff = cf['pa']['freqdset']
