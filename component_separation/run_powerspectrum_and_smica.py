@@ -9,6 +9,19 @@ Do in the following order:
     4. transform smica-cmb-powerspectrum into map?
     5. get cmb only map from npipe simulation, where?
     6. determine crosscorrelation between (4.) and (5.), using transferfunction eq (9)
+
+
+TODO
+1. validate spectrum
+    derive transfer function
+    
+2. validate smica
+    take consistent simulation data as input
+        check data
+    make synmaps from smica data
+    derive transferfunction, for both, combined cmb, and cmb-per-detector?
+
+3. add everything to cmb-skypatch package
 """
 
 __author__ = "S. Belkner"
