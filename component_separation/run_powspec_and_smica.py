@@ -307,10 +307,10 @@ def calc_transferfunction(smica_cmb):
     c_lin_mv = _weightspec(icov_lin_all)
     
     # now, calculate transferfunction from c_lin_mv to smica_cmb
-    tf = np.cov(smica_cmb, c_lin_mv)
-    print(tf)
     # perhaps, use eq (9) from diffuse comp sep paper
     # tf = 1/(beamf * pixwindow) * sqrt(mean(c_lin_mv/smica_cmb))
+    tf = 1.*np.sqrt(smica_cmb/c_lin_mv)
+    print(tf)
     io.save_data(tf, cf[mch]['outdir_ap']+"inout_cov.npy")
 
 
