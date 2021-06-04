@@ -81,15 +81,16 @@ if __name__ == '__main__':
     print("Generated filename(s) for this session: {}".format(filename_raw))
     print(filename)
     print(40*"$")
-    bins = const.SMICA_lowell_bins
+    bins = const.linear_equisized_bins_100 #const.SMICA_lowell_bins    #
 
 
     # Load smica spectrum of interest
     smica_spec = io.load_data(io.spec_sc_path_name+'SMICA.npy')[0,0,:]
 
     # Load planck cmb simulation of interest
-    cmb_map_in = hp.read_map("/global/cfs/cdirs/cmb/data/planck2018/pr3/cmbmaps/dx12_v3_smica_cmb_raw.fits", field=1)
+    cmb_map_in = hp.read_map("/global/cfs/cdirs/cmb/data/planck2018/pr3/cmbmaps/dx12_v3_smica_cmb_raw.fits", field=(0,1,2))
     cmb_spec_in = hp.anafast(cmb_map_in)
+    io.save_data(cmb_spec_in, cf[mch]['outdir_misc_ap']+"cmb_spec_in.npy")
 
     # or load cmb sim map for each frequency and combine using mv,
     # C_lin_all = [hp.read_map("<path_to_sim_cmb_cls>{}".format(freq)) for freq in PLANCKMAPFREQ_f]
@@ -98,7 +99,7 @@ if __name__ == '__main__':
     # c_lin_mv = mv(icov_lin_all)
     # smica_cmb_map = hp.synfast(smica_spec, nside=2048)
 
-    cmb_spec_in_bnd = bin_it_1D(cmb_spec_in, bins=bins)
+    cmb_spec_in_bnd = bin_it_1D(cmb_spec_in[1,:], bins=bins)
     tf = calc_transferfunction(smica_spec, cmb_spec_in_bnd)
 
-    io.save_data(tf, cf[mch]['outdir_ap']+"tf.npy")
+    io.save_data(tf, cf[mch]['outdir_misc_ap']+"tf.npy")

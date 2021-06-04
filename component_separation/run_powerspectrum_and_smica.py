@@ -19,7 +19,6 @@ import logging.handlers
 import os
 import platform
 import sys
-from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
@@ -29,7 +28,6 @@ import smica
 
 import component_separation
 import component_separation.io as io
-import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
 import component_separation.preprocess as prep
 from component_separation.cs_util import Config as csu
@@ -64,19 +62,11 @@ specfilter = cf['pa']["specfilter"]
 
 
 def set_logger(loglevel=logging.INFO):
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(loglevel)
     logging.StreamHandler(sys.stdout)
 
 
 def map2spec(data, tmask, pmask, freqcomb):
-    # tqumap_hpcorrected = tqumap
-    # if len(data) == 3:
-    #     spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
-    # elif len(data) == 2:
-    #     spectrum = pw.qupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
-    # elif len(data) == 1:
-    #     print("Only TT spectrum caluclation requested. This is currently not supported.")
-
     spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
     return spectrum
 
@@ -115,10 +105,9 @@ def calc_nmodes(bins, mask):
     return nmode
 
 
-def build_smica_model(nmap, Q, N):
+def build_smica_model(Q, N_cov_bn, C_lS_bnd):
     # Noise part
-    N_cov = pw.build_covmatrices(N, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-    N_cov_bn = np.diagonal(hpf.bin_it(N_cov["EE"], bins=bins, offset=offset), offset=offset, axis1=0, axis2=1).T
+    nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
     noise.set_ampl(np.ones((nmap,1)), fixed="null")
     noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="null") # where N is a (nmap, Q) array with noise spectra
@@ -128,15 +117,8 @@ def build_smica_model(nmap, Q, N):
     cmb = smica.Source1D (nmap, Q, name='cmb')
     acmb = np.ones((nmap,1)) # if cov in cmb unit
     cmb.set_mixmat(acmb, fixed='null')
-    signal = pd.read_csv(
-        cf[mch]['powspec_truthfile'],
-        header=0,
-        sep='    ',
-        index_col=0)
-    spectrum_trth = signal["Planck-"+"EE"].to_numpy()
-    C_lS_bn =  hpf.bin_it(np.ones((7,7,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)]))*1e12, bins=bins, offset=offset)
-
-    cmbcq = C_lS_bn[0,0,:]
+    
+    cmbcq = C_lS_bnd[0,0,:]
     cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 
     # Galactic foreground part
@@ -146,7 +128,7 @@ def build_smica_model(nmap, Q, N):
     gal.fix_mixmat("null")
 
     model = smica.Model(complist=[cmb, gal, noise])
-    return model, gal, N_cov_bn, C_lS_bn
+    return model
 
 
 def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_template=None, afix=None, qmin=0, asyn=None, logger=None, qmax=None, no_starting_point=False):
@@ -246,13 +228,6 @@ if __name__ == '__main__':
     print(40*"$")
     set_logger(DEBUG)
 
-    C_lN = io.load_data(io.noise_sc_path_name)
-    
-        ### Let smica component separate
-        ### transform smica_cmb into smica_cmb_map
-        ### check cross correlation between smica_cmb_map and input_cmb_map
-        ### Load simulation maps
-        ### combine simulation maps
     tmask, pmask, pmask = io.load_one_mask_forallfreq()
     if cf['pa']['new_spectrum']:
         data = io.load_plamap(cf, field=(0,1,2))
@@ -265,7 +240,7 @@ if __name__ == '__main__':
     else:
         C_ltot = io.load_data(path_name=io.spec_sc_path_name)
         if C_ltot is None:
-            print("couldn't find scaled spectrum with given specifications at {}. Trying unscaled..".format(io.out_spec_unsc_path_name))
+            print("couldn't find scaled spectrum with given specifications at {}. Trying unscaled..".format(io.out_spec_sc_path_name))
             C_ltot_unsc = io.load_data(path_name=io.out_spec_unsc_path_name)
             if C_ltot_unsc is None:
                 print("couldn't find unscaled spectrum with given specifications at {}. Exit..".format(io.out_spec_unsc_path_name))
@@ -274,15 +249,32 @@ if __name__ == '__main__':
             io.save_data(C_ltot, io.spec_sc_path_name)
 
     cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
-
+    
     """
     Here starts the SMICA part
     """
-    bins = const.SMICA_lowell_bins #const.linear_equisized_bins_100 
+    bins = const.linear_equisized_bins_100 #const.SMICA_lowell_bins    #
     offset = 0
     nmodes = calc_nmodes(bins, pmask)
+
+    C_lN = io.load_data(io.noise_sc_path_name)
+    cov_lN = pw.build_covmatrices(C_lN, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+
     cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
-    smica_model, gal, cov_lN_bnd, C_lS_bnd = build_smica_model(cov_ltot_bnd.shape[0], len(nmodes), C_lN)
+    cov_lN_bnd = np.diagonal(hpf.bin_it(cov_lN["EE"], bins=bins, offset=offset), offset=offset, axis1=0, axis2=1).T
+    
+    signal = pd.read_csv(
+        cf[mch]['powspec_truthfile'],
+        header=0,
+        sep='    ',
+        index_col=0)
+    spectrum_trth = signal["Planck-"+"EE"].to_numpy()
+    C_lS_bnd =  hpf.bin_it(np.ones((7,7,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)]))*1e12, bins=bins, offset=offset)
+
+
+    smica_model = build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
+
+    print(cov_ltot_bnd)
 
     fit_model_to_cov(
         smica_model,
@@ -297,4 +289,4 @@ if __name__ == '__main__':
         qmax=len(nmodes),
         no_starting_point=False)
 
-    io.save_data(smica_model.get_comp_by_name('cmb').powspec(),   io.spec_sc_path_name+'SMICA')
+    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.spec_sc_path_name+'SMICA')

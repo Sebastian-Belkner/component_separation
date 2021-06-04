@@ -37,31 +37,8 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-import component_separation
 
-with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
-    cf = json.load(f)
-
-num_sim = cf['pa']["num_sim"]
-lmax = cf['pa']["lmax"]
-lmax_mask = cf['pa']["lmax_mask"]
 freqfilter = cf['pa']["freqfilter"]
-specfilter = cf['pa']["specfilter"]
-
-
-uname = platform.uname()
-if uname.node == "DESKTOP-KMIGUPV":
-    mch = "XPS"
-else:
-    mch = "NERSC"
-
-PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
-                    if FREQ not in cf['pa']["freqfilter"]]
-PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-
-map_path = cf[mch]['outdir_map']
-mask_path = cf[mch]['outdir_mask']
 
 
 def create_difference_map(data_hm1, data_hm2):
@@ -115,13 +92,8 @@ def splitmaps2diffmap():
     
     # scratch = sys.argv[1]
     outpath_name = cf[mch]["outdir_map_ap"]
-    
-    if path.exists(outpath_name):
-        pass
-    else:
-        os.makedirs(outpath_name)
 
-    for FREQ in PLANCKMAPFREQ_f:
+    for FREQ in csu.PLANCKMAPFREQ_f:
         freqf = [f for f in freqfilter if f != FREQ]
         cf['pa']["freqfilter"] = freqf
         
@@ -144,10 +116,11 @@ def splitmaps2diffmap():
 
 
 def map2mask():
+
     """This routine generates masks based on the standard SMICA or lensing masks and
         the noise variance due to the scanning strategy from planck
     """
-
+    mask_path = cf[mch]['outdir_mask']
     freqfilter =  [
             '030',
             '044',
@@ -162,7 +135,7 @@ def map2mask():
     treshold = 3*1e-9
     freqdset = cf["pa"]['freqdset']
     maskbase = cf['pa']['mskset']
-    for FREQ in PLANCKMAPFREQ[:-2]:
+    for FREQ in csu.PLANCKMAPFREQ[:-2]:
         print(FREQ)
         freqf = [f for f in freqfilter if f != FREQ]
         cf['pa']["freqfilter"] = freqf

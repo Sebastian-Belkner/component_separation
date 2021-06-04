@@ -43,14 +43,7 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
-                    if FREQ not in cf['pa']["freqfilter"]]
-PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-PLANCKSPECTRUM_f = [SPEC for SPEC in PLANCKSPECTRUM
-                    if SPEC not in cf['pa']["specfilter"]]
 lmax = cf['pa']["lmax"]
-
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
@@ -85,7 +78,6 @@ def build_smica_model(nmap, Q, N):
     noise.set_ampl(np.ones((nmap,1)), fixed="null")
     noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="null") # where N is a (nmap, Q) array with noise spectra
     # print("noise cov: {}".format(N_cov_bn))
-
     # CMB part
     cmb = smica.Source1D (nmap, Q, name='cmb')
     acmb = np.ones((nmap,1)) # if cov in cmb unit
