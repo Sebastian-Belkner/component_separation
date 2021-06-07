@@ -1,5 +1,6 @@
 0. misc
-    Remove sectra and frequency lists from naming convention
+    Remove sectra and frequency lists from naming convention    OK
+    Remove parameter section from d_config.py?
 
 1. validate spectrum
     check why errorbars are so large

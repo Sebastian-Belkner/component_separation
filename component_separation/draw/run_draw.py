@@ -262,6 +262,70 @@ def plot_spectrum_comparison(fname):
             path_name = outpath_name)
 
 
+def plot_tf(fname):
+    """
+    quite similar to plot_spectrum_comparison()
+    """
+
+    path1 = io.out_spec_path
+    name1 = "SPEC"+io.make_filenamestring(dcf)
+    pathname1 = path1 + name1
+
+    dcf2 = copy.deepcopy(dcf)
+    dcf2['pa']['smoothing_window'] = 0
+    dcf2['pa']['max_polynom'] = 0
+    pathname1 = path1 + name1
+
+    spectrum1 = io.load_data(io.spec_sc_path_name+'SMICA.npy')[0,0,:]
+    spectrum2 = io.load_data(path_name=cf[mch]['outdir_misc_ap']+"cmb_spec_in.npy")
+
+    spectrum1_re = hpf.reorder_spectrum_dict(spectrum1)
+    spectrum2_re = hpf.reorder_spectrum_dict(spectrum2)
+
+    lmax = dcf['pa']['lmax']
+    spectrum_truth = io.load_truthspectrum()
+    
+    plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
+        mskset = mskset,
+        freqdset = freqdset,
+        split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
+    
+    diff_spectrum = io.load_data(cf[mch]['outdir_misc_ap']+"tf.npy")
+    for specc, diff_data in diff_spectrum.items():
+        color = ['red', 'green', 'blue', 'yellow', 'black', 'orange', 'purple']
+        title_string = specc+"-spectrum - " + plotsubtitle
+        if "Planck-"+specc in spectrum_truth.columns:
+            spectrum_trth = spectrum_truth["Planck-"+specc][:lmax+1]/(hpf.llp1e12(np.array([range(lmax+1)])))[0]*1e12
+
+        plt.figure(figsize=(8,6))
+        gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
+        ax1 = plt.subplot(gs[0])
+
+        mp = cplt.plot_compare_powspec_binned(plt,
+            spectrum1_re[specc],
+            spectrum2_re[specc],
+            lmax,
+            title_string = title_string,
+            truthfile = spectrum_trth,
+            truth_label = "Planck-"+specc)
+        
+        ax2 = mp.subplot(gs[1])
+        mp = cplt.plot_powspec_diff_binned(
+            mp,
+            diff_spectrum[specc],
+            lmax,
+            color = color)
+        outpath = "/global/cscratch1/sd/sebibel/vis/" + \
+            specc+"_spectrum/"
+        io.iff_make_dir(outpath)
+        outpath_name = outpath + \
+            specc+"_transferfunction" + "-" + ".jpg"
+
+        io.save_figure(
+            mp = mp,
+            path_name = outpath_name)
+
+
 def plot_variance():
     ylim = {
         "TT": (1e2, 1e5),
@@ -555,15 +619,17 @@ if __name__ == '__main__':
         print("plotting maps")
         plot_maps(fname = fname)
 
-    # TODO adapt to latest structure
     if dcf["plot"]["spectrum"]["do_plot"]:
         print("plotting spectrum")
         plot_spectrum(fname = fname)
 
-    # TODO adapt to latest structure
     if dcf["plot"]["spectrum_comparison"]["do_plot"]:
         print("plotting spectrum comparison")
         plot_spectrum_comparison(fname = fname)
+
+    if dcf["plot"]["transferfunction"]["do_plot"]:
+        print("plotting spectrum")
+        plot_tf(fname = fname)
 
     if dcf["plot"]["variance"]["do_plot"]:
         print("plotting variance")
