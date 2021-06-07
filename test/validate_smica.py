@@ -125,7 +125,7 @@ if __name__ == '__main__':
     crc = calc_crosscorrelation(hp.synfast(smica_spec, nside=2048), cmb_map_in)
     io.save_data(crc, cf[mch]['outdir_misc_ap']+"crc.npy")
 
-
+    # this is a possible alternative to the above cmb_map_in, to be fixed
     # or load cmb sim map for each frequency and combine using mv,
     # C_lin_all = [hp.read_map("<path_to_sim_cmb_cls>{}".format(freq)) for freq in PLANCKMAPFREQ_f]
     # cov_lin_all = pw.build_covmatrices(C_lin_all, lmax, freqfilter, specfilter)

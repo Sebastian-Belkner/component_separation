@@ -20,8 +20,11 @@ TODO
         check data
     make synmaps from smica data
     derive transferfunction, for both, combined cmb, and cmb-per-detector?
+    crosscorrelation/covariance on maplevel or ratio on cl level?
 
 3. add everything to cmb-skypatch package
+    check if cmb-skypatch still works
+    add
 """
 
 __author__ = "S. Belkner"
@@ -46,7 +49,6 @@ import component_separation.preprocess as prep
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
-from component_separation.cs_util import Planckf, Planckr, Plancks
 
 with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
