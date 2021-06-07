@@ -326,13 +326,8 @@ if __name__ == '__main__':
     set_logger(DEBUG)
 
     C_lN = io.load_data(io.noise_sc_path_name)
-    
-        ### Let smica component separate
-        ### transform smica_cmb into smica_cmb_map
-        ### check cross correlation between smica_cmb_map and input_cmb_map
-        ### Load simulation maps
-        ### combine simulation maps
     tmask, pmask, pmask = io.load_one_mask_forallfreq()
+    
     if cf['pa']['new_spectrum']:
         data = io.load_plamap(cf, field=(0,1,2))
         data = prep.preprocess_all(data)

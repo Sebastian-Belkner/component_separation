@@ -20,6 +20,8 @@ import component_separation.io as io
 import component_separation.powspec as pw
 from component_separation.cs_util import Planckf, Plancks
 
+# %%
+
 path_cmb = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/test/data/simulations/cmb/"
 path_noise = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/test/data/simulations/noise/"
 path_smica = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/project/component_separation/test/data/map/"
@@ -269,4 +271,24 @@ for specID, specval in data.items():
     data[specID] *= sc
 
 print(len(list(data.values())[0]))
+
+
+# %%
+filename = "febecop_ffp10_lensed_scl_cmb_353_mc_0000.fits"
+filepath = "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/simulations/"
+hdul = fits.open(filepath+filename)
+# %%
+hdul[1].header
+
+
+# %%
+
+cmb_in = hp.read_map("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/map/cmb/COM_CMB_IQU-smica-nosz_2048_R3.00_full.fits")
+hdul = fits.open("/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/map/cmb/COM_CMB_IQU-smica-nosz_2048_R3.00_full.fits")
+
+
+# %%
+cmb_in = hdul[2].header
+# %%
+cmb_in
 # %%
