@@ -46,24 +46,23 @@ freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 num_sim = cf['pa']["num_sim"]
 
-def spec2synmap(C_ltot):
-    return pw.create_synmap(C_ltot, cf, mch, csu.freqcomb, specfilter) 
+
+def spec2mapsyn(C_ltot):
+    return pw.create_mapsyn(C_ltot, cf, mch, csu.freqcomb, specfilter) 
 
 
-def cl2synmap():
+def cl2mapsyn():
     start = 0
     C_ltot = io.load_data(path_name=io.spec_sc_path_name)
-    tmask, pmask, pmask = io.load_one_mask_forallfreq()
     for i in range(start, num_sim):
-        print("Starting simulation {} of {}.".format(i+1, num_sim))
-        
-        syn_map = spec2synmap(C_ltot)
-        io.save_data(syn_map, io.synmap_sc_path_name+'_'+str(i))
+        print("Starting simulation {} of {}.".format(i+1, num_sim))    
+        map_syn = spec2mapsyn(C_ltot)
+        io.save_data(map_syn, io.mapsyn_sc_path_name+'_'+str(i))
     
 
-def synmaps2average(fname):
+def mapsyns2average(fname):
     def _synpath_name(i):
-        return io.synmap_sc_path_name+'_'+str(i)
+        return io.mapsyn_sc_path_name+'_'+str(i)
     spectrum = {
         i: io.load_data(path_name=_synpath_name(i))
         for i in range(num_sim)}
@@ -97,21 +96,24 @@ if __name__ == '__main__':
 
     #TODO fix this pipeline
 
-
     #load calculated spectrum
     # io.load_data()
 
     #generate set of syn maps
-    cl2synmap()
+    cl2mapsyn()
 
     #calculate syn spectrum
-    # syn_spectrum = pw.tqupowerspec(syn_map, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
-    # io.save_data(syn_spectrum, io.out_spec_pathspec_path, "syn/unscaled-"+str(i)+"_synspec-"+filename)
-    # syn_spectrum_scaled = spec2specsc(syn_spectrum, freqcomb)
-    # io.save_spectrum(syn_spectrum_scaled, spec_path, "syn/scaled-"+str(i)+"_synmap-"+filename)
+    tmask, pmask, pmask = io.load_one_mask_forallfreq()
+    for i in range(num_sim):
+        map_syn = io.load_data(path_name=io.mapsyn_sc_path_name+'_'+str(i))
+        C_ltot_syn = pw.tqupowerspec(map_syn, tmask, pmask, lmax, lmax_mask, csu.freqcomb, specfilter)
+    io.save_data(C_ltot_syn, io.specsyn_sc_path_name+'_'+str(i))
 
     #calculate syn mean spectrum
-    # syn_spectrum_avgsc = synmaps2average(filename)
-    # io.save_spectrum(syn_spectrum_avgsc, spec_path, "syn/scaled-" + "synavg-"+ filename)
+    C_ltot_syn_avg = io.load_data(io.specsyn_sc_path_name+'_'+str(i))
+    for i in range(1, num_sim):
+        C_ltot_syn_avg += io.load_data(io.specsyn_sc_path_name+'_'+str(i))
+    C_ltot_syn_avg/=num_sim
+    io.save_spectrum(C_ltot_syn_avg, io.specsyn_sc_path_name+'_{}mean'.format(num_sim))
 
     #compare syn mean spectrum to calculated spectrum, (i.e. spectrum transferfunction?)
