@@ -24,7 +24,6 @@ import component_separation.preprocess as prep
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
-from component_separation.cs_util import Planckf, Planckr, Plancks
 import healpy as hp
 
 with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
@@ -65,6 +64,26 @@ def calc_transferfunction(smica_cmb, C_lin):
     return tf
 
 
+def calc_crosscorrelation(map_smica, map_in):
+    def _ud_grade(data, FREQ):
+        if int(FREQ)<100:
+            return hp.pixelfunc.ud_grade(data, nside_out=1024)
+        else:
+            return hp.pixelfunc.ud_grade(data, nside_out=2048)
+    tmask, pmask, pmask = io.load_one_mask_forallfreq()
+    spectrum = ps.map2cls(
+                tqumap=map_smica,
+                tmask=_ud_grade(tmask, 100),
+                pmask=_ud_grade(pmask, 100),
+                lmax=lmax,
+                lmax_mask=lmax_mask,
+                tqumap2=map_in,
+                tmask2=_ud_grade(tmask, 100),
+                pmask2=_ud_grade(pmask, 100)
+        )
+    return spectrum
+
+
 def bin_it_1D(data, bins, offset=0):
     ret = np.ones(len(bins))
     for k in range(bins.shape[0]):
@@ -83,14 +102,29 @@ if __name__ == '__main__':
     print(40*"$")
     bins = const.linear_equisized_bins_100 #const.SMICA_lowell_bins    #
 
-
     # Load smica spectrum of interest
     smica_spec = io.load_data(io.spec_sc_path_name+'SMICA.npy')[0,0,:]
 
     # Load planck cmb simulation of interest
+    #TODO this should be somehwat related to the SMICA output, but cannot find the NPIPE data atm. gotta ask Julien
+    # for now, use anything as long as its a CMB map, preferably a E map.
+    # if its Q,U, then transform first
     cmb_map_in = hp.read_map("/global/cfs/cdirs/cmb/data/planck2018/pr3/cmbmaps/dx12_v3_smica_cmb_raw.fits", field=(0,1,2))
+    
+    #two paths possible from here
+    #   1. compare smica_spec with hp.anafast(cmb_map_in) using eq 9 from diffuse comp sep paper
+    #   beware, cmb_map_in most likely is IQU -> transform first? pol=true parameter takes care of it?
     cmb_spec_in = hp.anafast(cmb_map_in)
     io.save_data(cmb_spec_in, cf[mch]['outdir_misc_ap']+"cmb_spec_in.npy")
+    cmb_spec_in_bnd = bin_it_1D(cmb_spec_in[1,:], bins=bins)
+    tf = calc_transferfunction(smica_spec, cmb_spec_in_bnd)   
+    io.save_data(tf, cf[mch]['outdir_misc_ap']+"tf.npy")
+
+    #   2. crosscorrelate hp.synfast(smica_spec) with cmb_map_in
+    #   beware, cmb_map_in most likely is IQU -> transform first? pol=true parameter takes care of it?
+    crc = calc_crosscorrelation(hp.synfast(smica_spec, nside=2048), cmb_map_in)
+    io.save_data(crc, cf[mch]['outdir_misc_ap']+"crc.npy")
+
 
     # or load cmb sim map for each frequency and combine using mv,
     # C_lin_all = [hp.read_map("<path_to_sim_cmb_cls>{}".format(freq)) for freq in PLANCKMAPFREQ_f]
@@ -99,7 +133,4 @@ if __name__ == '__main__':
     # c_lin_mv = mv(icov_lin_all)
     # smica_cmb_map = hp.synfast(smica_spec, nside=2048)
 
-    cmb_spec_in_bnd = bin_it_1D(cmb_spec_in[1,:], bins=bins)
-    tf = calc_transferfunction(smica_spec, cmb_spec_in_bnd)
 
-    io.save_data(tf, cf[mch]['outdir_misc_ap']+"tf.npy")

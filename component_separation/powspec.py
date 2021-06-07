@@ -106,9 +106,6 @@ def tqupowerspec(tqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int) ->
                 tqumap2=tqumap[FREQC.split("-")[1]],
                 tmask2=_ud_grade(tmask, FREQC.split("-")[1]),
                 pmask2=_ud_grade(pmask, FREQC.split("-")[1])
-                # wwt = ww[0],
-                # wwp = ww[1],
-                # wwtp = ww[2]
                 )
             for FREQC in csu.freqcomb}
     spectrum = dict()
