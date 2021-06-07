@@ -8,24 +8,22 @@ __author__ = "S. Belkner"
 import json
 import logging
 import logging.handlers
-from component_separation.cs_util import Config as csu
+import os
 import platform
 import sys
 from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
-from healpy.sphtfunc import smoothing
 
 import numpy as np
-import os
-
-import component_separation.io as io
-import component_separation.MSC.MSC.pospace as ps
-import component_separation.powspec as pw
-import component_separation.preprocess as prep
-from component_separation.cs_util import Planckf, Plancks
+from healpy.sphtfunc import smoothing
 
 import component_separation
+import component_separation.io as io
+import component_separation.powspec as pw
+import component_separation.preprocess as prep
+from component_separation.cs_util import Config as csu
+from component_separation.cs_util import Planckf, Plancks
 
 with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
@@ -45,15 +43,6 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
-    if FREQ not in cf['pa']["freqfilter"]]
-PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-PLANCKSPECTRUM_f = [SPEC for SPEC in PLANCKSPECTRUM
-    if SPEC not in cf['pa']["specfilter"]]
-
-num_sim = cf['pa']["num_sim"]
-
 lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
 freqfilter = cf['pa']["freqfilter"]
@@ -61,24 +50,19 @@ specfilter = cf['pa']["specfilter"]
 
 
 def set_logger(loglevel=logging.INFO):
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(loglevel)
     logging.StreamHandler(sys.stdout)
 
 
-def spec2synmap(spectrum, freqcomb):
-    return pw.create_synmap(spectrum, cf, mch, freqcomb, specfilter) 
-
-
-def map2spec(data, tmask, pmask, freqcomb):
+def map2spec(data, tmask, pmask):
     # tqumap_hpcorrected = tqumap
     # if len(data) == 3:
     #     spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
     # elif len(data) == 2:
     #     spectrum = pw.qupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
     # elif len(data) == 1:
-    #     print("Only TT spectrum caluclation requested. This is currently not supported.")
-
-    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+    #     print("Only TT spectrum calculation requested. This is currently not supported.")
+    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask)
     return spectrum
 
 
@@ -87,36 +71,6 @@ def specsc2weights(spectrum, Tscale):
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter, Tscale)
     return weights
-
-
-def synmaps2average(fname):
-    # Load all syn spectra
-    # TODO check if its right
-    def _synpath_name(i):
-        return io.out_spec_path + 'syn/scaled-{}_synmap-'.format(str(i)) + filename
-    spectrum = {
-        i: io.load_data(path_name=_synpath_name(i))
-        for i in range(num_sim)}
-
-    # sum all syn spectra
-    spectrum_avg = dict()
-    for FREQC in csu.freqcomb:
-        for spec in csu.speccomb:
-            if FREQC in spectrum_avg.keys():
-                pass
-            else:
-                spectrum_avg.update({FREQC: {}})
-            if spec in spectrum_avg[FREQC].keys():
-                pass
-            else:
-                spectrum_avg[FREQC].update({spec: []})
-                    
-            spectrum_avg[FREQC][spec] = np.array(list(reduce(lambda x, y: x+y, [
-                spectrum[idx][FREQC][spec]
-                    for idx, _ in spectrum.items()
-                ])))
-            spectrum_avg[FREQC][spec] /= num_sim
-    return spectrum_avg
 
 
 def spec_weight2weighted_spec(spectrum, weights):
@@ -151,7 +105,7 @@ if __name__ == '__main__':
         data = prep.preprocess_all(data)
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
 
-        spectrum = map2spec(data, tmask, pmask, csu.freqcomb)
+        spectrum = map2spec(data, tmask, pmask)
         io.save_data(spectrum, io.out_spec_unsc_path_name)
     else:
         spectrum = io.load_data(path_name=io.out_spec_unsc_path_name)

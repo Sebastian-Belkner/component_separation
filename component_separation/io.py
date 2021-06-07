@@ -262,21 +262,6 @@ def load_weights(path_name: str, indir_root: str = None, indir_rel: str = None, 
         return None
 
 
-@log_on_start(INFO, "Starting to load synmap from {path_name}")
-@log_on_end(DEBUG, "Synmap loaded successfully")
-def load_synmap(path_name: str, indir_root: str = None, indir_rel: str = None, in_desc: str = None, fname: str = None) -> Dict[str, Dict]:
-    if path_name == None:
-        fending = ".npy"
-        path_name = indir_root+indir_rel+in_desc+fname+fending
-    if os.path.isfile(path_name):
-        data = np.load(path_name, allow_pickle=True)
-        print( "loaded {}".format(path_name))
-        return data
-    else:
-        print("no existing map at {}".format(path_name))
-        return None
-
-
 @log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb}")
 @log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
 def load_beamf(freqcomb: List) -> Dict:
@@ -387,11 +372,15 @@ map_sc_filename = "MAP" + total_filename
 map_sc_path_name = out_map_path + map_sc_filename
 
 
-out_synmap_path = cf[mch]['outdir_map_ap'] + cf['pa']["freqdset"] + "/"
-iff_make_dir(out_synmap_path)
-synmap_sc_filename = "SYNMAP" + total_filename
-synmap_sc_path_name = out_synmap_path + synmap_sc_filename
+out_mapsyn_path = cf[mch]['outdir_map_ap'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(out_mapsyn_path)
+mapsyn_sc_filename = "MAPSYN" + total_filename
+mapsyn_sc_path_name = out_mapsyn_path + mapsyn_sc_filename
 
+out_specsyn_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(out_specsyn_path)
+specsyn_sc_filename = "SPECSYN" + total_filename
+specsyn_sc_path_name = out_specsyn_path + specsyn_sc_filename
 
 spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
 out_spec_unsc_path_name = out_spec_path + spec_unsc_filename
@@ -402,13 +391,15 @@ spec_sc_path_name = out_spec_path + spec_sc_filename
 
 weight_path = cf[mch]['outdir_weight_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(weight_path)
-
 weight_path_name = weight_path + "WEIG_" + cf['pa']["Tscale"] + "_" + total_filename
 
+out_misc_path = cf[mch]['outdir_misc_ap']
+iff_make_dir(out_misc_path)
 
+
+#TODO the following part needs reviewing
 import copy
 cf_copy = copy.deepcopy(cf)
-
 
 ### the following lines are only needed for run_smica part of the code
 buff = cf['pa']['freqdset']

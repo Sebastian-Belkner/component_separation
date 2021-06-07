@@ -4,18 +4,27 @@ run_powerspectrum.py: script for executing main functionality of component_separ
 
 
 Do in the following order:
-    0. get jupyter fixed - otherwise running jobs on nersc will be tough
-    1. create difference spectra using npipe-diff - for the noise spectra (smica input)
     2. create spectra from npipe-sim - for the full spectra (smica input)
     3. call smica with the above to get smica-cmb-powerspectrum
     4. transform smica-cmb-powerspectrum into map?
     5. get cmb only map from npipe simulation, where?
-    6. determine crosscorrelation between (4.) and (5.)
-"""
+    6. determine crosscorrelation between (4.) and (5.), using transferfunction eq (9)
 
-"""
-run_powerspectrum.py: script for executing main functionality of component_separation
 
+TODO
+1. validate spectrum
+    derive transfer function
+    
+2. validate smica
+    take consistent simulation data as input
+        check data
+    make synmaps from smica data
+    derive transferfunction, for both, combined cmb, and cmb-per-detector?
+    crosscorrelation/covariance on maplevel or ratio on cl level?
+
+3. add everything to cmb-skypatch package
+    check if cmb-skypatch still works
+    add
 """
 
 __author__ = "S. Belkner"
@@ -26,24 +35,20 @@ import logging.handlers
 import os
 import platform
 import sys
-from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from healpy.sphtfunc import smoothing
 import smica
 
 import component_separation
 import component_separation.io as io
-import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
 import component_separation.preprocess as prep
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
-from component_separation.cs_util import Planckf, Planckr, Plancks
 
 with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
@@ -63,13 +68,6 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
-    if FREQ not in cf['pa']["freqfilter"]]
-PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-PLANCKSPECTRUM_f = [SPEC for SPEC in PLANCKSPECTRUM
-    if SPEC not in cf['pa']["specfilter"]]
-
 num_sim = cf['pa']["num_sim"]
 
 lmax = cf['pa']["lmax"]
@@ -79,24 +77,12 @@ specfilter = cf['pa']["specfilter"]
 
 
 def set_logger(loglevel=logging.INFO):
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(loglevel)
     logging.StreamHandler(sys.stdout)
 
 
-def spec2synmap(spectrum, freqcomb):
-    return pw.create_synmap(spectrum, cf, mch, freqcomb, specfilter) 
-
-
-def map2spec(data, tmask, pmask, freqcomb):
-    # tqumap_hpcorrected = tqumap
-    # if len(data) == 3:
-    #     spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
-    # elif len(data) == 2:
-    #     spectrum = pw.qupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
-    # elif len(data) == 1:
-    #     print("Only TT spectrum caluclation requested. This is currently not supported.")
-
-    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+def map2spec(data, tmask, pmask):
+    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask)
     return spectrum
 
 
@@ -105,36 +91,6 @@ def specsc2weights(spectrum, Tscale):
     cov_inv_l = pw.invert_covmatrices(cov, lmax, freqfilter, specfilter)
     weights = pw.calculate_weights(cov_inv_l, lmax, freqfilter, specfilter, Tscale)
     return weights
-
-
-def synmaps2average(fname):
-    # Load all syn spectra
-    # TODO check if its right
-    def _synpath_name(i):
-        return io.out_spec_path + 'syn/scaled-{}_synmap-'.format(str(i)) + filename
-    spectrum = {
-        i: io.load_data(path_name=_synpath_name(i))
-        for i in range(num_sim)}
-
-    # sum all syn spectra
-    spectrum_avg = dict()
-    for FREQC in csu.freqcomb:
-        for spec in csu.speccomb:
-            if FREQC in spectrum_avg.keys():
-                pass
-            else:
-                spectrum_avg.update({FREQC: {}})
-            if spec in spectrum_avg[FREQC].keys():
-                pass
-            else:
-                spectrum_avg[FREQC].update({spec: []})
-                    
-            spectrum_avg[FREQC][spec] = np.array(list(reduce(lambda x, y: x+y, [
-                spectrum[idx][FREQC][spec]
-                    for idx, _ in spectrum.items()
-                ])))
-            spectrum_avg[FREQC][spec] /= num_sim
-    return spectrum_avg
 
 
 def spec_weight2weighted_spec(spectrum, weights):
@@ -164,10 +120,9 @@ def calc_nmodes(bins, mask):
     return nmode
 
 
-def build_smica_model(nmap, Q, N):
+def build_smica_model(Q, N_cov_bn, C_lS_bnd):
     # Noise part
-    N_cov = pw.build_covmatrices(N, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-    N_cov_bn = np.diagonal(hpf.bin_it(N_cov["EE"], bins=bins, offset=offset), offset=offset, axis1=0, axis2=1).T
+    nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
     noise.set_ampl(np.ones((nmap,1)), fixed="null")
     noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="null") # where N is a (nmap, Q) array with noise spectra
@@ -177,15 +132,8 @@ def build_smica_model(nmap, Q, N):
     cmb = smica.Source1D (nmap, Q, name='cmb')
     acmb = np.ones((nmap,1)) # if cov in cmb unit
     cmb.set_mixmat(acmb, fixed='null')
-    signal = pd.read_csv(
-        cf[mch]['powspec_truthfile'],
-        header=0,
-        sep='    ',
-        index_col=0)
-    spectrum_trth = signal["Planck-"+"EE"].to_numpy()
-    C_lS_bn =  hpf.bin_it(np.ones((7,7,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)]))*1e12, bins=bins, offset=offset)
-
-    cmbcq = C_lS_bn[0,0,:]
+    
+    cmbcq = C_lS_bnd[0,0,:]
     cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 
     # Galactic foreground part
@@ -195,7 +143,7 @@ def build_smica_model(nmap, Q, N):
     gal.fix_mixmat("null")
 
     model = smica.Model(complist=[cmb, gal, noise])
-    return model, gal, N_cov_bn, C_lS_bn
+    return model
 
 
 def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_template=None, afix=None, qmin=0, asyn=None, logger=None, qmax=None, no_starting_point=False):
@@ -284,36 +232,6 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     return model
 
 
-def calc_transferfunction(smica_cmb):
-    # emp_map = io.load_plamap(cf, field=(0,1,2))
-    # Tsyn_map, Psyn_map, Psyn_map = io.load_data(io.synmap_sc_path_name+'_0.npy')
-    import healpy as hp
-    ## either this, and use synfast for the smica output?
-    C_lin = hp.read_map("/global/cfs/cdirs/cmb/data/planck2018/pr3/cmbmaps/dx12_v3_smica_cmb_raw.fits", field=0)
-
-    # or load cmb sim map for each frequency and combine using mv,
-    # 
-    # 
-    C_lin_all = [hp.read_map("<path_to_sim_cmb_cls>{}".format(freq)) for freq in PLANCKMAPFREQ_f]
-    cov_lin_all = pw.build_covmatrices(C_lin_all, lmax, freqfilter, specfilter)
-    icov_lin_all = pw.invert_covmatrices(cov_lin_all)
-    spec_pick = "EE"
-    def _weightspec(icov_l):
-        for specc, data in icov_l.items():
-            if specc == spec_pick:
-                icovsum = np.array([np.sum(icov_l[specc][l]) for l in range(lmax)])
-                retspec = {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
-        return retspec
-    c_lin_mv = _weightspec(icov_lin_all)
-    
-    # now, calculate transferfunction from c_lin_mv to smica_cmb
-    # perhaps, use eq (9) from diffuse comp sep paper
-    # tf = 1/(beamf * pixwindow) * sqrt(mean(c_lin_mv/smica_cmb))
-    tf = 1.*np.sqrt(smica_cmb/c_lin_mv)
-    print(tf)
-    io.save_data(tf, cf[mch]['outdir_ap']+"inout_cov.npy")
-
-
 if __name__ == '__main__':
     filename_raw = io.total_filename_raw
     filename = io.total_filename
@@ -325,7 +243,6 @@ if __name__ == '__main__':
     print(40*"$")
     set_logger(DEBUG)
 
-    C_lN = io.load_data(io.noise_sc_path_name)
     tmask, pmask, pmask = io.load_one_mask_forallfreq()
     
     if cf['pa']['new_spectrum']:
@@ -333,40 +250,48 @@ if __name__ == '__main__':
         data = prep.preprocess_all(data)
 
         ### Calculate powerspectra
-        spectrum = map2spec(data, tmask, pmask, csu.freqcomb)
-        io.save_data(spectrum, io.spec_unsc_path_name)
+        C_ltot_unsc = map2spec(data, tmask, pmask)
+        io.save_data(C_ltot_unsc, io.out_spec_unsc_path_name)
+        C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
     else:
         C_ltot = io.load_data(path_name=io.spec_sc_path_name)
         if C_ltot is None:
-            print("couldn't find scaled spectrum with given specifications at {}. Trying unscaled..".format(io.spec_unsc_path_name))
-            spectrum = io.load_data(path_name=io.spec_unsc_path_name)
-            if spectrum is None:
-                print("couldn't find unscaled spectrum with given specifications at {}. Exit..".format(io.spec_unsc_path_name))
+            print("couldn't find scaled spectrum with given specifications at {}. Trying unscaled..".format(io.out_spec_sc_path_name))
+            C_ltot_unsc = io.load_data(path_name=io.out_spec_unsc_path_name)
+            if C_ltot_unsc is None:
+                print("couldn't find unscaled spectrum with given specifications at {}. Exit..".format(io.out_spec_unsc_path_name))
                 sys.exit()
-            C_ltot = postprocess_spectrum(spectrum, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
+            C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
             io.save_data(C_ltot, io.spec_sc_path_name)
 
-    # weights = specsc2weights(C_ltot, cf['pa']["Tscale"])
-    # io.save_data(weights, io.weight_path_name)
     cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"]
-
-    # transferfunction = calc_transferfunction()
-
+    
     """
     Here starts the SMICA part
     """
-
-    bins = const.SMICA_lowell_bins
+    bins = const.linear_equisized_bins_100 #const.SMICA_lowell_bins    #
     offset = 0
     nmodes = calc_nmodes(bins, pmask)
+
+    C_lN = io.load_data(io.noise_sc_path_name)
+    cov_lN = pw.build_covmatrices(C_lN, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+
     cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
+    cov_lN_bnd = np.diagonal(hpf.bin_it(cov_lN["EE"], bins=bins, offset=offset), offset=offset, axis1=0, axis2=1).T
+    
+    signal = pd.read_csv(
+        cf[mch]['powspec_truthfile'],
+        header=0,
+        sep='    ',
+        index_col=0)
+    spectrum_trth = signal["Planck-"+"EE"].to_numpy()
+    C_lS_bnd =  hpf.bin_it(np.ones((7,7,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)]))*1e12, bins=bins, offset=offset)
 
 
-    # %%
-    smica_model, gal, cov_lN_bnd, C_lS_bnd = build_smica_model(cov_ltot_bnd.shape[0], len(nmodes), C_lN)
+    smica_model = build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
 
+    print(cov_ltot_bnd)
 
-    # %%
     fit_model_to_cov(
         smica_model,
         cov_ltot_bnd,
@@ -380,8 +305,4 @@ if __name__ == '__main__':
         qmax=len(nmodes),
         no_starting_point=False)
 
-
-    
-    ### Now, compare smica_cmb with input_cmb
-
-    tf = calc_transferfunction(smica_model.get_comp_by_name('cmb').powspec())
+    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.spec_sc_path_name+'SMICA')

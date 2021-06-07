@@ -22,6 +22,22 @@
     ]
 },
 "plot": {
+    "beamf": {
+        "do_plot": false,
+        "outdir_root": "vis/beamf/",
+        "outdir_rel": "",
+        "out_desc": ""
+    },
+    "maps": {
+        "do_plot": false,
+        "type": "syn",
+        "indir_root": "data/tmp/map/",
+        "indir_rel": "syn/",
+        "outdir_root": "vis/map/",
+        "outdir_rel": "syn/",
+        "in_desc": "0_synmaps",
+        "out_desc": "0_synmaps"
+    },
     "spectrum": {
         "do_plot": true,
         "indir_root": "data/tmp/spectrum/",
@@ -31,28 +47,7 @@
         "in_desc": "scaled",
         "out_desc": ""
     },
-
-    "variance": {
-        "do_plot": false,
-        "indir_root": "data/tmp/spectrum/",
-        "indir_rel": "",
-        "outdir_root": "vis/spectrum/",
-        "outdir_rel": "",
-        "in_desc": "scaled",
-        "out_desc": ""
-    },
-
-    "noise": {
-        "do_plot": false,
-        "indir_root": "data/tmp/spectrum/",
-        "indir_rel": "",
-        "outdir_root": "vis/spectrum/",
-        "outdir_rel": "",
-        "in_desc": "scaled-difference",
-        "out_desc": "scaled-difference"
-    },
-
-    "spectrum_bias": {
+    "spectrum_comparison": {
         "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
         "indir_rel": "",
@@ -64,17 +59,15 @@
         "in_desc_syn": "scaled-synavg-",
         "out_desc": "scaled-synavg-"
     },
-
-    "weights_bias": {
+    "variance": {
         "do_plot": false,
-        "indir_root": "data/tmp/weights/",
+        "indir_root": "data/tmp/spectrum/",
         "indir_rel": "",
-        "outdir_root": "vis/weights/",
+        "outdir_root": "vis/spectrum/",
         "outdir_rel": "",
-        "in_desc": "K_CMB",
-        "out_desc": "K_CMB"
+        "in_desc": "scaled",
+        "out_desc": ""
     },
-
     "weights": {
         "do_plot": true,
         "indir_root": "data/tmp/weights/",
@@ -84,7 +77,6 @@
         "in_desc": "K_CMB",
         "out_desc": "K_CMB"
     },
-
     "weights_comparison": {
         "do_plot": false,
         "indir_root": "data/tmp/weights/",
@@ -102,17 +94,6 @@
         "smoothing_window2": 0,
         "max_polynom2": 0
     },
-
-    "noise_comparison": {
-        "do_plot": false,
-        "indir_root": "data/tmp/weights/",
-        "indir_rel": "",
-        "outdir_root": "vis/noise_comparison/",
-        "outdir_rel": "",
-        "in_desc": "K_RJ",
-        "out_desc": "K_RJ"
-    },
-
     "spec_w/noise": {
         "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
@@ -121,24 +102,6 @@
         "outdir_rel": "",
         "in_desc": "scaled",
         "out_desc": "noisesub"
-    },
-
-    "beamf": {
-        "do_plot": false,
-        "outdir_root": "vis/beamf/",
-        "outdir_rel": "",
-        "out_desc": ""
-    },
-
-    "maps": {
-        "do_plot": false,
-        "type": "syn",
-        "indir_root": "data/tmp/map/",
-        "indir_rel": "syn/",
-        "outdir_root": "vis/map/",
-        "outdir_rel": "syn/",
-        "in_desc": "0_synmaps",
-        "out_desc": "0_synmaps"
     }
 }
 }

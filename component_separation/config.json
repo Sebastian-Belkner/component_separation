@@ -8,8 +8,8 @@
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
-    "smoothing_window": 0,
-    "max_polynom": 0,
+    "smoothing_window": 5,
+    "max_polynom": 2,
     "num_sim": 5,
 
     "freqfilter": [
@@ -97,6 +97,7 @@
             }
         },
     "outdir_ap": "/global/cscratch1/sd/sebibel/",
+    "outdir_misc_ap": "/global/cscratch1/sd/sebibel/misc/",
     "outdir_spectrum_ap": "/global/cscratch1/sd/sebibel/spectrum/",
     "outdir_weight_ap": "/global/cscratch1/sd/sebibel/weights/",
     "outdir_map_ap": "/global/cscratch1/sd/sebibel/map/frequency/",
@@ -154,6 +155,7 @@
             }
         },
     "outdir_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/",
+    "outdir_misc_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/misc/",
     "outdir_spectrum_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/spectrum/",
     "outdir_weight_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/weights/",
     "outdir_map_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/map/frequency/",
