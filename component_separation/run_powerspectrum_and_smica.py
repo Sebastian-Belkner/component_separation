@@ -79,8 +79,8 @@ def set_logger(loglevel=logging.INFO):
     logging.StreamHandler(sys.stdout)
 
 
-def map2spec(data, tmask, pmask, freqcomb):
-    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+def map2spec(data, tmask, pmask):
+    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask)
     return spectrum
 
 
@@ -247,7 +247,7 @@ if __name__ == '__main__':
         data = prep.preprocess_all(data)
 
         ### Calculate powerspectra
-        C_ltot_unsc = map2spec(data, tmask, pmask, csu.freqcomb)
+        C_ltot_unsc = map2spec(data, tmask, pmask)
         io.save_data(C_ltot_unsc, io.out_spec_unsc_path_name)
         C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
     else:

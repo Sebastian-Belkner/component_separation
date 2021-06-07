@@ -377,7 +377,7 @@ iff_make_dir(out_mapsyn_path)
 mapsyn_sc_filename = "MAPSYN" + total_filename
 mapsyn_sc_path_name = out_mapsyn_path + mapsyn_sc_filename
 
-out_specsyn_path = cf[mch]['outdir_spec_ap'] + cf['pa']["freqdset"] + "/"
+out_specsyn_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(out_specsyn_path)
 specsyn_sc_filename = "SPECSYN" + total_filename
 specsyn_sc_path_name = out_specsyn_path + specsyn_sc_filename

@@ -20,7 +20,6 @@ from healpy.sphtfunc import smoothing
 
 import component_separation
 import component_separation.io as io
-import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
 import component_separation.preprocess as prep
 from component_separation.cs_util import Config as csu
@@ -55,7 +54,7 @@ def set_logger(loglevel=logging.INFO):
     logging.StreamHandler(sys.stdout)
 
 
-def map2spec(data, tmask, pmask, freqcomb):
+def map2spec(data, tmask, pmask):
     # tqumap_hpcorrected = tqumap
     # if len(data) == 3:
     #     spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
@@ -63,8 +62,7 @@ def map2spec(data, tmask, pmask, freqcomb):
     #     spectrum = pw.qupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
     # elif len(data) == 1:
     #     print("Only TT spectrum calculation requested. This is currently not supported.")
-
-    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask, freqcomb, specfilter)
+    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask)
     return spectrum
 
 
@@ -107,7 +105,7 @@ if __name__ == '__main__':
         data = prep.preprocess_all(data)
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
 
-        spectrum = map2spec(data, tmask, pmask, csu.freqcomb)
+        spectrum = map2spec(data, tmask, pmask)
         io.save_data(spectrum, io.out_spec_unsc_path_name)
     else:
         spectrum = io.load_data(path_name=io.out_spec_unsc_path_name)
