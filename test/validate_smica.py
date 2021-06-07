@@ -109,21 +109,25 @@ if __name__ == '__main__':
     #TODO this should be somehwat related to the SMICA output, but cannot find the NPIPE data atm. gotta ask Julien
     # for now, use anything as long as its a CMB map, preferably a E map.
     # if its Q,U, then transform first
-    cmb_map_in = hp.read_map("/global/cfs/cdirs/cmb/data/planck2018/pr3/cmbmaps/dx12_v3_smica_cmb_raw.fits", field=(0,1,2))
+    
+    # cmb_map_in = hp.read_map("/global/cfs/cdirs/cmb/data/planck2018/pr3/cmbmaps/dx12_v3_smica_cmb_raw.fits", field=(0,1,2))
+    # cmb_spec_in = hp.anafast(cmb_map_in)
+    # io.save_data(cmb_spec_in, cf[mch]['outdir_misc_ap']+"cmb_spec_in.npy")
+    cmb_spec_in = io.load_data(cf[mch]['outdir_misc_ap']+"cmb_spec_in.npy")
     
     #two paths possible from here
     #   1. compare smica_spec with hp.anafast(cmb_map_in) using eq 9 from diffuse comp sep paper
     #   beware, cmb_map_in most likely is IQU -> transform first? pol=true parameter takes care of it?
-    cmb_spec_in = hp.anafast(cmb_map_in)
-    io.save_data(cmb_spec_in, cf[mch]['outdir_misc_ap']+"cmb_spec_in.npy")
-    cmb_spec_in_bnd = bin_it_1D(cmb_spec_in[1,:], bins=bins)
+    cmb_spec_in_bnd = bin_it_1D(cmb_spec_in[1,:]*1e12, bins=bins)
     tf = calc_transferfunction(smica_spec, cmb_spec_in_bnd)   
     io.save_data(tf, cf[mch]['outdir_misc_ap']+"tf.npy")
 
+
     #   2. crosscorrelate hp.synfast(smica_spec) with cmb_map_in
     #   beware, cmb_map_in most likely is IQU -> transform first? pol=true parameter takes care of it?
-    crc = calc_crosscorrelation(hp.synfast(smica_spec, nside=2048), cmb_map_in)
-    io.save_data(crc, cf[mch]['outdir_misc_ap']+"crc.npy")
+    if False:
+        crc = calc_crosscorrelation(hp.synfast(smica_spec, nside=2048), cmb_map_in)
+        io.save_data(crc, cf[mch]['outdir_misc_ap']+"crc.npy")
 
     # this is a possible alternative to the above cmb_map_in, to be fixed
     # or load cmb sim map for each frequency and combine using mv,

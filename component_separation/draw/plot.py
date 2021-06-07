@@ -10,7 +10,7 @@ import platform
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
-from cs_util import Config as conf
+from component_separation.cs_util import Config as conf
 
 import healpy as hp
 import matplotlib.gridspec as gridspec
@@ -30,11 +30,11 @@ else:
 
 import component_separation
 compath = os.path.dirname(component_separation.__file__)
-with open('{}/draw/draw.json'.format(compath), "r") as f:
+with open('{}/draw/d_config.json'.format(compath), "r") as f:
     cf = json.load(f)
 
 freqfilter = cf['pa']["freqfilter"]
-lmax = cf['pa']['lmax']
+lmax = cf['pa']['lmax']+1
 bins = np.logspace(np.log10(1), np.log10(cf['pa']['lmax']+1), 200)
 bl = bins[:-1]
 br = bins[1:]
@@ -246,8 +246,6 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
     # bins = np.arange(0, lmax+1, lmax/200)
 
 
-
-    
     plt.figure(figsize=(8,6))
     plt.xlabel("Multipole l")
     plt.ylabel("Powerspectrum")
@@ -256,13 +254,11 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
     plt.grid(which='major', axis='y')
     idx=0
 
-
     plt.title(title_string)
     plt.xlim((10,4000))
     plt.ylim(0.001, 1)
     plt.xscale("log", nonpositive='clip')
     plt.yscale("linear", nonpositive='clip')
-
 
 
     binmean, binerr , _ = _std_dev_binned(data1)
@@ -283,7 +279,6 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
         alpha=0.5
         )
 
-
     binmean, binerr , _ = _std_dev_binned(data2)
     binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
     plt.errorbar(
@@ -302,8 +297,6 @@ def plot_diff_binned(data1, data2, lmax, title_string: str, ylim: tuple = (1e-3,
         alpha=0.5
         )
     
-
-
     binmean, binerr , _ = _std_dev_binned((data2-data1)/data2)
     binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
     plt.errorbar(
@@ -454,93 +447,6 @@ def plot_variance_binned(data: Dict, lmax: Dict, title_string: str, ylim: tuple 
     return plt
 
 
-def plot_powspec_binned_bokeh(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
-    """Plotting
-
-    Args:
-        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
-        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
-        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
-    """
-    # koi = next(iter(data.keys()))
-    # specs = list(data[koi].keys())
-
-    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
-    bl = bins[:-1]
-    br = bins[1:]
-
-    from bokeh.plotting import figure as bfigure
-    plt = bfigure(title=title_string, y_axis_type="log", x_axis_type="log",
-           x_range=(10,4000), y_range=(1e-3,1e6),
-           background_fill_color="#fafafa")
-    # plt.xlabel("Multipole l")
-    # plt.ylabel("Powerspectrum")
-
-    idx=0
-    idx_max = 8
-    from bokeh.palettes import inferno
-    for freqc, val in data.items():
-        col = inferno(idx_max)
-        freqs = freqc.split("-")
-        if freqs[0]  == freqs[1]:
-            binmean, binerr , _ = _std_dev_binned(data[freqc])
-            binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
-            plt.line(
-                0.5 * bl + 0.5 * br,
-                np.nan_to_num(binmean),
-                legend_label=freqc+ " Channel",
-                # yerr=(binerr_low, binerr),
-                # # 0.5 * bl + 0.5 * br,
-                # # binmean,
-                # # yerr=binerr,
-                # label=freqc,
-                # capsize=2,
-                # elinewidth=1,
-                # fmt='x',
-                # # ls='-',
-                # ms=4,
-                # alpha=(2*idx_max-idx)/(2*idx_max)
-                color = col[idx],
-                line_width=3,
-                muted_alpha=0.2)
-            plt.multi_line(#[(bm, bm) for bm in np.nan_to_num(binmean)]
-                [(bx, bx) for bx in 0.5 * bl + 0.5 * br],
-                [(bm-br, bm+br) for bm, br in zip(np.nan_to_num(binmean), np.nan_to_num(binerr))],
-                legend_label=freqc+ " Channel",
-                # yerr=(binerr_low, binerr),
-                # # 0.5 * bl + 0.5 * br,
-                # # binmean,
-                # # yerr=binerr,
-                # label=freqc,
-                # capsize=2,
-                # elinewidth=1,
-                # fmt='x',
-                # # ls='-',
-                # ms=4,
-                # alpha=(2*idx_max-idx)/(2*idx_max)
-                line_color = col[idx],
-                line_width=2,
-                muted_alpha=0.2)
-            idx+=1
-            plt.xaxis.axis_label = "Multipole l"
-            plt.yaxis.axis_label = "Powerspectrum"
-    
-    plt.line(
-        np.arange(0,4000,1),
-        truthfile,
-        color='red',
-        line_width=4,
-        legend_label="Best Planck EE",
-        muted_alpha=0.2)
-        # label = truth_label,
-        # ls='-', marker='.',
-        # ms=0,
-        # lw=3)
-    plt.legend.location = "top_left"
-    plt.legend.click_policy="mute"
-    return plt
-
-
 def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'default', plotfilename: str = 'default', color: List = None) -> None:
     """Plotting
 
@@ -573,6 +479,7 @@ def plot_powspec_diff_binned(plt, data: Dict, lmax: int, plotsubtitle: str = 'de
     for freqc, val in data.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
         # if "070" in freqc or "030" in freqc or "044" in freqc:
+        if freqc.split('-')[0] == freqc.split('-')[1]:
             idx_max+=len(freqc)
             mean, std, _ = _std_dev_binned(data[freqc])
             plt.errorbar(
@@ -613,16 +520,17 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
     idx=0
     plt.title(title_string)
     plt.xlim((10,4000))
-    plt.ylim((1e-4,1e5))
+    plt.ylim((1e-6,1e1))
 
     for freqc, val in data2.items():
         # if "070" not in freqc and "030" not in freqc and "044" not in freqc:
+        if freqc.split('-')[0] == freqc.split('-')[1]:
             mean, std, _ = _std_dev_binned(data1[freqc])
             plt.errorbar(
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
-                label="Optimal NPIPE lens spectrum",# + freqc,
+                # label="Optimal NPIPE lens spectrum",# + freqc,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
@@ -633,11 +541,11 @@ def plot_compare_powspec_binned(plt, data1: Dict, data2: Dict, lmax: int, title_
                 (_[1:] + _[:-1])/2,
                 mean,
                 yerr=std,
-                label="Optimal NPIPE smica spectrum",# + freqc,
+                # label="Optimal NPIPE smica spectrum",# + freqc,
                 capsize=3,
                 elinewidth=2,
                 fmt='x',
-                color=CB_color_cycle[idx+1],
+                color=CB_color_cycle[idx],
                 alpha=0.6)
             idx+=1
 
@@ -843,3 +751,92 @@ def plot_map(data: Dict, title_string: str = ''):
     plt.figure()
     hp.mollview(data["map"]*data["mask"], title=title_string, norm="hist")
     return plt
+
+
+
+def plot_powspec_binned_bokeh(data: Dict, lmax: Dict, title_string: str, truthfile = None, truth_label: str = None) -> None:
+    """Plotting
+
+    Args:
+        data (Dict): powerspectra with spectrum and frequency-combinations in the columns
+        plotsubtitle (str, optional): Add characters to the title. Defaults to 'default'.
+        plotfilename (str, optional): Add characters to the filename. Defaults to 'default'
+    """
+    # koi = next(iter(data.keys()))
+    # specs = list(data[koi].keys())
+
+    bins = np.logspace(np.log10(1), np.log10(lmax+1), 250)
+    bl = bins[:-1]
+    br = bins[1:]
+
+    from bokeh.plotting import figure as bfigure
+    plt = bfigure(title=title_string, y_axis_type="log", x_axis_type="log",
+           x_range=(10,4000), y_range=(1e-3,1e6),
+           background_fill_color="#fafafa")
+    # plt.xlabel("Multipole l")
+    # plt.ylabel("Powerspectrum")
+
+    idx=0
+    idx_max = 8
+    from bokeh.palettes import inferno
+    for freqc, val in data.items():
+        col = inferno(idx_max)
+        freqs = freqc.split("-")
+        if freqs[0]  == freqs[1]:
+            binmean, binerr , _ = _std_dev_binned(data[freqc])
+            binerr_low = np.array([binmean[n]*0.01 if binerr[n]>binmean[n] else binerr[n] for n in range(len(binerr))])
+            plt.line(
+                0.5 * bl + 0.5 * br,
+                np.nan_to_num(binmean),
+                legend_label=freqc+ " Channel",
+                # yerr=(binerr_low, binerr),
+                # # 0.5 * bl + 0.5 * br,
+                # # binmean,
+                # # yerr=binerr,
+                # label=freqc,
+                # capsize=2,
+                # elinewidth=1,
+                # fmt='x',
+                # # ls='-',
+                # ms=4,
+                # alpha=(2*idx_max-idx)/(2*idx_max)
+                color = col[idx],
+                line_width=3,
+                muted_alpha=0.2)
+            plt.multi_line(#[(bm, bm) for bm in np.nan_to_num(binmean)]
+                [(bx, bx) for bx in 0.5 * bl + 0.5 * br],
+                [(bm-br, bm+br) for bm, br in zip(np.nan_to_num(binmean), np.nan_to_num(binerr))],
+                legend_label=freqc+ " Channel",
+                # yerr=(binerr_low, binerr),
+                # # 0.5 * bl + 0.5 * br,
+                # # binmean,
+                # # yerr=binerr,
+                # label=freqc,
+                # capsize=2,
+                # elinewidth=1,
+                # fmt='x',
+                # # ls='-',
+                # ms=4,
+                # alpha=(2*idx_max-idx)/(2*idx_max)
+                line_color = col[idx],
+                line_width=2,
+                muted_alpha=0.2)
+            idx+=1
+            plt.xaxis.axis_label = "Multipole l"
+            plt.yaxis.axis_label = "Powerspectrum"
+    
+    plt.line(
+        np.arange(0,4000,1),
+        truthfile,
+        color='red',
+        line_width=4,
+        legend_label="Best Planck EE",
+        muted_alpha=0.2)
+        # label = truth_label,
+        # ls='-', marker='.',
+        # ms=0,
+        # lw=3)
+    plt.legend.location = "top_left"
+    plt.legend.click_policy="mute"
+    return plt
+

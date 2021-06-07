@@ -11,9 +11,11 @@ Do in the following order:
     6. determine crosscorrelation between (4.) and (5.), using transferfunction eq (9)
 
 
-TODO
+TODO:
+Remove sectra and frequency lists from naming convention
 1. validate spectrum
-    derive transfer function
+    finish run
+    add tf plotting to draw module
     
 2. validate smica
     take consistent simulation data as input
@@ -285,12 +287,9 @@ if __name__ == '__main__':
         sep='    ',
         index_col=0)
     spectrum_trth = signal["Planck-"+"EE"].to_numpy()
-    C_lS_bnd =  hpf.bin_it(np.ones((7,7,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)]))*1e12, bins=bins, offset=offset)
-
+    C_lS_bnd =  hpf.bin_it(np.ones((7,7,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)])), bins=bins, offset=offset)*1e12
 
     smica_model = build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
-
-    print(cov_ltot_bnd)
 
     fit_model_to_cov(
         smica_model,

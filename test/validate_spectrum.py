@@ -80,9 +80,16 @@ if __name__ == '__main__':
 
     #calculate syn mean spectrum
     C_ltot_syn_avg = io.load_data(io.specsyn_sc_path_name+'_'+str(0)+'.npy')
+    print(C_ltot_syn_avg)
     for i in range(1, num_sim):
-        C_ltot_syn_avg += io.load_data(io.specsyn_sc_path_name+'_'+str(i)+'.npy')
-    C_ltot_syn_avg /= num_sim
-    io.save_spectrum(C_ltot_syn_avg, io.specsyn_sc_path_name+'_{}mean'.format(num_sim))
+        data = io.load_data(io.specsyn_sc_path_name+'_'+str(i)+'.npy')
+        for freq in csu.freqcomb:
+            for spec in csu.PLANCKSPECTRUM_f:
+                C_ltot_syn_avg[freq][spec] += data[freq][spec]
+        
+    for freq in csu.freqcomb:
+        for spec in csu.PLANCKSPECTRUM_f:
+            C_ltot_syn_avg[freq][spec] /= num_sim
+    io.save_data(C_ltot_syn_avg, io.specsyn_sc_path_name+'_{}mean'.format(num_sim))
 
     #compare syn mean spectrum to calculated spectrum, (i.e. spectrum transferfunction?)

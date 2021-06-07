@@ -9,6 +9,7 @@ import itertools
 import json
 import os
 import platform
+import copy
 import sys
 
 import component_separation
@@ -188,15 +189,24 @@ def plot_spectrum_comparison(fname):
         3. two different spectra (e.g. varying in masks)
     """
 
-    dc = dcf["plot"]["spectrum_bias"]
-    inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
-    inpath_name_syn = dc["indir_root_syn"]+dc["indir_rel_syn"]+dc["in_desc_syn"]+fname
-    
-    spectrum = io.load_spectrum(inpath_name, fname)
-    syn_spectrum = io.load_spectrum(inpath_name_syn, fname)
+    name1 = "SPEC"+io.make_filenamestring(dcf)
+    path1 = io.out_spec_path
+    pathname1 = path1 + name1
 
-    spectrum_re = hpf.reorder_spectrum_dict(spectrum)
-    syn_spectrum_re = hpf.reorder_spectrum_dict(syn_spectrum)
+    dcf2 = copy.deepcopy(dcf)
+    dcf2['pa']['smoothing_window'] = 0
+    dcf2['pa']['max_polynom'] = 0
+
+    name2 = "SPEC"+io.make_filenamestring(dcf2)
+    path2 = io.out_spec_path
+    pathname2 = path2 + name2
+
+    spectrum1 = io.load_data(path_name=pathname1)
+    spectrum2 = io.load_data(path_name=pathname2)
+
+
+    spectrum1_re = hpf.reorder_spectrum_dict(spectrum1)
+    spectrum2_re = hpf.reorder_spectrum_dict(spectrum2)
 
     lmax = dcf['pa']['lmax']
 
@@ -206,32 +216,32 @@ def plot_spectrum_comparison(fname):
         split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"])
     
     diff_spectrum = dict()
-    for specc, va in syn_spectrum_re.items():
-        for freqc, val in syn_spectrum_re[specc].items():
+    for specc, va in spectrum1_re.items():
+        for freqc, val in spectrum1_re[specc].items():
             if specc not in diff_spectrum.keys():
                 diff_spectrum.update({specc: {}})
             diff_spectrum[specc].update({freqc: 
-                (syn_spectrum_re[specc][freqc]-spectrum_re[specc][freqc])/spectrum_re[specc][freqc]})
+                (spectrum1_re[specc][freqc]-spectrum2_re[specc][freqc])/spectrum1_re[specc][freqc]})
     spectrum_truth = io.load_truthspectrum()
+    
 
     for specc, diff_data in diff_spectrum.items():
         color = ['red', 'green', 'blue', 'yellow', 'black', 'orange', 'purple']
         title_string = specc+"-spectrum - " + plotsubtitle
         if "Planck-"+specc in spectrum_truth.columns:
-            spectrum_trth = spectrum_truth["Planck-"+specc]
+            spectrum_trth = spectrum_truth["Planck-"+specc][:lmax+1]/(hpf.llp1e12(np.array([range(lmax+1)])))[0]*1e12
 
         plt.figure(figsize=(8,6))
         gs = gridspec.GridSpec(2, 1, height_ratios=[3,1])
         ax1 = plt.subplot(gs[0])
 
         mp = cplt.plot_compare_powspec_binned(plt,
-            spectrum_re[specc],
-            syn_spectrum_re[specc],
+            spectrum1_re[specc],
+            spectrum2_re[specc],
             lmax,
             title_string = title_string,
             truthfile = spectrum_trth,
-            truth_label = "Planck-"+specc,
-            color = color)
+            truth_label = "Planck-"+specc)
         
         ax2 = mp.subplot(gs[1])
         mp = cplt.plot_powspec_diff_binned(
@@ -239,14 +249,13 @@ def plot_spectrum_comparison(fname):
             diff_spectrum[specc],
             lmax,
             color = color)
-            
-        outpath_name = \
-            dc["outdir_root"] + \
-            dc["outdir_rel"] + \
-            specc+"_spectrum/" + \
-            specc+"_spectrumbias" + "-" + \
-            dc["out_desc"] + "-" + \
-            fname + ".jpg"
+        outpath = "/global/cscratch1/sd/sebibel/vis/" + \
+            specc+"_spectrum/"
+        io.iff_make_dir(outpath)
+        outpath_name = outpath + \
+            specc+"_spectrumbias" + "-" + ".jpg"
+
+        
 
         io.save_figure(
             mp = mp,

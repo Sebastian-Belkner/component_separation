@@ -360,6 +360,7 @@ def iff_make_dir(outpath_name):
 """The following lines define naming conventions for the files and directories
 """
 
+##TODO find a way to make this work for both, drawing and analysing
 total_filename = make_filenamestring(cf)
 total_filename_raw = make_filenamestring(cf, 'raw')
 
