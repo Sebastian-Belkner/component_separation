@@ -2,31 +2,28 @@
 """
 run_powerspectrum.py: script for executing main functionality of component_separation
 
-
-Do in the following order:
-    2. create spectra from npipe-sim - for the full spectra (smica input)
-    3. call smica with the above to get smica-cmb-powerspectrum
-    4. transform smica-cmb-powerspectrum into map?
-    5. get cmb only map from npipe simulation, where?
-    6. determine crosscorrelation between (4.) and (5.), using transferfunction eq (9)
-
-
 TODO:
-Remove sectra and frequency lists from naming convention
+0. misc
+    Remove sectra and frequency lists from naming convention
+
 1. validate spectrum
-    finish run
+    check why errorbars are so large
     add tf plotting to draw module
     
 2. validate smica
     take consistent simulation data as input
         check data
-    make synmaps from smica data
+    make synmaps from smica data?
     derive transferfunction, for both, combined cmb, and cmb-per-detector?
     crosscorrelation/covariance on maplevel or ratio on cl level?
 
 3. add everything to cmb-skypatch package
     check if cmb-skypatch still works
     add
+
+4. smica 
+    fix singular matrix error
+    get it to run for ell>2000 (it's LFI cut-off)
 """
 
 __author__ = "S. Belkner"

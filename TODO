@@ -1,0 +1,21 @@
+0. misc
+    Remove sectra and frequency lists from naming convention
+
+1. validate spectrum
+    check why errorbars are so large
+    add tf plotting to draw module
+    
+2. validate smica
+    take consistent simulation data as input
+        check data
+    make synmaps from smica data?
+    derive transferfunction, for both, combined cmb, and cmb-per-detector?
+    crosscorrelation/covariance on maplevel or ratio on cl level?
+
+3. add everything to cmb-skypatch package
+    check if cmb-skypatch still works
+    add
+
+4. smica 
+    fix singular matrix error
+    get it to run for ell>2000 (it's LFI cut-off)

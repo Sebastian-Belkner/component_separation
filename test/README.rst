@@ -28,4 +28,4 @@ To validate the smica output,
         taken from planck sim suite
     4. `validate_smica.py` to calculate the transferfunction. takes cmb powerspectrum and smica-output as input.
         the cmb powerspectrum should be taken from planck sim suite, but cannot find the data..
-    5. `run_draw.py` to plot the transferfunction 
+    5. `run_draw.py` to plot the transferfunction
