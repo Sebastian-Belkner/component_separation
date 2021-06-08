@@ -102,8 +102,8 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd):
     # Noise part
     nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
-    noise.set_ampl(np.ones((nmap,1)), fixed="null")
-    noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="null") # where N is a (nmap, Q) array with noise spectra
+    noise.set_ampl(np.ones((nmap,1)), fixed="all")
+    noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all") # where N is a (nmap, Q) array with noise spectra
     # print("noise cov: {}".format(N_cov_bn))
 
     # CMB part
@@ -119,6 +119,8 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd):
     dim = 6
     gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
     gal.fix_mixmat("null")
+    # galmixmat = np.ones((nmap,dim))*0.1
+    # gal.set_mixmat(galmixmat, fixed='null')
 
     model = smica.Model(complist=[cmb, gal, noise])
     return model
@@ -146,6 +148,8 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     cmbcq = np.squeeze(model.get_comp_by_name("cmb").powspec())
     polar = True if acmb.shape[1]==2 else False
 
+    print("starting point chosen.")
+
     if fixed: # TODO; did i interpret this right?  if not is_mixmat_fixed(model)
         if not no_starting_point:
             model.ortho_subspace(np.abs(stats), nmodes, acmb, qmin=qmin, qmax=qmax)
@@ -157,10 +161,16 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
                 ag[0:int(nmap/2),-2] = asyn
                 ag[int(nmap/2):,-1]  = asyn
                 gal.set_mixmat(ag, fixed=agfix)
-            
+
+    
+    print('starting quasi newton')
     model.quasi_newton(np.abs(stats), nmodes)
+    print('starting set_powspec 1')
     cmb.set_powspec (cmbcq, fixed=cfix)
+    print('starting close_form')
     model.close_form(stats)
+    print('starting set_powspec 2')
+    cmb.set_powspec (cmbcq, fixed=cfix)
     cmb.set_powspec (cmbcq, fixed=cfix)
     mm = model.mismatch(stats, nmodes, exact=True)
     mmG = model.mismatch(stats, nmodes, exact=True)
@@ -168,8 +178,8 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     # start CG/close form
     for i in range(maxiter):
         # fit mixing matrix
-        gal.fix_powspec("all")
-        cmbfix = "all" if polar else cfix 
+        gal.fix_powspec("null")
+        cmbfix = "null" if polar else cfix 
         cmb.fix_powspec(cmbfix)
         model.conjugate_gradient (stats, nmodes,maxiter=cg_maxiter, avextol=cg_eps)
         if 0:#logger is not None:
@@ -229,15 +239,15 @@ if __name__ == '__main__':
 
         ### Calculate powerspectra
         C_ltot_unsc = map2spec(data, tmask, pmask)
-        io.save_data(C_ltot_unsc, io.out_spec_unsc_path_name)
+        io.save_data(C_ltot_unsc, io.spec_unsc_path_name)
         C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
     else:
         C_ltot = io.load_data(path_name=io.spec_sc_path_name)
         if C_ltot is None:
-            print("couldn't find scaled spectrum with given specifications at {}. Trying unscaled..".format(io.out_spec_sc_path_name))
-            C_ltot_unsc = io.load_data(path_name=io.out_spec_unsc_path_name)
+            print("couldn't find scaled spectrum with given specifications at {}. Trying unscaled..".format(io.spec_sc_path_name))
+            C_ltot_unsc = io.load_data(path_name=io.spec_unsc_path_name)
             if C_ltot_unsc is None:
-                print("couldn't find unscaled spectrum with given specifications at {}. Exit..".format(io.out_spec_unsc_path_name))
+                print("couldn't find unscaled spectrum with given specifications at {}. Exit..".format(io.spec_unsc_path_name))
                 sys.exit()
             C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
             io.save_data(C_ltot, io.spec_sc_path_name)
@@ -247,16 +257,39 @@ if __name__ == '__main__':
     """
     Here starts the SMICA part
     """
+
     bins = const.linear_equisized_bins_100 #const.SMICA_lowell_bins    #
     offset = 0
     nmodes = calc_nmodes(bins, pmask)
 
-    C_lN = io.load_data(io.noise_sc_path_name)
+    C_lN_unsc = io.load_data(io.noise_unsc_path_name)
+    C_lN = postprocess_spectrum(C_lN_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
     cov_lN = pw.build_covmatrices(C_lN, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-
-    cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
-    cov_lN_bnd = np.diagonal(hpf.bin_it(cov_lN["EE"], bins=bins, offset=offset), offset=offset, axis1=0, axis2=1).T
     
+    
+    # for n in range(cov_lN["EE"].shape[2]):
+    #     cov_lN["EE"][:,:,n] = np.diag(np.diag(cov_lN["EE"][:,:,n]))
+    cov_lNEE = cov_lN["EE"]
+    cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
+    cov_ltot_bnd[cov_ltot_bnd==0.0] = 0.01
+    one_dummy = [0.01,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001]
+    for n in range(cov_ltot_bnd.shape[2]):
+        print('n = {}'.format(n))
+        for m in range(3):
+            print('m = {}'.format(m))
+            if m>0:
+                rotated = one_dummy[-m:] + one_dummy[:-m]
+            else:
+                rotated = one_dummy
+            if cov_ltot_bnd[m,0,n] == 0.01:
+                print('rot: {}'.format(rotated))
+                cov_ltot_bnd[m,:,n] = rotated
+            print(cov_ltot_bnd[:,:,n])
+
+
+    cov_lN_bnd = hpf.bin_it(cov_lNEE, bins=bins, offset=offset)
+    cov_lN_bnd[cov_lN_bnd==0.0] = 0.01
+    cov_lN_bnd = np.diagonal(cov_lN_bnd, offset=offset, axis1=0, axis2=1).T
     signal = pd.read_csv(
         cf[mch]['powspec_truthfile'],
         header=0,
@@ -266,6 +299,8 @@ if __name__ == '__main__':
     C_lS_bnd =  hpf.bin_it(np.ones((7,7,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)])), bins=bins, offset=offset)*1e12
 
     smica_model = build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
+    print(40*"@")
+
 
     fit_model_to_cov(
         smica_model,
@@ -281,3 +316,9 @@ if __name__ == '__main__':
         no_starting_point=False)
 
     io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.specsmica_sc_path_name)
+
+
+    """
+    Now, follow the procedure described in https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/Astrophysical_component_separation
+    1. fit all model parameters over clean fraction of sky at  100 <= ell <= 680, keep emission spectrum a
+    """

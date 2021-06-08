@@ -3,6 +3,7 @@ validate_spectrum.py: compare powerspectrum as being calculated by `powspec.py` 
 
  - take calculated powerspectra, C_out
  - use C_out to generate set of syntethic maps using hp.synfast(), C_out_syn
+    - average over syntethic data. TODO do i average over spectrum or map?
  - compare C_out to C_out_syn
 
 

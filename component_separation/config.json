@@ -8,8 +8,8 @@
     "lmax": 3000,
     "lmax_mask": 6000,
     "freqdatsplit": "",
-    "smoothing_window": 5,
-    "max_polynom": 2,
+    "smoothing_window": 0,
+    "max_polynom": 0,
     "num_sim": 5,
 
     "freqfilter": [

@@ -79,13 +79,16 @@ def make_filenamestring(cf_local, desc='scaled'):
     Returns:
         str: unique filename which may be used for spectra, weights, maps, etc..
     """    
+
+    freqfilter = cf_local['pa']["freqfilter"]
+    specfilter = cf_local['pa']["specfilter"]
+    
     spectrum_scale = cf['pa']["Spectrum_scale"]
     mskset = cf_local['pa']['mskset'] # smica or lens
     freqdset = cf_local['pa']['freqdset'] # DX12 or NERSC
     lmax = cf_local['pa']["lmax"]
     lmax_mask = cf_local['pa']["lmax_mask"]
-    # freqfilter = cf_local['pa']["freqfilter"]
-    # specfilter = cf_local['pa']["specfilter"]
+
     smoothing_window = cf_local['pa']["smoothing_window"]
     max_polynom = cf_local['pa']["max_polynom"]
     if "sim_id" in cf[mch][freqdset]:
@@ -93,26 +96,29 @@ def make_filenamestring(cf_local, desc='scaled'):
     else:
         sim_id = ""
     if desc == 'raw':
-        return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(
+        return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(#'{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(
             # '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(
+            spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+            freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+            
             sim_id = sim_id,
             spectrum_scale = spectrum_scale,
             freqdset = freqdset,
             mskset = mskset,
             lmax = lmax,
             lmax_mask = lmax_mask,
-            # spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-            # freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+
             split = "Full" if cf_local['pa']["freqdatsplit"] == "" else cf_local['pa']["freqdatsplit"])
     else:
-        return '{sim_id}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{split}.npy'.format(
+        return '{sim_id}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{smoothing_window}_{max_polynom}_{split}.npy'.format(#'{sim_id}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{split}.npy'.format(
+            spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+            freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+            
             sim_id = sim_id,
             freqdset = freqdset,
             mskset = mskset,
             lmax = lmax,
             lmax_mask = lmax_mask,
-            # spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-            # freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
             split = "Full" if cf_local['pa']["freqdatsplit"] == "" else cf_local['pa']["freqdatsplit"],
             smoothing_window = smoothing_window,
             max_polynom = max_polynom)
@@ -386,7 +392,7 @@ specsyn_sc_filename = "SPECSYN" + total_filename
 specsyn_sc_path_name = out_specsyn_path + specsyn_sc_filename
 
 spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
-out_spec_unsc_path_name = out_spec_path + spec_unsc_filename
+spec_unsc_path_name = out_spec_path + spec_unsc_filename
 
 spec_sc_filename = "SPEC" + total_filename
 spec_sc_path_name = out_spec_path + spec_sc_filename
