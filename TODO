@@ -21,3 +21,4 @@
     fix singular matrix error
         im one step further. now, "starting point is complex" for bins where LFIs are set to 0
     get it to run for ell>2000 (it's LFI cut-off)
+        works now, as long as LFI input is turned off (dim of gal components: 6->3)
