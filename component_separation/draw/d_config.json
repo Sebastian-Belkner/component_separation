@@ -1,26 +1,4 @@
 {
-"pa": {
-    "mskset": "lens",
-    "Tscale": "K_CMB",
-    "freqdset": "NPIPE_sim",
-    "Spectrum_scale": "C_l",
-    "lmax": 3000,
-    "lmax_mask": 6000,
-    "freqdatsplit": "",
-    "smoothing_window": 5,
-    "max_polynom": 2,
-    "freqfilter": [
-        "545",
-        "857"
-    ],
-    "specfilter": [
-        "TB",
-        "EB",
-        "ET",
-        "BT",
-        "BE"
-    ]
-},
 "plot": {
     "beamf": {
         "do_plot": false,
@@ -59,6 +37,24 @@
         "in_desc_syn": "scaled-synavg-",
         "out_desc": "scaled-synavg-"
     },
+    "spec_w/noise": {
+        "do_plot": false,
+        "indir_root": "data/tmp/spectrum/",
+        "indir_rel": "",
+        "outdir_root": "vis/spectrum/",
+        "outdir_rel": "",
+        "in_desc": "scaled",
+        "out_desc": "noisesub"
+    },
+    "transferfunction": {
+        "do_plot": true,
+        "indir_root": "data/tmp/spectrum/",
+        "indir_rel": "",
+        "outdir_root": "vis/spectrum/",
+        "outdir_rel": "",
+        "in_desc": "scaled",
+        "out_desc": ""
+    },
     "variance": {
         "do_plot": false,
         "indir_root": "data/tmp/spectrum/",
@@ -93,15 +89,6 @@
         "freqdset2": "DX12",
         "smoothing_window2": 0,
         "max_polynom2": 0
-    },
-    "spec_w/noise": {
-        "do_plot": false,
-        "indir_root": "data/tmp/spectrum/",
-        "indir_rel": "",
-        "outdir_root": "vis/spectrum/",
-        "outdir_rel": "",
-        "in_desc": "scaled",
-        "out_desc": "noisesub"
     }
 }
 }

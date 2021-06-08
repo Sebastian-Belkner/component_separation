@@ -34,14 +34,14 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-mskset = dcf['pa']['mskset'] # smica or lens
-freqdset = dcf['pa']['freqdset'] # DX12 or NERSC
+mskset = cf['pa']['mskset'] # smica or lens
+freqdset = cf['pa']['freqdset'] # DX12 or NERSC
 
-lmax = dcf['pa']["lmax"]
+lmax = cf['pa']["lmax"]
 
-freqfilter = dcf['pa']["freqfilter"]
-specfilter = dcf['pa']["specfilter"]
-split = "Full" if dcf['pa']["freqdatsplit"] == "" else dcf['pa']["freqdatsplit"]
+freqfilter = cf['pa']["freqfilter"]
+specfilter = cf['pa']["specfilter"]
+split = "Full" if cf['pa']["freqdatsplit"] == "" else cf['pa']["freqdatsplit"]
 
 
 def plot_beamwindowfunctions():
@@ -91,7 +91,7 @@ def plot_maps(fname):
         inpath_name = dc["indir_root"]+dc["indir_rel"]+dc["in_desc"]+fname
         maps = io.load_synmap(path_name=inpath_name)
     else:
-        maps = io.load_plamap(dcf["pa"])
+        maps = io.load_plamap(cf['pa'])
 
     tqu = ["T", "Q", "U"]
     for data in maps:
@@ -109,7 +109,7 @@ def plot_maps(fname):
 
 def plot_spectrum(fname):
     
-    if dcf['pa']["Spectrum_scale"] == "D_l":
+    if cf['pa']["Spectrum_scale"] == "D_l":
         ylim = {
             "TT": (1e2, 1e5),
             "EE": (1e-3, 1e6),
@@ -135,7 +135,7 @@ def plot_spectrum(fname):
        }
     
     dc = dcf["plot"]["spectrum"]
-    lmax = dcf['pa']['lmax']
+    lmax = cf['pa']['lmax']
 
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
@@ -150,7 +150,7 @@ def plot_spectrum(fname):
             title_string = "{} spectrum - {}".format(specc, plotsubtitle)
             if "Planck-"+specc in spectrum_truth.columns:
                 spectrum_trth = spectrum_truth["Planck-"+specc]
-                if dcf['pa']["Spectrum_scale"] == "D_l":
+                if cf['pa']["Spectrum_scale"] == "D_l":
                     pass
                 else:
                     spectrum_trth = spectrum_trth/hpf.llp1e12(np.array([l for l in range(len(spectrum_trth))]))*1e12
@@ -172,7 +172,7 @@ def plot_spectrum(fname):
                 specc+"_spectrum/" + \
                 specc+"_spectrum" + "-" + \
                 dc["out_desc"] + "-" + \
-                dcf['pa']["Spectrum_scale"] + "-" + \
+                cf['pa']["Spectrum_scale"] + "-" + \
                 fname + ".jpg"
             io.save_figure(
                 mp = mp,
@@ -189,15 +189,15 @@ def plot_spectrum_comparison(fname):
         3. two different spectra (e.g. varying in masks)
     """
 
-    name1 = "SPEC"+io.make_filenamestring(dcf)
+    name1 = "SPEC"+io.make_filenamestring(cf)
     path1 = io.out_spec_path
     pathname1 = path1 + name1
 
-    dcf2 = copy.deepcopy(dcf)
-    dcf2['pa']['smoothing_window'] = 0
-    dcf2['pa']['max_polynom'] = 0
+    cf2 = copy.deepcopy(cf)
+    cf2['pa']['smoothing_window'] = 0
+    cf2['pa']['max_polynom'] = 0
 
-    name2 = "SPEC"+io.make_filenamestring(dcf2)
+    name2 = "SPEC"+io.make_filenamestring(cf2)
     path2 = io.out_spec_path
     pathname2 = path2 + name2
 
@@ -208,7 +208,7 @@ def plot_spectrum_comparison(fname):
     spectrum1_re = hpf.reorder_spectrum_dict(spectrum1)
     spectrum2_re = hpf.reorder_spectrum_dict(spectrum2)
 
-    lmax = dcf['pa']['lmax']
+    lmax = cf['pa']['lmax']
 
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
@@ -268,7 +268,7 @@ def plot_tf(fname):
     """
 
     path1 = io.out_spec_path
-    name1 = "SPEC"+io.make_filenamestring(dcf)
+    name1 = "SPEC"+io.make_filenamestring(cf)
     pathname1 = path1 + name1
 
     dcf2 = copy.deepcopy(dcf)
@@ -276,13 +276,13 @@ def plot_tf(fname):
     dcf2['pa']['max_polynom'] = 0
     pathname1 = path1 + name1
 
-    spectrum1 = io.load_data(io.spec_sc_path_name+'SMICA.npy')[0,0,:]
+    spectrum1 = io.load_data(io.specsmica_sc_path_name)[0,0,:]
     spectrum2 = io.load_data(path_name=cf[mch]['outdir_misc_ap']+"cmb_spec_in.npy")
 
     spectrum1_re = hpf.reorder_spectrum_dict(spectrum1)
     spectrum2_re = hpf.reorder_spectrum_dict(spectrum2)
 
-    lmax = dcf['pa']['lmax']
+    lmax = cf['pa']['lmax']
     spectrum_truth = io.load_truthspectrum()
     
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
@@ -370,7 +370,7 @@ def plot_variance():
         spec: np.array(io.load_cl(_inpathname(freqc,spec)))
         for spec in speccs}  
         for freqc in freqcomb}
-    lmax = dcf['pa']['lmax']
+    lmax = cf['pa']['lmax']
     npatch = 1
     ll = np.arange(0,lmax,1)
     # fsky = np.zeros((npatch, npatch), float)
@@ -429,7 +429,6 @@ def plot_variance():
 
 def plot_weights(fname):
     dc = dcf["plot"]["weights"]
-    total_filename = io.make_filenamestring(dcf)
     weight_path_name = io.weight_path_name
     weights = io.load_weights(weight_path_name, fname)
 
@@ -447,7 +446,7 @@ def plot_weights(fname):
             title_string = "{} weigthts - {}".format(spec, plotsubtitle)
             mp = cplt.plot_weights_binned(plt,
                 weights[idx],
-                lmax = dcf['pa']['lmax'],
+                lmax = cf['pa']['lmax'],
                 title_string = title_string,
                 )
 
@@ -479,7 +478,7 @@ def plot_weights_comparison():
     }
     
     dc = dcf["plot"]["weights_comparison"]
-    lmax = dcf['pa']['lmax']
+    lmax = cf['pa']['lmax']
 
     plotsubtitle = '{freqdset}"{split}" dataset - {mskset} masks'.format(
         mskset = mskset,
@@ -554,8 +553,8 @@ def plot_compare_optimalspectrum(fname):
                     # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
                 retspec = {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
         return retspec
-    fname = io.make_filenamestring(dcf)
-    lmax = dcf['pa']['lmax']
+    fname = io.make_filenamestring(cf)
+    lmax = cf['pa']['lmax']
     freqcomb =  [
     "{}-{}".format(FREQ,FREQ2)
         for FREQ in PLANCKMAPFREQ
@@ -609,7 +608,7 @@ def plot_compare_optimalspectrum(fname):
 
 
 if __name__ == '__main__':
-    fname = io.make_filenamestring(dcf)
+    fname = io.make_filenamestring(cf)
     
     if dcf["plot"]["beamf"]["do_plot"]:
         print("plotting beam windowfunctions")

@@ -1,10 +1,10 @@
 0. misc
     Remove sectra and frequency lists from naming convention    OK
-    Remove parameter section from d_config.py?
+    Remove parameter section from d_config.py?                  OK
 
 1. validate spectrum
     check why errorbars are so large
-    add tf plotting to draw module
+    add tf plotting to draw module                              OK
     
 2. validate smica
     take consistent simulation data as input

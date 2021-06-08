@@ -103,7 +103,7 @@ if __name__ == '__main__':
     bins = const.linear_equisized_bins_100 #const.SMICA_lowell_bins    #
 
     # Load smica spectrum of interest
-    smica_spec = io.load_data(io.spec_sc_path_name+'SMICA.npy')[0,0,:]
+    smica_spec = io.load_data(io.specsmica_sc_path_name)[0,0,:]
 
     # Load planck cmb simulation of interest
     #TODO this should be somehwat related to the SMICA output, but cannot find the NPIPE data atm. gotta ask Julien

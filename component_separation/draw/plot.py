@@ -31,6 +31,9 @@ else:
 import component_separation
 compath = os.path.dirname(component_separation.__file__)
 with open('{}/draw/d_config.json'.format(compath), "r") as f:
+    dcf = json.load(f)
+
+with open('{}/config.json'.format(compath), "r") as f:
     cf = json.load(f)
 
 freqfilter = cf['pa']["freqfilter"]

@@ -387,10 +387,14 @@ specsyn_sc_path_name = out_specsyn_path + specsyn_sc_filename
 
 spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
 out_spec_unsc_path_name = out_spec_path + spec_unsc_filename
-out_spec_unsc_path_name = out_spec_unsc_path_name
 
 spec_sc_filename = "SPEC" + total_filename
 spec_sc_path_name = out_spec_path + spec_sc_filename
+
+out_specsmica_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
+iff_make_dir(out_specsmica_path)
+specsmica_sc_filename = "SPECSMICA" + total_filename
+specsmica_sc_path_name = out_specsmica_path + specsmica_sc_filename
 
 weight_path = cf[mch]['outdir_weight_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(weight_path)

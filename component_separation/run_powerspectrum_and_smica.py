@@ -280,4 +280,4 @@ if __name__ == '__main__':
         qmax=len(nmodes),
         no_starting_point=False)
 
-    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.spec_sc_path_name+'SMICA')
+    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.specsmica_sc_path_name)
