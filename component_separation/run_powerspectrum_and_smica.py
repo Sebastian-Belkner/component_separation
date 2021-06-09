@@ -164,7 +164,6 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
                 ag[int(nmap/2):,-1]  = asyn
                 gal.set_mixmat(ag, fixed=agfix)
 
-    
     print('starting quasi newton')
     model.quasi_newton(np.abs(stats), nmodes)
     print('starting set_powspec 1')
@@ -256,6 +255,7 @@ if __name__ == '__main__':
 
     cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"][3:7,3:7,:]
     
+
     """
     Here starts the SMICA part
     """

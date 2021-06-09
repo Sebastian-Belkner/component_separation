@@ -1,9 +1,9 @@
 {
 "pa":{
-    "new_spectrum": true,
+    "new_spectrum": false,
     "Tscale": "K_CMB",
     "mskset": "lens",
-    "freqdset": "NPIPE_sim_cmb",
+    "freqdset": "NPIPE_sim",
     "Spectrum_scale": "C_l",
     "lmax": 3000,
     "lmax_mask": 6000,

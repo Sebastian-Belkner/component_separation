@@ -40,15 +40,17 @@ lmax_mask = cf['pa']["lmax_mask"]
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
-def mv(icov_l):
+
+def mv(icov_l, spectrum):
     spec_pick = "EE"
-    def _weightspec(icov_l):
-        for specc, data in icov_l.items():
+    def _weightspec(icov_l, spectrum):
+        # retspec = copy.deepcopy(spectrum)
+        for specc, data in spectrum.items():
             if specc == spec_pick:
                 icovsum = np.array([np.sum(icov_l[specc][l]) for l in range(lmax)])
-                retspec = {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
-        return retspec
-    return _weightspec(icov_l)
+                    # buff += spectrum[specc][freqc][:lmax] * spectrum[specc][freqc][:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax] * weights[specc]["channel @{}GHz".format(freqs[0])].to_numpy()[:lmax]/(normaliser * normaliser)
+                return {specc: {'optimal-optimal': np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])}}
+    return _weightspec(icov_l, spectrum)
 
 
 def calc_transferfunction(smica_cmb, C_lin):
@@ -100,26 +102,34 @@ if __name__ == '__main__':
     print("Generated filename(s) for this session: {}".format(filename_raw))
     print(filename)
     print(40*"$")
-    bins = const.linear_equisized_bins_100 #const.SMICA_lowell_bins    #
+    bins = const.linear_equisized_bins_10 #const.SMICA_lowell_bins    #
 
     # Load smica spectrum, i.e. cmb output
     freqdset = cf['pa']['freqdset']
     specsmicanpipesim_sc_path_name = io.out_specsmica_path + freqdset + cf[mch][freqdset]['sim_id'] + io.specsmica_sc_filename
-    smica_spec = io.load_data(specsmicanpipesim_sc_path_name)[0,0,:]
+    smica_spec_bnd = io.load_data(specsmicanpipesim_sc_path_name)[0,0,:]
 
     # Load cmb input
     cf['pa']['freqdset'] = freqdset+"_cmb"
     total_filename = io.make_filenamestring(cf)
     cmb_in_spec = io.load_data(cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/SPEC" + total_filename)
     
-    
     #two paths possible from here
     #   1. compare smica_spec with hp.anafast(cmb_map_in) using eq 9 from diffuse comp sep paper
-    #   beware, cmb_map_in most likely is IQU -> transform first? pol=true parameter takes care of it?
-    cmb_spec_in_bnd = bin_it_1D(cmb_in_spec[1,:]*1e12, bins=bins)
-    tf = calc_transferfunction(smica_spec, cmb_spec_in_bnd)  
-    
+    #       note: any of the cmb_in_spec works, as signal is same in every detector?
+    tf = calc_transferfunction(smica_spec_bnd, bin_it_1D(cmb_in_spec['143-143']["EE"], bins=bins))
+    cf['pa']['freqdset'] = freqdset[:-4]
     io.save_data(tf, cf[mch]['outdir_misc_ap']+"tf{}.npy".format(cf[mch][freqdset]['sim_id']))
+
+    # The following lines are bollocks as it tries to mv combine signal only channels. the way this is done here is not possible
+    ###################################
+    # cov = pw.build_covmatrices(cmb_in_spec, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+    # icov_l = np.nan_to_num(pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter))
+    # spec_data = hpf.reorder_spectrum_dict(cmb_in_spec)
+    # spec_data_wweighted = mv(icov_l, spec_data)
+    # cmb_spec_in_bnd = bin_it_1D(spec_data_wweighted['EE']['optimal-optimal'], bins=bins)
+    # io.save_data(cmb_spec_in_bnd, cf[mch]['outdir_misc_ap']+"cmb_in0200.npy")
+    # tf = calc_transferfunction(smica_spec_bnd, cmb_spec_in_bnd)
 
 
     #   2. crosscorrelate hp.synfast(smica_spec) with cmb_map_in
@@ -127,13 +137,5 @@ if __name__ == '__main__':
     if False:
         crc = calc_crosscorrelation(hp.synfast(smica_spec, nside=2048), cmb_map_in)
         io.save_data(crc, cf[mch]['outdir_misc_ap']+"crc.npy")
-
-    # this is a possible alternative to the above cmb_map_in, to be fixed
-    # or load cmb sim map for each frequency and combine using mv,
-    # C_lin_all = [hp.read_map("<path_to_sim_cmb_cls>{}".format(freq)) for freq in PLANCKMAPFREQ_f]
-    # cov_lin_all = pw.build_covmatrices(C_lin_all, lmax, freqfilter, specfilter)
-    # icov_lin_all = pw.invert_covmatrices(cov_lin_all)
-    # c_lin_mv = mv(icov_lin_all)
-    # smica_cmb_map = hp.synfast(smica_spec, nside=2048)
 
 
