@@ -67,7 +67,7 @@ def read_single(mask_path, mask_filename):
         '{mask_path}{mask_filename}'
         .format(
             mask_path = mask_path,
-            mask_filename = mask_filename))
+            mask_filename = mask_filename), dtype=np.bool)
 
 
 def make_filenamestring(cf_local, desc='scaled'):
@@ -78,10 +78,7 @@ def make_filenamestring(cf_local, desc='scaled'):
 
     Returns:
         str: unique filename which may be used for spectra, weights, maps, etc..
-    """    
-
-    freqfilter = cf_local['pa']["freqfilter"]
-    specfilter = cf_local['pa']["specfilter"]
+    """
     
     spectrum_scale = cf['pa']["Spectrum_scale"]
     mskset = cf_local['pa']['mskset'] # smica or lens
@@ -96,10 +93,10 @@ def make_filenamestring(cf_local, desc='scaled'):
     else:
         sim_id = ""
     if desc == 'raw':
-        return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(#'{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(
+        return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(#'{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(#'{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(
             # '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(
-            spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-            freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+            # spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+            # freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
             
             sim_id = sim_id,
             spectrum_scale = spectrum_scale,
@@ -110,11 +107,12 @@ def make_filenamestring(cf_local, desc='scaled'):
 
             split = "Full" if cf_local['pa']["freqdatsplit"] == "" else cf_local['pa']["freqdatsplit"])
     else:
-        return '{sim_id}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{smoothing_window}_{max_polynom}_{split}.npy'.format(#'{sim_id}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{split}.npy'.format(
-            spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
-            freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
+        return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{split}.npy'.format(#'{sim_id}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{smoothing_window}_{max_polynom}_{split}.npy'.format(#
+            # spec = ','.join([spec for spec in PLANCKSPECTRUM if spec not in specfilter]),
+            # freqs = ','.join([fr for fr in PLANCKMAPFREQ if fr not in freqfilter]),
             
             sim_id = sim_id,
+            spectrum_scale = spectrum_scale,
             freqdset = freqdset,
             mskset = mskset,
             lmax = lmax,
@@ -182,7 +180,7 @@ def load_plamap(cf_local, field):
             if FREQ not in freqfilter}
 
     maps = {
-        FREQ: hp.read_map(mappath[FREQ], field=field)
+        FREQ: hp.read_map(mappath[FREQ], field=field, dtype=np.float64, nest=False)
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter
     }
@@ -416,7 +414,7 @@ cf_copy = copy.deepcopy(cf)
 
 ### the following lines are only needed for run_smica part of the code
 buff = cf['pa']['freqdset']
-if "diff" in buff:
+if "diff" in buff or 'cmb' in buff:
     pass
 else:
     cf_copy['pa']['freqdset'] = buff+'_diff'

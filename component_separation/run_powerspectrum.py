@@ -95,7 +95,8 @@ if __name__ == '__main__':
     print(40*"$")
     print("Starting run with the following settings:")
     print(cf['pa'])
-    print("Generated filename(s) for this session: {}".format(filename_raw))
+    print("Generated raw filename(s) for this session: {}".format(filename_raw))
+    print("Generated filename(s) for this session: {}".format(filename))
     print(filename)
     print(40*"$")
     set_logger(DEBUG)
@@ -106,18 +107,18 @@ if __name__ == '__main__':
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
 
         spectrum = map2spec(data, tmask, pmask)
-        io.save_data(spectrum, io.out_spec_unsc_path_name)
+        io.save_data(spectrum, io.spec_unsc_path_name)
     else:
-        spectrum = io.load_data(path_name=io.out_spec_unsc_path_name)
+        spectrum = io.load_data(path_name=io.spec_unsc_path_name)
 
     if spectrum is None:
-        print("couldn't find spectrum with given specifications at {}. Exiting..".format(io.out_spec_unsc_path_name))
+        print("couldn't find spectrum with given specifications at {}. Exiting..".format(io.spec_unsc_path_name))
         sys.exit()
 
     spectrum_scaled = postprocess_spectrum(spectrum, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
     io.save_data(spectrum_scaled, io.spec_sc_path_name)
 
-    weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
-    io.save_data(weights, io.weight_path_name)
+    # weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
+    # io.save_data(weights, io.weight_path_name)
 
     # weighted_spec = spec_weight2weighted_spec(spectrum, weights)

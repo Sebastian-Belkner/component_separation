@@ -208,9 +208,6 @@ def map2mask():
         io.save_map(comb_tmask_negated, mask_path+filename)
 
 
-
-
-
 if __name__ == '__main__':
     print(60*"$")
     print("Starting run with the following settings:")
@@ -219,7 +216,7 @@ if __name__ == '__main__':
 
     make_emp_noisemap = True
     make_mask = False
-    make_synmap = True
+    make_synmap = False
 
     freqdset = cf['pa']["freqdset"]
 

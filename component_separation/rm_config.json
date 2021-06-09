@@ -1,7 +1,7 @@
 {
 "pa":{
     "freqdatsplit": "",
-    "freqdset": "NPIPE-sim-half_ring",
+    "freqdset": "NPIPE_sim_half_ring",
     "freqfilter": [
         "545",
         "857"
@@ -21,7 +21,7 @@
             ""
         ]
     },
-    "NPIPE-sim":{
+    "NPIPE_sim":{
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/",
         "filename": "npipe6v20{split}_{freq}_map.fits",
         "noisefix_filename": "noisefix/noisefix_{freq}{split}_{sim_id}.fits",
@@ -32,10 +32,10 @@
             ""
         ]   
     },
-    "NPIPE-sim-half_ring":{
+    "NPIPE_sim_half_ring":{
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/half_ring/",
         "filename": "npipe6v20{split}_{freq}_map_sub{n_of_2}.fits",
-        "out_filename": "{sim_id}_half_ring_npipe6v20{split}_{freq}.fits",
+        "out_filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}.fits",
         "sim_id": "0200",
         "split": [
             "A",

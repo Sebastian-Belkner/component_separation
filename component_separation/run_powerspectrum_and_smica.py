@@ -318,8 +318,9 @@ if __name__ == '__main__':
         logger=None,
         qmax=len(nmodes),
         no_starting_point=False)
-
-    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.specsmica_sc_path_name)
+    freqdset = cf['pa']['freqdset']
+    specsmicanpipesim_sc_path_name = io.out_specsmica_path + freqdset + cf[mch][freqdset]['sim_id'] + io.specsmica_sc_filename
+    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), specsmicanpipesim_sc_path_name)
 
 
     """

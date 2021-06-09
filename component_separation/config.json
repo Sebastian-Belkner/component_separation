@@ -1,9 +1,9 @@
 {
 "pa":{
-    "new_spectrum": false,
+    "new_spectrum": true,
     "Tscale": "K_CMB",
     "mskset": "lens",
-    "freqdset": "NPIPE_sim",
+    "freqdset": "NPIPE_sim_cmb",
     "Spectrum_scale": "C_l",
     "lmax": 3000,
     "lmax_mask": 6000,
@@ -53,6 +53,7 @@
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/",
         "filename": "npipe6v20{split}_{freq}_map.fits",
         "noisefix_filename": "noisefix/noisefix_{freq}{split}_{sim_id}.fits",
+        "order": "NESTED",
         "sim_id": "0200",
         "split": [
             "A",
@@ -63,7 +64,8 @@
         },
     "NPIPE_sim_diff":{
             "ap": "/global/cscratch1/sd/sebibel/map/frequency/",
-            "filename": "{sim_id}_half_ring_npipe6v20{split}_{freq}.fits",
+            "filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}.fits",
+            "order": "NESTED",
             "sim_id": "0200",
             "split": [
                 "A",
@@ -71,6 +73,17 @@
                 ""
                 ]
     },
+    "NPIPE_sim_cmb":{
+        "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/input/",
+        "filename": "ffp10_cmb_{freq}_alm_mc_{sim_id}_nside{nside}_quickpol.fits",
+        "order": "NESTED",
+        "sim_id": "0200",
+        "split": [
+            "A",
+            "B",
+            ""
+            ]
+},
     "lens":{
         "tmask":{
             "ap": "/global/homes/s/sebibel/data/mask/",
