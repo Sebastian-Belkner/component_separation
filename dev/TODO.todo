@@ -16,8 +16,9 @@
     e) cleanup last couple of steps of the pipeline
 
 3. add everything to cmb-skypatch package
-    check if cmb-skypatch still works
-    add
+    check if cmb-skypatch still works                              OK
+    add                                                            IP
+    take noise variance maps from dx12 .fits files
     derive analytic result for variance when combining patches with predefined weights
 
 4. smica

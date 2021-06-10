@@ -1,4 +1,4 @@
 dev
 ===============
 
-Collection of files needed for development of this software..
+Collection of files for development of this software..

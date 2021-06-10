@@ -207,6 +207,31 @@ class Helperfunctions:
                     })
         return spec_data
 
+
+    @staticmethod
+    def std_dev_binned(d, lmax=3000, binwidth=200):
+        bins = np.logspace(np.log10(1), np.log10(lmax+1), binwidth)
+        bl = bins[:-1]
+        br = bins[1:]
+        if type(d) == np.ndarray:
+            val = np.nan_to_num(d)
+        else:
+            val = np.nan_to_num(d.to_numpy())
+        n, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins)
+        sy, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val)
+        sy2, _ = np.histogram(
+            np.linspace(0,lmax,lmax),
+            bins=bins,
+            weights=val * val)
+        mean = sy / n
+        std = np.sqrt(sy2/n - mean*mean)
+        return mean, std, _
+
 # K_CMB to K_RJ conversion factors
 
 # Instrument  Factor
