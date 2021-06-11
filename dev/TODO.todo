@@ -21,6 +21,7 @@
     take noise variance maps from dx12 .fits files                 OK
     derive analytic result for variance when combining patches with predefined weights
     calculate correct fsky in `Lib_emp`
+    apply smica on each patch, then calculate approx_variance_min_ma?
 
 4. smica
     fix singular matrix error                                   OK
