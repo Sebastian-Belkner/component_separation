@@ -54,6 +54,8 @@ class Config(object):
         if FREQ not in cf['pa']["freqfilter"]]
     PLANCKSPECTRUM_f = [SPEC for SPEC in PLANCKSPECTRUM
         if SPEC not in cf['pa']["specfilter"]]
+    CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
+                             "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
 
 
 class Constants:
@@ -214,6 +216,8 @@ class Helperfunctions:
         bl = bins[:-1]
         br = bins[1:]
         if type(d) == np.ndarray:
+            val = np.nan_to_num(d)
+        elif type(d) == np.ma.core.MaskedArray:
             val = np.nan_to_num(d)
         else:
             val = np.nan_to_num(d.to_numpy())

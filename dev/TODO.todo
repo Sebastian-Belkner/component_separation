@@ -17,9 +17,10 @@
 
 3. add everything to cmb-skypatch package
     check if cmb-skypatch still works                              OK
-    add                                                            IP
-    take noise variance maps from dx12 .fits files
+    add                                                            OK
+    take noise variance maps from dx12 .fits files                 OK
     derive analytic result for variance when combining patches with predefined weights
+    calculate correct fsky in `Lib_emp`
 
 4. smica
     fix singular matrix error                                   OK
