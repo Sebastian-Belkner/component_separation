@@ -21,6 +21,7 @@ import pandas as pd
 import smica
 
 import component_separation
+import matplotlib.pyplot as plt
 import component_separation.io as io
 import component_separation.powspec as pw
 import component_separation.preprocess as prep
@@ -31,14 +32,14 @@ from component_separation.cs_util import Helperfunctions as hpf
 with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
 
-LOGFILE = 'data/tmp/logging/messages.log'
-logger = logging.getLogger("")
-handler = logging.handlers.RotatingFileHandler(
-        LOGFILE, maxBytes=(1048576*5), backupCount=0
-)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+# LOGFILE = 'data/tmp/logging/messages.log'
+# logger = logging.getLogger("")
+# handler = logging.handlers.RotatingFileHandler(
+#         LOGFILE, maxBytes=(1048576*5), backupCount=0
+# )
+# formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
 
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
@@ -54,9 +55,9 @@ freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 
 
-def set_logger(loglevel=logging.INFO):
-    logger.setLevel(loglevel)
-    logging.StreamHandler(sys.stdout)
+# def set_logger(loglevel=logging.INFO):
+#     logger.setLevel(loglevel)
+#     logging.StreamHandler(sys.stdout)
 
 
 def map2spec(data, tmask, pmask):
@@ -221,6 +222,52 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     return model
 
 
+def plot2D (x, d, fplot='plot', leg=None,legpos='lower right', figfile=None, tit=None,xmin=None, xmax=None,ymin=None,ymax=None,x_label=None,y_label=None):
+
+    plt.figure()
+    if len(d.shape)>1:
+        for c in range(d.shape[1]):
+            eval (fplot+'(x,d[:,c],linewidth=2)')
+    else:
+        eval (fplot+'(x,d,linewidth=2)')
+
+    a = np.array(plt.axis())
+    if not xmin is None:
+        a[0] = xmin
+    if not xmax is None:
+        a[1] = xmax
+    if not ymin is None:
+        a[2] = ymin
+    if not ymax is None:
+        a[3] = ymax
+    plt.axis(a)
+
+    if leg is None:
+        pass
+    else:
+        plt.legend(leg,legpos, shadow=True)
+
+    if x_label is None:
+        pass
+    else:
+        plt.xlabel(x_label,fontsize=18)
+
+    if y_label is None:
+        pass
+    else:
+        plt.ylabel(y_label,fontsize=18)
+
+    if tit is None:
+        pass
+    else:
+        plt.title(tit)
+
+    if figfile is None:
+        plt.show()
+    else:
+        plt.savefig(figfile)
+
+
 if __name__ == '__main__':
     filename_raw = io.total_filename_raw
     filename = io.total_filename
@@ -230,7 +277,7 @@ if __name__ == '__main__':
     print("Generated filename(s) for this session: {}".format(filename_raw))
     print(filename)
     print(40*"$")
-    set_logger(DEBUG)
+    # set_logger(DEBUG)
 
     tmask, pmask, pmask = io.load_one_mask_forallfreq()
     
@@ -310,7 +357,7 @@ if __name__ == '__main__':
         smica_model,
         np.abs(cov_ltot_bnd),
         nmodes,
-        maxiter=50,
+        maxiter=5,
         noise_fix=True,
         noise_template=cov_lN_bnd,
         afix=None, qmin=0,
@@ -321,8 +368,33 @@ if __name__ == '__main__':
     freqdset = cf['pa']['freqdset']
     specsmicanpipesim_sc_path_name = io.out_specsmica_path + freqdset + cf[mch][freqdset]['sim_id'] + io.specsmica_sc_filename
     io.save_data(smica_model.get_comp_by_name('cmb').powspec(), specsmicanpipesim_sc_path_name)
+    
+    """Plot components electro-magnetic spectra.
 
-
+        Parameters
+        ----------
+        nmodes : array-like, shape (nbin,1).
+        Number of modes of each bin.
+        freqlist : array-like, shape (ndet, 1), x axis values.
+        figfile : string, filename where to save the plot.
+        """
+    freqlist = None    
+    m = smica_model.ndet
+    Rq = smica_model.covariance4D()
+    P = np.zeros((smica_model.ndet, smica_model.ncomp))
+    leg = []
+    for c in range(smica_model.ncomp):
+        R = np.zeros((m,m))
+        for q in range(smica_model.nbin):
+            R += nmodes[q]*Rq[:,:,q,c]
+        P[:,c] = np.diag(R)
+        leg.append(smica_model.get_comp_by_number(c).name)
+    if freqlist is None:
+        freqlist = np.arange(m)
+    figfile = "/global/cscratch1/sd/sebibel/vis/smica_em.jpg"
+    plot2D(freqlist, P, fplot='plt.loglog',x_label='freqs',y_label='EM', leg=leg, figfile=figfile,xmin=min(freqlist),xmax=max(freqlist))
+    
+    print(smica_model.get_theta())
     """
     Now, follow the procedure described in https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/Astrophysical_component_separation
     1. fit all model parameters over clean fraction of sky at  100 <= ell <= 680, keep emission spectrum a
