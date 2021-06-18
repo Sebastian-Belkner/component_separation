@@ -357,7 +357,7 @@ if __name__ == '__main__':
         smica_model,
         np.abs(cov_ltot_bnd),
         nmodes,
-        maxiter=5,
+        maxiter=99,
         noise_fix=True,
         noise_template=cov_lN_bnd,
         afix=None, qmin=0,
@@ -395,6 +395,11 @@ if __name__ == '__main__':
     plot2D(freqlist, P, fplot='plt.loglog',x_label='freqs',y_label='EM', leg=leg, figfile=figfile,xmin=min(freqlist),xmax=max(freqlist))
     
     print(smica_model.get_theta())
+    io.save_data(smica_model.get_theta(), "/global/cscratch1/sd/sebibel/smica/theta.npy")
+    # covariance4D
+    io.save_data(smica_model.covariance4D(), "/global/cscratch1/sd/sebibel/smica/cov4D.npy")
+    # covariance
+    io.save_data(smica_model.covariance(), "/global/cscratch1/sd/sebibel/smica/cov.npy")
     """
     Now, follow the procedure described in https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/Astrophysical_component_separation
     1. fit all model parameters over clean fraction of sky at  100 <= ell <= 680, keep emission spectrum a
