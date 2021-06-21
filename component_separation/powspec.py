@@ -380,7 +380,7 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: L
     
     def _elaw(shp):
         if Tscale == "K_RJ":
-            return np.array([prep.tcmb2trj_sc(FREQ) for FREQ in csu.PLANCKMAPFREQ_f])[:-shp]
+            return np.array([prep.tcmb2trj_sc(FREQ) for FREQ in csu.PLANCKMAPFREQ_f])
         else:
             return np.ones((shp))
     weight_arr = np.array([

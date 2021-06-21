@@ -95,7 +95,7 @@ def calc_nmodes(bins, mask):
         nmode[idx] = np.sum(2*rg+1, axis=0)
         fsky = np.mean(mask**2)
         nmode *= fsky
-    print('nmodes: {}, fsky: {}'.format(nmode, fsky))
+    # print('nmodes: {}, fsky: {}'.format(nmode, fsky))
     return nmode
 
 
@@ -222,55 +222,39 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     return model
 
 
-def plot2D (x, d, fplot='plot', leg=None,legpos='lower right', figfile=None, tit=None,xmin=None, xmax=None,ymin=None,ymax=None,x_label=None,y_label=None):
+def calculate_powerspectra(tmask, pmask):
+    data = io.load_plamap(cf, field=(0,1,2))
+    data = prep.preprocess_all(data)
 
-    plt.figure()
-    if len(d.shape)>1:
-        for c in range(d.shape[1]):
-            eval (fplot+'(x,d[:,c],linewidth=2)')
-    else:
-        eval (fplot+'(x,d,linewidth=2)')
+    ### Calculate powerspectra
 
-    a = np.array(plt.axis())
-    if not xmin is None:
-        a[0] = xmin
-    if not xmax is None:
-        a[1] = xmax
-    if not ymin is None:
-        a[2] = ymin
-    if not ymax is None:
-        a[3] = ymax
-    plt.axis(a)
+    C_ltot_unsc = map2spec(data, tmask, pmask)
+    io.save_data(C_ltot_unsc, io.spec_unsc_path_name)
+    C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
+    return C_ltot
 
-    if leg is None:
-        pass
-    else:
-        plt.legend(leg,legpos, shadow=True)
 
-    if x_label is None:
-        pass
-    else:
-        plt.xlabel(x_label,fontsize=18)
+def load_powerspectra():
+    C_ltot = io.load_data(path_name=io.spec_sc_path_name)
+    if C_ltot is None:
+        print("couldn't find scaled spectrum with given specifications at {}. Trying unscaled..".format(io.spec_sc_path_name))
+        C_ltot_unsc = io.load_data(path_name=io.spec_unsc_path_name)
+        if C_ltot_unsc is None:
+            print("couldn't find unscaled spectrum with given specifications at {}. Exit..".format(io.spec_unsc_path_name))
+            sys.exit()
+        C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
+        io.save_data(C_ltot, io.spec_sc_path_name)
+    return C_ltot
 
-    if y_label is None:
-        pass
-    else:
-        plt.ylabel(y_label,fontsize=18)
-
-    if tit is None:
-        pass
-    else:
-        plt.title(tit)
-
-    if figfile is None:
-        plt.show()
-    else:
-        plt.savefig(figfile)
 
 
 if __name__ == '__main__':
     filename_raw = io.total_filename_raw
     filename = io.total_filename
+    ndet = 7
+    bins = const.SMICA_lowell_bins    #const.linear_equisized_bins_10 #
+    maxiter = 50
+
     print(40*"$")
     print("Starting run with the following settings:")
     print(cf['pa'])
@@ -280,84 +264,48 @@ if __name__ == '__main__':
     # set_logger(DEBUG)
 
     tmask, pmask, pmask = io.load_one_mask_forallfreq()
-    
     if cf['pa']['new_spectrum']:
-        data = io.load_plamap(cf, field=(0,1,2))
-        data = prep.preprocess_all(data)
-
-        ### Calculate powerspectra
-        C_ltot_unsc = map2spec(data, tmask, pmask)
-        io.save_data(C_ltot_unsc, io.spec_unsc_path_name)
-        C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
+        C_ltot = calculate_powerspectra(tmask, pmask)
     else:
-        C_ltot = io.load_data(path_name=io.spec_sc_path_name)
-        if C_ltot is None:
-            print("couldn't find scaled spectrum with given specifications at {}. Trying unscaled..".format(io.spec_sc_path_name))
-            C_ltot_unsc = io.load_data(path_name=io.spec_unsc_path_name)
-            if C_ltot_unsc is None:
-                print("couldn't find unscaled spectrum with given specifications at {}. Exit..".format(io.spec_unsc_path_name))
-                sys.exit()
-            C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
-            io.save_data(C_ltot, io.spec_sc_path_name)
-
-    cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"][3:7,3:7,:]
+        C_ltot = load_powerspectra()
+    cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
     
-
-    """
-    Here starts the SMICA part
-    """
-
-    ndet = 4
-    bins = const.linear_equisized_bins_10 #const.SMICA_lowell_bins    #
-    offset = 0
-    nmodes = calc_nmodes(bins, pmask)
-
-    cov_ltot_bnd = hpf.bin_it(cov_ltot, bins=bins, offset=offset)
-    print(cov_ltot_bnd.shape)
-    # cov_ltot_bnd[cov_ltot_bnd==0.0] = 0.01
-    # one_dummy = [0.01,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001]
-    # for n in range(cov_ltot_bnd.shape[2]):
-    #     print('n = {}'.format(n))
-    #     for m in range(3):
-    #         print('m = {}'.format(m))
-    #         if m>0:
-    #             rotated = one_dummy[-m:] + one_dummy[:-m]
-    #         else:
-    #             rotated = one_dummy
-    #         if cov_ltot_bnd[m,0,n] == 0.01:
-    #             print('rot: {}'.format(rotated))
-    #             cov_ltot_bnd[m,:,n] = rotated
-    #         print(cov_ltot_bnd[:,:,n])
-
-
-
     C_lN_unsc = io.load_data(io.noise_unsc_path_name)
     C_lN = postprocess_spectrum(C_lN_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
-    cov_lN = pw.build_covmatrices(C_lN, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)["EE"][3:7,3:7,:]
-    # for n in range(cov_lN["EE"].shape[2]):
-    #     cov_lN["EE"][:,:,n] = np.diag(np.diag(cov_lN["EE"][:,:,n]))
-    cov_lNEE = cov_lN
-    cov_lN_bnd = hpf.bin_it(cov_lNEE, bins=bins, offset=offset)
-    cov_lN_bnd[cov_lN_bnd==0.0] = 0.01
-    cov_lN_bnd = np.diagonal(cov_lN_bnd, offset=offset, axis1=0, axis2=1).T
-    print(cov_lN_bnd.shape)
+    cov_lN = pw.build_covmatrices(C_lN, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
 
-    signal = pd.read_csv(
+    D_lS = pd.read_csv(
         cf[mch]['powspec_truthfile'],
         header=0,
         sep='    ',
         index_col=0)
-    spectrum_trth = signal["Planck-"+"EE"].to_numpy()
-    C_lS_bnd =  hpf.bin_it(np.ones((ndet,ndet,lmax+1))* spectrum_trth[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)])), bins=bins, offset=offset)*1e12
+    D_lS_EE = D_lS["Planck-"+"EE"].to_numpy()
+    C_lS_EE = D_lS_EE[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)]))
+
+    cov_lS_EE = np.ones((ndet,ndet,lmax+1)) * C_lS_EE * 1e12
+    cov_ltotEE = cov_ltot["EE"][0:8,0:8,:]
+    cov_lNEE = cov_lN["EE"][0:8,0:8,:]
+
+    cov_ltot_bnd = hpf.bin_it(cov_ltotEE, bins=bins)
+    print(cov_ltot_bnd.shape)
+
+    cov_lN_bnd = hpf.bin_it(cov_lNEE, bins=bins)
+    # cov_lN_bnd[cov_lN_bnd==0.0] = 0.01
+    cov_lN_bnd = np.diagonal(cov_lN_bnd, axis1=0, axis2=1).T
+    print(cov_lN_bnd.shape)
+
+
+    C_lS_bnd =  hpf.bin_it(cov_lS_EE, bins=bins)
     print(C_lS_bnd.shape)
 
+    nmodes = calc_nmodes(bins, pmask)
     smica_model = build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
 
     fit_model_to_cov(
         smica_model,
         np.abs(cov_ltot_bnd),
         nmodes,
-        maxiter=99,
+        maxiter=maxiter,
         noise_fix=True,
         noise_template=cov_lN_bnd,
         afix=None, qmin=0,
@@ -365,34 +313,9 @@ if __name__ == '__main__':
         logger=None,
         qmax=len(nmodes),
         no_starting_point=False)
-    freqdset = cf['pa']['freqdset']
-    specsmicanpipesim_sc_path_name = io.out_specsmica_path + freqdset + cf[mch][freqdset]['sim_id'] + io.specsmica_sc_filename
-    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), specsmicanpipesim_sc_path_name)
-    
-    """Plot components electro-magnetic spectra.
 
-        Parameters
-        ----------
-        nmodes : array-like, shape (nbin,1).
-        Number of modes of each bin.
-        freqlist : array-like, shape (ndet, 1), x axis values.
-        figfile : string, filename where to save the plot.
-        """
-    freqlist = None    
-    m = smica_model.ndet
-    Rq = smica_model.covariance4D()
-    P = np.zeros((smica_model.ndet, smica_model.ncomp))
-    leg = []
-    for c in range(smica_model.ncomp):
-        R = np.zeros((m,m))
-        for q in range(smica_model.nbin):
-            R += nmodes[q]*Rq[:,:,q,c]
-        P[:,c] = np.diag(R)
-        leg.append(smica_model.get_comp_by_number(c).name)
-    if freqlist is None:
-        freqlist = np.arange(m)
-    figfile = "/global/cscratch1/sd/sebibel/vis/smica_em.jpg"
-    plot2D(freqlist, P, fplot='plt.loglog',x_label='freqs',y_label='EM', leg=leg, figfile=figfile,xmin=min(freqlist),xmax=max(freqlist))
+    cmb_specsmica_sc_path_name = io.out_specsmica_path + "CMB_" + io.specsmica_sc_filename
+    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), cmb_specsmica_sc_path_name)
     
     print(smica_model.get_theta())
     io.save_data(smica_model.get_theta(), "/global/cscratch1/sd/sebibel/smica/theta.npy")

@@ -114,10 +114,10 @@ def tcmb2trj_sc(freq) -> List[Dict]:
     """Converts maps (which are presumably in K_CMB) to K_RJ scale.
 
     Args:
-        data (Dict): Maps in K_CMB scale
+        freq: detector to be scaled
 
     Returns:
-        Dict: Converted maps in K_RJ scale
+        float: Scaling factor
     """
 
     factor = slhpastro.convfact(freq=int(freq)*1e9, fr=r'K_CMB',to=r'K_RJ')

@@ -182,17 +182,19 @@ class Helperfunctions:
     llp1e12 = lambda x: x*(x+1)*1e12/(2*np.pi)
 
     @staticmethod
-    def bin_it(data, bins=Constants.SMICA_lowell_bins, offset=0):
+    def bin_it(data, bins=Constants.SMICA_lowell_bins):
         ret = np.ones((*data.shape[:-1], len(bins)))
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
                 for k in range(bins.shape[0]):
-                    ret[i,j,k] = np.mean(np.nan_to_num(data[i,j,offset+int(bins[k][0]):offset+int(bins[k][1])]))
+                    ret[i,j,k] = np.mean(np.nan_to_num(data[i,j,int(bins[k][0]):int(bins[k][1])]))
         return np.nan_to_num(ret)
+
 
     @staticmethod
     def multi(a,b):
         return a*b
+    
     
     @staticmethod
     def reorder_spectrum_dict(spectrum):
