@@ -11,6 +11,8 @@
     "smoothing_window": 0,
     "max_polynom": 0,
     "num_sim": 5,
+    "split": "",
+    "splitvariation": "GHz",
 
     "freqfilter": [
         "545",
@@ -31,13 +33,25 @@
 "NERSC":{
     "powspec_truthfile": "/global/homes/s/sebibel/git/component_separation/data/powspecplanck.txt",
     "beamf":{
-        "HFI": {     
-            "ap": "/global/homes/s/sebibel/data/beamf/",
-            "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
+        "NPIPE": {
+            "HFI": {     
+            "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/quickpol/",
+            "filename": "Bl_TEB_npipe6v20_{freq1}{splitvariation}x{freq2}{splitvariation}.fits"
+            },
+            "LFI": {
+                "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/quickpol/",
+                "filename": "Bl_TEB_npipe6v20_{freq1}{splitvariation}x{freq2}{splitvariation}.fits"
+            }
         },
-        "LFI": {     
-            "ap": "/global/homes/s/sebibel/data/beamf/",
-            "filename": "LFI_RIMO_R3.31.fits"
+        "DX12": {
+            "HFI": {     
+                "ap": "/global/homes/s/sebibel/data/beamf/",
+                "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
+            },
+            "LFI": {     
+                "ap": "/global/homes/s/sebibel/data/beamf/",
+                "filename": "LFI_RIMO_R3.31.fits"
+            }
         }
     },
     "NPIPE":{

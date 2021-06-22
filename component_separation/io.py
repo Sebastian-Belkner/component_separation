@@ -282,6 +282,8 @@ def load_beamf(freqcomb: List) -> Dict:
         Dict: Planck beamfunctions
     """
     beamf = dict()
+    split = cf['pa']['split']
+    splitvariation = cf['pa']['splitvariation']
     for freqc in freqcomb:
         freqs = freqc.split('-')
         if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
@@ -290,10 +292,11 @@ def load_beamf(freqcomb: List) -> Dict:
                     "HFI": fits.open(
                         "{bf_path}{bf_filename}"
                         .format(
-                            bf_path = cf[mch]["beamf"]["HFI"]['ap'],
+                            bf_path = cf[mch]["beamf"]["HFI"]['ap'].replace("{split}", split),
                             bf_filename = cf[mch]["beamf"]["HFI"]['filename']
                                 .replace("{freq1}", freqs[0])
                                 .replace("{freq2}", freqs[1])
+                                .replace("{splitvariation}", splitvariation)
                         ))
                     }
                 })
@@ -303,10 +306,11 @@ def load_beamf(freqcomb: List) -> Dict:
                     "HFI": fits.open(
                         "{bf_path}{bf_filename}"
                         .format(
-                            bf_path = cf[mch]["beamf"]["HFI"]['ap'],
+                            bf_path = cf[mch]["beamf"]["HFI"]['ap'].replace("{split}", split),
                             bf_filename = cf[mch]["beamf"]["HFI"]['filename']
                                 .replace("{freq1}", freqs[1])
                                 .replace("{freq2}", freqs[1])
+                                .replace("{splitvariation}", splitvariation)
                     ))
                 }
             })
@@ -314,20 +318,23 @@ def load_beamf(freqcomb: List) -> Dict:
                 "LFI": fits.open(
                         "{bf_path}{bf_filename}"
                         .format(
-                            bf_path = cf[mch]["beamf"]["LFI"]['ap'],
+                            bf_path = cf[mch]["beamf"]["LFI"]['ap'].replace("{split}", split),
                             bf_filename = cf[mch]["beamf"]["LFI"]['filename']
+                                .replace("{splitvariation}", splitvariation)
                     ))
             })
         if int(freqs[0]) < 100 and int(freqs[1]) < 100:
-             beamf.update({
+            beamf.update({
                 freqc: {
                     "LFI": fits.open(
                         "{bf_path}{bf_filename}"
                         .format(
-                            bf_path = cf[mch]["beamf"]["LFI"]['ap'],
+                            bf_path = cf[mch]["beamf"]["LFI"]['ap'].replace("{split}", split),
                             bf_filename = cf[mch]["beamf"]["LFI"]['filename']
+                                .replace("{splitvariation}", splitvariation)
                     ))
                 }})
+
     return beamf
 
 

@@ -235,27 +235,42 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
         "044": 29,
         "070": 30
     }
-    for freqc, spec in data.items():
-        freqs = freqc.split('-')
-        hdul = beamf[freqc]
-        for specID, val in spec.items():
-            if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+    if cf['pa']['freqdset'].startswith('DX12'):
+        for freqc, spec in data.items():
+            freqs = freqc.split('-')
+            hdul = beamf[freqc]
+            for specID, val in spec.items():
+                if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+                    data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
+                    data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
+                elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
+                    for freq in freqs:
+                        b = np.sqrt(hdul["LFI"][LFI_dict[freq]].data.field(0))
+                        buff = np.concatenate((
+                            b[:min(lmax+1, len(b))],
+                            np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
+                        data[freqc][specID] /= buff
+                else:
+                    b = np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))
+                    buff = np.concatenate((
+                        b[:min(lmax+1, len(b))],
+                        np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
+                    data[freqc][specID] /= buff
+                    data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
+
+    elif cf['pa']['freqdset'].startswith('NPIPE'):
+        ### hdul['lfi'] and hdul['hfi'] are the same for npipe. only reason for distinguishing is to keep the datastructure of
+        ### config.json. even easier. now that all cross beamfunctions exist, and beamf
+        ### files have the same structure, no difference between applying lfis and hfis anymore
+        for freqc, spec in data.items():
+            freqs = freqc.split('-')
+            hdul = beamf[freqc]
+            for specID, val in spec.items():
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
                 data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
-            elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
-                b = np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))
-                buff = np.concatenate((
-                    b[:min(lmax+1, len(b))],
-                    np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
-                data[freqc][specID] /= buff
-                data[freqc][specID] /= buff
-            else:
-                b = np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))
-                buff = np.concatenate((
-                    b[:min(lmax+1, len(b))],
-                    np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
-                data[freqc][specID] /= buff
-                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
+    else:
+        print("Error applying beamfunction to dataset. Dataset might not be supported. Exiting..")
+        sys.exit()
     return data
 
 
