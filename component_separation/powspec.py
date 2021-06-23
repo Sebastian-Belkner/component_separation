@@ -56,7 +56,11 @@ with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as
     cf = json.load(f)
 
 PLANCKMAPAR = [p.value for p in list(Planckr)]
-PLANCKMAPNSIDE = cf["pa"]['nside']
+PLANCKMAPNSIDE = cf["pa"]['nside_desc_map']
+if cf["pa"]['nside_out'] is None:
+    nside_out = PLANCKMAPNSIDE
+else:
+    nside_out = [cf["pa"]['nside_out'],cf["pa"]['nside_out']]
 
 """ Doctest:
 The following constants be needed because functions are called with globals()
@@ -92,9 +96,9 @@ def tqupowerspec(tqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int) ->
     """
     def _ud_grade(data, FREQ):
         if int(FREQ)<100:
-            return hp.pixelfunc.ud_grade(data, nside_out=PLANCKMAPNSIDE[0])
+            return hp.pixelfunc.ud_grade(data, nside_out=nside_out[0])
         else:
-            return hp.pixelfunc.ud_grade(data, nside_out=PLANCKMAPNSIDE[1])
+            return hp.pixelfunc.ud_grade(data, nside_out=nside_out[1])
     buff = {
         FREQC:
             ps.map2cls(
@@ -259,8 +263,7 @@ def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str
                     data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
 
     elif cf['pa']['freqdset'].startswith('NPIPE'):
-        ### hdul['lfi'] and hdul['hfi'] are the same for npipe. only reason for distinguishing is to keep the datastructure of
-        ### config.json. even easier. now that all cross beamfunctions exist, and beamf
+    	### now that all cross beamfunctions exist, and beamf
         ### files have the same structure, no difference between applying lfis and hfis anymore
         for freqc, spec in data.items():
             freqs = freqc.split('-')
@@ -331,7 +334,7 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
 
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
-def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[str], specfilter: List[str]):
+def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int):
     """Inverts a covariance matrix
 
     Args:
@@ -380,14 +383,12 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int, freqfilter: List[s
 
 @log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
 @log_on_end(DEBUG, "channel weights calculated successfully: '{result}' ")
-def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_CMB") -> np.array:
+def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], Tscale: str = "K_CMB") -> np.array:
     """Calculates weightings of the respective Frequency channels
 
     Args:
         cov (Dict): The inverted covariance matrices of Dimension [lmax,Nspec,Nspec]
         lmax (int): Maximum multipol of data to be considered
-        freqfilter (List[str]): Frequency channels which are to be ignored
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
 
     Returns:
         np.array: The weightings of the respective Frequency channels
@@ -413,9 +414,13 @@ def smoothC_l(data, smoothing_window=5, max_polynom=2):
     return data
 
 
-def spec2alms(spectrum):
-    return None
+def map2alm_spin(maps, pmask, spin, lmax):
+    return ps.map2alm_spin([maps[1] * pmask, maps[2] * pmask], spin,
+                                 lmax=lmax)
 
+def map2alm(maps, tmask, lmax):
+    return ps.map2alm([maps[0] * tmask, maps[2] * pmask],
+                                 lmax=lmax)
 
 def alms2almsxweight(alms, weights):
     return None

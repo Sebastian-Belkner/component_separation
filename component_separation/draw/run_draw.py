@@ -377,8 +377,7 @@ def plot_variance():
     # np.fill_diagonal(fsky, 1/npatch*0.73)#*np.ones((npatch)))
 
     cov = pw.build_covmatrices(spectrum, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-    icov_l = pw.invert_covmatrices(cov, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-
+    
     spec_data = hpf.reorder_spectrum_dict(spectrum)
     spec_data_wweighted = _weightspec(icov_l, spec_data)
 

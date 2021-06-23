@@ -92,22 +92,27 @@ def splitmaps2diffmap():
     
     # scratch = sys.argv[1]
     outpath_name = cf[mch]["outdir_map_ap"]
+    PLANCKMAPNSIDE = cf["pa"]['nside']
+    if cf["pa"]['nside_out'] is None:
+        nside_out = PLANCKMAPNSIDE
+    else:
+        nside_out = [cf["pa"]['nside_out'],cf["pa"]['nside_out']]
 
     for FREQ in csu.PLANCKMAPFREQ_f:
         freqf = [f for f in freqfilter if f != FREQ]
         cf['pa']["freqfilter"] = freqf
         
         cf[mch][freqdset]['filename'] = filename_1of2
-        data_hm1 = io.load_plamap(cf, field=(0,1,2))
+        data_hm1 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out[0])
 
         cf[mch][freqdset]['filename'] = filename_2of2
-        data_hm2 = io.load_plamap(cf, field=(0,1,2))
+        data_hm2 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out[0])
         data_diff = create_difference_map(data_hm1, data_hm2)
 
         outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
             .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
             .replace("{freq}", FREQ)\
-            .replace("{nside}", str(1024) if int(FREQ)<100 else str(2048))\
+            .replace("{nside}", str(nside_out[0]) if int(FREQ)<100 else str(nside_out[0]))\
             .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
             .replace("{split}", freqdatsplit)\
             .replace("{sim_id}", sim_id)

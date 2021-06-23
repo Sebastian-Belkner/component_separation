@@ -28,14 +28,14 @@ from component_separation.cs_util import Planckf, Plancks
 with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
     cf = json.load(f)
 
-LOGFILE = 'data/tmp/logging/messages.log'
-logger = logging.getLogger("")
-handler = logging.handlers.RotatingFileHandler(
-        LOGFILE, maxBytes=(1048576*5), backupCount=0
-)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+# LOGFILE = 'data/tmp/logging/messages.log'
+# logger = logging.getLogger("")
+# handler = logging.handlers.RotatingFileHandler(
+#         LOGFILE, maxBytes=(1048576*5), backupCount=0
+# )
+# formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
 
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
@@ -47,6 +47,7 @@ lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
+nside_out = cf['pa']["nside_out"]
 
 
 def set_logger(loglevel=logging.INFO):
@@ -99,10 +100,10 @@ if __name__ == '__main__':
     print("Generated filename(s) for this session: {}".format(filename))
     print(filename)
     print(40*"$")
-    set_logger(DEBUG)
+    # set_logger(DEBUG)
 
     if cf['pa']['new_spectrum']:
-        data = io.load_plamap(cf, field=(0,1,2))
+        data = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
         data = prep.preprocess_all(data)
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
 

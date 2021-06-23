@@ -36,7 +36,7 @@ with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as
     cf = json.load(f)
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-PLANCKMAPNSIDE = cf["pa"]['nside']
+PLANCKMAPNSIDE = cf["pa"]['nside_desc_map']
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
 freqdset = cf["pa"]['freqdset']
@@ -135,7 +135,9 @@ def load_data(path_name: str) -> Dict[str, Dict]:
         return None
 
 
-def load_plamap(cf_local, field):
+def load_plamap(cf_local, field, nside_out=None):
+    if nside_out is None:
+        nside_out = cf_local["pa"]["nside"]
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
@@ -152,7 +154,7 @@ def load_plamap(cf_local, field):
 
     freqdset = cf_local["pa"]['freqdset'] # NPIPE or DX12
     freqfilter = cf_local["pa"]["freqfilter"]
-    nside = cf_local["pa"]["nside"]
+    nside_desc = cf_local["pa"]["nside_desc_map"]
 
     abs_path = cf_local[mch][freqdset]['ap']
     freq_filename = cf_local[mch][freqdset]['filename']
@@ -169,7 +171,7 @@ def load_plamap(cf_local, field):
                 freq_filename = freq_filename
                     .replace("{freq}", FREQ)
                     .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
-                    .replace("{nside}", str(nside[0]) if int(FREQ)<100 else str(nside[1]))
+                    .replace("{nside}", str(nside_desc[0]) if int(FREQ)<100 else str(nside_desc[1]))
                     .replace("{00/1}", "00" if int(FREQ)<100 else "01")
                     .replace("{even/half1}", "even" if int(FREQ)>=100 else "half1")
                     .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "half2")
@@ -180,7 +182,7 @@ def load_plamap(cf_local, field):
             if FREQ not in freqfilter}
 
     maps = {
-        FREQ: hp.read_map(mappath[FREQ], field=field, dtype=np.float64, nest=False)
+        FREQ: hp.ud_grade(hp.read_map(mappath[FREQ], field=field, dtype=np.float64, nest=False), nside_out=nside_out)
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter
     }
@@ -219,7 +221,7 @@ def load_mask_per_freq(dg_to=1024):
     return tmask, pmask, pmask
 
 
-def load_one_mask_forallfreq(udgrade=False):
+def load_one_mask_forallfreq(nside_out=False):
     maskset = cf['pa']['mskset']
     pmask_path = cf[mch][maskset]['pmask']["ap"]
     pmask_filename = cf[mch][maskset]['pmask']['filename']
@@ -234,9 +236,9 @@ def load_one_mask_forallfreq(udgrade=False):
     tmask_path = cf[mch][maskset]['tmask']["ap"]
     tmask_filename = cf[mch][maskset]['tmask']['filename']
     tmask = read_single(tmask_path, tmask_filename)
-    if udgrade:
-        tmask = hp.ud_grade(tmask, nside_out=udgrade)
-        pmask = hp.ud_grade(pmask, nside_out=udgrade)
+    if nside_out:
+        tmask = hp.ud_grade(tmask, nside_out=nside_out)
+        pmask = hp.ud_grade(pmask, nside_out=nside_out)
 
     return tmask, pmask, pmask
 
@@ -284,56 +286,78 @@ def load_beamf(freqcomb: List) -> Dict:
     beamf = dict()
     split = cf['pa']['split']
     splitvariation = cf['pa']['splitvariation']
-    for freqc in freqcomb:
-        freqs = freqc.split('-')
-        if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+    if cf['pa']['freqdset'].startswith('DX12'):
+        dset = 'DX12'
+    elif cf['pa']['freqdset'].startswith('NPIPE'):
+        dset = 'NPIPE'
+
+    if cf['pa']['freqdset'].startswith('DX12'):
+        for freqc in freqcomb:
+            freqs = freqc.split('-')
+            if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+                beamf.update({
+                    freqc: {
+                        "HFI": fits.open(
+                            "{bf_path}{bf_filename}"
+                            .format(
+                                bf_path = cf[mch]["beamf"][dset]["HFI"]['ap'].replace("{split}", split),
+                                bf_filename = cf[mch]["beamf"][dset]["HFI"]['filename']
+                                    .replace("{freq1}", freqs[0])
+                                    .replace("{freq2}", freqs[1])
+                                    .replace("{splitvariation}", splitvariation)
+                            ))
+                        }
+                    })
+            elif int(freqs[0]) < 100 and int(freqs[1]) >= 100:
+                beamf.update({
+                    freqc: {
+                        "HFI": fits.open(
+                            "{bf_path}{bf_filename}"
+                            .format(
+                                bf_path = cf[mch]["beamf"][dset]["HFI"]['ap'].replace("{split}", split),
+                                bf_filename = cf[mch]["beamf"][dset]["HFI"]['filename']
+                                    .replace("{freq1}", freqs[1])
+                                    .replace("{freq2}", freqs[1])
+                                    .replace("{splitvariation}", splitvariation)
+                        ))
+                    }
+                })
+                beamf[freqc].update({
+                    "LFI": fits.open(
+                            "{bf_path}{bf_filename}"
+                            .format(
+                                bf_path = cf[mch]["beamf"][dset]["LFI"]['ap'].replace("{split}", split),
+                                bf_filename = cf[mch]["beamf"][dset]["LFI"]['filename']
+                                    .replace("{splitvariation}", splitvariation)
+                        ))
+                })
+            if int(freqs[0]) < 100 and int(freqs[1]) < 100:
+                beamf.update({
+                    freqc: {
+                        "LFI": fits.open(
+                            "{bf_path}{bf_filename}"
+                            .format(
+                                bf_path = cf[mch]["beamf"][dset]["LFI"]['ap'].replace("{split}", split),
+                                bf_filename = cf[mch]["beamf"][dset]["LFI"]['filename']
+                                    .replace("{splitvariation}", splitvariation)
+                        ))
+                    }})
+    elif cf['pa']['freqdset'].startswith('NPIPE'):
+        for freqc in freqcomb:
+            freqs = freqc.split('-')
             beamf.update({
                 freqc: {
                     "HFI": fits.open(
                         "{bf_path}{bf_filename}"
                         .format(
-                            bf_path = cf[mch]["beamf"]["HFI"]['ap'].replace("{split}", split),
-                            bf_filename = cf[mch]["beamf"]["HFI"]['filename']
+                            bf_path = cf[mch]["beamf"][dset]["HFI"]['ap'].replace("{split}", split),
+                            bf_filename = cf[mch]["beamf"][dset]["HFI"]['filename']
                                 .replace("{freq1}", freqs[0])
                                 .replace("{freq2}", freqs[1])
                                 .replace("{splitvariation}", splitvariation)
                         ))
                     }
                 })
-        elif int(freqs[0]) < 100 and int(freqs[1]) >= 100:
-            beamf.update({
-                freqc: {
-                    "HFI": fits.open(
-                        "{bf_path}{bf_filename}"
-                        .format(
-                            bf_path = cf[mch]["beamf"]["HFI"]['ap'].replace("{split}", split),
-                            bf_filename = cf[mch]["beamf"]["HFI"]['filename']
-                                .replace("{freq1}", freqs[1])
-                                .replace("{freq2}", freqs[1])
-                                .replace("{splitvariation}", splitvariation)
-                    ))
-                }
-            })
-            beamf[freqc].update({
-                "LFI": fits.open(
-                        "{bf_path}{bf_filename}"
-                        .format(
-                            bf_path = cf[mch]["beamf"]["LFI"]['ap'].replace("{split}", split),
-                            bf_filename = cf[mch]["beamf"]["LFI"]['filename']
-                                .replace("{splitvariation}", splitvariation)
-                    ))
-            })
-        if int(freqs[0]) < 100 and int(freqs[1]) < 100:
-            beamf.update({
-                freqc: {
-                    "LFI": fits.open(
-                        "{bf_path}{bf_filename}"
-                        .format(
-                            bf_path = cf[mch]["beamf"]["LFI"]['ap'].replace("{split}", split),
-                            bf_filename = cf[mch]["beamf"]["LFI"]['filename']
-                                .replace("{splitvariation}", splitvariation)
-                    ))
-                }})
 
     return beamf
 
@@ -398,6 +422,9 @@ specsyn_sc_path_name = out_specsyn_path + specsyn_sc_filename
 
 spec_unsc_filename = "SPEC-RAW_" + total_filename_raw
 spec_unsc_path_name = out_spec_path + spec_unsc_filename
+
+cmb_unsc_filename = "CMB-RAW_" + total_filename_raw
+cmb_unsc_path_name = out_spec_path + cmb_unsc_filename
 
 spec_sc_filename = "SPEC" + total_filename
 spec_sc_path_name = out_spec_path + spec_sc_filename

@@ -6,6 +6,7 @@
         "545",
         "857"
     ],
+    "nside_out": 256,
     "nside": [
         1024,
         2048
@@ -35,7 +36,7 @@
     "NPIPE_sim_half_ring":{
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/half_ring/",
         "filename": "npipe6v20{split}_{freq}_map_sub{n_of_2}.fits",
-        "out_filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}.fits",
+        "out_filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}_{nside}.fits",
         "sim_id": "0200",
         "split": [
             "A",

@@ -1,17 +1,18 @@
 {
 "pa":{
-    "new_spectrum": false,
+    "new_spectrum": false ,
     "Tscale": "K_CMB",
     "mskset": "lens",
     "freqdset": "NPIPE_sim",
     "Spectrum_scale": "C_l",
-    "lmax": 3000,
-    "lmax_mask": 6000,
+    "lmax": 750,
+    "lmax_mask": 1500,
     "freqdatsplit": "",
     "smoothing_window": 0,
     "max_polynom": 0,
     "num_sim": 5,
     "split": "",
+    "nside_out": 256,
     "splitvariation": "GHz",
 
     "freqfilter": [
@@ -25,7 +26,7 @@
         "BT",
         "BE"
     ],
-    "nside": [
+    "nside_desc_map": [
         1024,
         2048
     ]
@@ -37,10 +38,6 @@
             "HFI": {     
             "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/quickpol/",
             "filename": "Bl_TEB_npipe6v20_{freq1}{splitvariation}x{freq2}{splitvariation}.fits"
-            },
-            "LFI": {
-                "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/quickpol/",
-                "filename": "Bl_TEB_npipe6v20_{freq1}{splitvariation}x{freq2}{splitvariation}.fits"
             }
         },
         "DX12": {
@@ -78,7 +75,7 @@
         },
     "NPIPE_sim_diff":{
             "ap": "/global/cscratch1/sd/sebibel/map/frequency/",
-            "filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}.fits",
+            "filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}_{nside}.fits",
             "order": "NESTED",
             "sim_id": "0200",
             "split": [
