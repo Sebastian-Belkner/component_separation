@@ -267,7 +267,7 @@ def cov_lS2voc_lSmin(icov_lS, C_lS):
     for specc, data in reC_lS.items():
         icovsum = np.array([np.sum(icov_lS[specc][l]) for l in range(lmax)])
         C_lSmin[specc] = np.array([1/icovsum_l if icovsum_l is not None else 0 for icovsum_l in icovsum])
-        
+    return C_lSmin  
 
 if __name__ == '__main__':
     CMB = dict()
@@ -365,71 +365,74 @@ if __name__ == '__main__':
     # covariance
     io.save_data(smica_model.covariance(), "/global/cscratch1/sd/sebibel/smica/cov.npy")
 
-
-    # TODO calculate weights from smica cov output
-    # cov_inv_ltot = pw.invert_covmatrices(cov_ltot, lmax)
-    # weights_tot = pw.calculate_weights(cov_inv_ltot, len(bins), "K_CMB")
-    # print(weights_tot.shape)
-    # io.save_data(weights_tot, io.weight_path_name)
+    smica_cov_full = dict()
+    zer = np.zeros_like(smica_model.covariance())
+    for spec in csu.PLANCKSPECTRUM_f:
+        smica_cov_full[spec] = zer
+    smica_cov_full["EE"] = smica_model.covariance()
+    smica_cov_full_inv_ltot = pw.invert_covmatrices(smica_cov_full, len(bins))
+    smica_weights_tot = pw.calculate_weights(smica_cov_full_inv_ltot, len(bins), "K_CMB")
+    print(smica_weights_tot.shape)
+    io.save_data(weights_tot, io.weight_path + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + io.total_filename)
 
     """
     The next lines follow tightly the algorithm of SMICA propagation code
     """
 
-
-
     # smica_W_pol = np.loadtxt("/global/homes/s/sebibel/data/weights/weights_EB_smica_R3.00.txt").reshape(2,7,4001)
     # smica_W_t = np.loadtxt("/global/homes/s/sebibel/data/weights/weights_T_smica_R3.00_Xfull.txt")
 
-    # TODO load weights from smica cov output
-    W = io.load_data(io.weight_path_name)
+
+    W = io.load_data(io.weight_path + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + io.total_filename)
+    print(W.shape)
     maps = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
     maps = prep.preprocess_all(maps)
     for det in detectors[:-2]:
         lmax = min(3 * nside_out - 1, lmax + lmax_mask)
-
-        alms = pw.map2alm_spin(hp.ud_grade(maps[det], nside_out=nside_out), lmax) # full sky QU->EB
-        almT[det] = alms[0]
-        almE[det] = alms[1]
-        almB[det] = alms[2]
+        alms = pw.map2alm_spin(hp.ud_grade(maps[det], nside_out=nside_out), pmask, 2, lmax) # full sky QU->EB
+        # almT[det] = alms[0]
+        almE[det] = alms[0]
+        almB[det] = alms[1]
 
     nalm = int((lmax+1)*(lmax+2)/2)  
-    combalmT = np.zeros((nalm), dtype=np.complex128)
+    # combalmT = np.zeros((nalm), dtype=np.complex128)
     combalmE = np.zeros((nalm), dtype=np.complex128)
     combalmB = np.zeros((nalm), dtype=np.complex128)
-    for m,name in zip(range(len(names[:-2])),names[:-2]):
-        combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-        combalmE += hp.almxfl(almE[name], np.squeeze(W[1,m,:]))
-        combalmB += hp.almxfl(almB[name], np.squeeze(W[2,m,:]))
+    for m,det in zip(range(len(detectors[:-2])),detectors[:-2]):
+        # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
+        combalmE += hp.almxfl(almE[det], np.squeeze(W[1,:,m]))
+        combalmB += hp.almxfl(almB[det], np.squeeze(W[2,:,m]))
 
-    CMB["TT"] = hp.almxfl(combalmT, hp.pixwin(nside_out)[0:lmax])
+    # CMB["TT"] = hp.almxfl(combalmT, hp.pixwin(nside_out)[0:lmax])
     CMB["EE"] = hp.almxfl(combalmE, hp.pixwin(nside_out, pol=True)[0][0:lmax])
     CMB["BB"] = hp.almxfl(combalmB, hp.pixwin(nside_out, pol=True)[1][0:lmax])
-
-    CMB["TQU"]['out'] = hp.alm2map([CMB["TT"], CMB["EE"], CMB["BB"]], nside_out)
-    smica_C_lS_unsc = pw.map2spec(CMB["TQU"], tmask, pmask)
+    CMB["QU"] = dict()
+    CMB["QU"]['out'] = ps.alm2map_spin([CMB["EE"], CMB["BB"]], nside_out, 0, lmax)
+    smica_C_lS_unsc = ps.map2cl_spin(qumap=CMB["QU"]['out'], spin=2, mask=pmask, lmax=lmax,
+                lmax_mask=lmax_mask)
     # SMICA result right above
 
-    CMB["TQU"]['in'] = hp.synfast(cov_lS_min, nside=nside_out)
+    CMB["QU"]['in'] = [hp.synfast(cov_lS_min['EE'], nside=nside_out), hp.synfast(cov_lS_min['BB'], nside=nside_out)]
     # cmb input as given to SMICA
 
     # crosscovariance between cmb input and what smica gives
-    pw.tqupowerspec(CMB["TQU"]['in'], CMB["TQU"]['out'])
-    crosscov = ps.map2cls(
-                tqumap=CMB["TQU"]['in'],
-                tmask=tmask,
-                pmask=pmask,
-                lmax=lmax,
-                lmax_mask=lmax_mask,
-                tqumap2=CMB["TQU"]['out'],
-                tmask2=tmask,
-                pmask2=pmask
-                )
-
+    crosscov = ps.map2cl_spin(
+        qumap=CMB["QU"]['in'],
+        spin=2,
+        mask=pmask,
+        lmax=lmax,
+        lmax_mask=lmax_mask,
+        qumap2=CMB["QU"]['out'],
+        mask2=pmask
+    )
 
     # TODO this should give the transferfunction
-    transferfunction = crosscov/cov_lS_min
-
+    print(crosscov[0][:750])
+    print("######")
+    print(cov_lS_min["EE"])
+    transferfunction = crosscov[0][:750]/cov_lS_min["EE"]
+    io.save_data(transferfunction, "/global/cscratch1/sd/sebibel/misc/tf.npy")
+    io.save_data(crosscov[0][:750], "/global/cscratch1/sd/sebibel/misc/crosscov.npy")
 
     """
     Now, follow the procedure described in https://wiki.cosmos.esa.int/planck-legacy-archive/index.php/Astrophysical_component_separation
