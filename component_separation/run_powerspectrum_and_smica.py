@@ -10,6 +10,7 @@ __author__ = "S. Belkner"
 import json
 import logging
 from astropy.io import fits
+from scipy import interpolate
 import logging.handlers
 import os
 import platform
@@ -59,9 +60,9 @@ specfilter = cf['pa']["specfilter"]
 tmask, pmask, pmask = io.load_one_mask_forallfreq(nside_out=nside_out)
 
 
-# def set_logger(loglevel=logging.INFO):
-#     logger.setLevel(loglevel)
-#     logging.StreamHandler(sys.stdout)
+def set_logger(loglevel=logging.INFO):
+    logger.setLevel(loglevel)
+    logging.StreamHandler(sys.stdout)
 
 
 def map2spec(data, tmask, pmask):
@@ -227,8 +228,6 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
 
 def calculate_powerspectra(maps, tmask, pmask):
-    ### Calculate powerspectra
-
     C_ltot_unsc = map2spec(maps, tmask, pmask)
     io.save_data(C_ltot_unsc, io.spec_unsc_path_name)
     C_ltot = postprocess_spectrum(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
@@ -278,14 +277,10 @@ def cmbmap2C_lS():
         # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
         combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(1)[0:lmax]), np.squeeze(signalW[:,m]))
         combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(2)[0:lmax]), np.squeeze(signalW[:,m]))
-        # combalmE += hp.almxfl(almE[det], np.squeeze(signalW[:,m]))
-        # combalmB += hp.almxfl(almB[det], np.squeeze(signalW[:,m]))
 
     CMB_in["EE"] = hp.almxfl(combalmE, 1/hp.pixwin(nside_out, pol=True)[0][0:lmax])
     CMB_in["BB"] = hp.almxfl(combalmB, 1/hp.pixwin(nside_out, pol=True)[1][0:lmax])
 
-    # CMB_in["EE"] = combalmE
-    # CMB_in["BB"] = combalmB
     CMB_in["QU"] = dict()
     CMB_in["QU"] = hp.alm2map([np.zeros_like(CMB_in["EE"]), CMB_in["EE"], CMB_in["BB"]], nside_out)
     return CMB_in["QU"]
@@ -301,10 +296,11 @@ def cov_lS2cov_lSmin(icov_lS, C_lS):
 
 
 if __name__ == '__main__':
-    run_smica = False
+    run_smica = True
     run_weight = False
     run_cmbmap = False
     CMB = dict()
+    CMB["TQU"] = dict()
     almT, almE, almB = dict(), dict(), dict()
 
     detectors = csu.PLANCKMAPFREQ_f
@@ -312,7 +308,7 @@ if __name__ == '__main__':
     filename = io.total_filename
     ndet = len(detectors)
     bins =  const.linear_equisized_bins_10    #const.linear_equisized_bins_10 #const.linear_equisized_bins_1
-    maxiter = 10
+    maxiter = 50
 
 
     print(40*"$")
@@ -321,6 +317,7 @@ if __name__ == '__main__':
     print("Generated filename(s) for this session: {}".format(filename_raw))
     print(filename)
     print(40*"$")
+
 
     # set_logger(DEBUG)
     if run_weight:
@@ -342,9 +339,8 @@ if __name__ == '__main__':
         print(weights_tot.shape)
 
     if run_cmbmap:
-        CMB_in = dict()
-        CMB_in["QU"] = cmbmap2C_lS()
-        io.save_data(CMB_in["QU"], "/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")
+        CMB["TQU"]["in"] = cmbmap2C_lS()
+        io.save_data(CMB["TQU"]["in"], "/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")
 
     
     """
@@ -354,12 +350,13 @@ if __name__ == '__main__':
     if run_smica:
         C_ltot = load_powerspectra()
         cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-        cov_ltotEE = cov_ltot["EE"][0:8,0:8,:]
+        cov_ltotEE = cov_ltot["EE"]
+        print(cov_ltot["EE"].shape, 'hello')
 
         C_lN_unsc = io.load_data(io.noise_unsc_path_name)
         C_lN = postprocess_spectrum(C_lN_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
         cov_lN = pw.build_covmatrices(C_lN, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-        cov_lNEE = cov_lN["EE"][0:8,0:8,:]
+        cov_lNEE = cov_lN["EE"]
 
         cov_ltot_bnd = hpf.bin_it(cov_ltotEE, bins=bins)
         print(cov_ltot_bnd.shape)
@@ -369,6 +366,7 @@ if __name__ == '__main__':
         cov_lN_bnd = np.diagonal(cov_lN_bnd, axis1=0, axis2=1).T
         print(cov_lN_bnd.shape)
 
+        #TODO Use cov_lS_EE from CMB maps
         D_lS = pd.read_csv(
         cf[mch]['powspec_truthfile'],
         header=0,
@@ -376,12 +374,10 @@ if __name__ == '__main__':
         index_col=0)
         D_lS_EE = D_lS["Planck-"+"EE"].to_numpy()
         C_lS_EE = D_lS_EE[:lmax+1]/hpf.llp1e12(np.array([range(lmax+1)]))
-        cov_lS_EE = np.ones((ndet,ndet,lmax+1)) * C_lS_EE * 1e12
+        cov_lS_EE = np.ones((ndet,ndet,lmax+1)) * C_lS_EE
         
-        # cov_lS_EE = cov_lS['EE']
         C_lS_bnd =  hpf.bin_it(cov_lS_EE, bins=bins)
         print(C_lS_bnd.shape)
-
 
         nmodes = calc_nmodes(bins, pmask)
         smica_model = build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
@@ -403,11 +399,10 @@ if __name__ == '__main__':
         io.save_data(smica_model.get_comp_by_name('cmb').powspec(), cmb_specsmica_sc_path_name)
         
         io.save_data(smica_model.get_theta(), "/global/cscratch1/sd/sebibel/smica/theta.npy")
-        # covariance4D
         io.save_data(smica_model.covariance4D(), "/global/cscratch1/sd/sebibel/smica/cov4D.npy")
-        # covariance
         io.save_data(smica_model.covariance(), "/global/cscratch1/sd/sebibel/smica/cov.npy")
 
+        #TODO smica needs to run for both BB and EE, as BB-weights are needed for later map generation
         smica_cov_full = dict()
         zer = np.zeros_like(smica_model.covariance())
         for spec in csu.PLANCKSPECTRUM_f:
@@ -418,20 +413,20 @@ if __name__ == '__main__':
         print(smica_weights_tot.shape)
         io.save_data(smica_weights_tot, io.weight_path + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + io.total_filename)
 
+
     """
     The next lines follow tightly the algorithm of SMICA propagation code
     """
 
-    # weight from full input maps
+    # weight from full input maps, derived from SMICA
     W = io.load_data(io.weight_path + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + io.total_filename)
+
     # full maps
     maps = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
     maps = prep.preprocess_all(maps)
-    CMB_in = dict()
-    CMB_in["QU"] = io.load_data("/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")
+    CMB["TQU"]["in"] = io.load_data("/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")
 
     for det in detectors:
-        # lmax = min(3 * nside_out - 1, lmax + lmax_mask)
         alms = pw.map2alm_spin(maps[det], pmask, 2, lmax) # full sky QU->EB
         # almT[det] = alms[0]
         almE[det] = alms[0]
@@ -442,41 +437,42 @@ if __name__ == '__main__':
     combalmE = np.zeros((nalm), dtype=np.complex128)
     combalmB = np.zeros((nalm), dtype=np.complex128)
     beamf = io.load_beamf(freqcomb=csu.freqcomb)
-    from scipy import interpolate
+
     xnew = np.arange(0,lmax,1)
-    for m,det in zip(range(2,len(detectors)+2),detectors):
-        print(np.mean(bins, axis=1).shape, W[1,:,m].shape)
-        f = interpolate.interp1d(np.mean(bins, axis=1), W[1,:,m], bounds_error = False, fill_value='extrapolate')
-        # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-        combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(1)[0:lmax]), np.squeeze(f(xnew)))
-        combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(2)[0:lmax]), np.squeeze(f(xnew)))
+    for it, det in enumerate(csu.PLANCKMAPFREQ): #weights do not dependent on freqfilter, but almE/B do
+        if det in csu.PLANCKMAPFREQ_f:
+            W_Einterp = interpolate.interp1d(np.mean(bins, axis=1), W[1,:,it], bounds_error = False, fill_value='extrapolate')
+            #TODO switch to W[2,:] once BB-weights are correctly calculated
+            W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W[1,:,it], bounds_error = False, fill_value='extrapolate')
+
+            # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
+            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(1)[0:lmax]), np.squeeze(W_Einterp(xnew)))
+            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(2)[0:lmax]), np.squeeze(W_Binterp(xnew)))
 
     # CMB["TT"] = hp.almxfl(combalmT, hp.pixwin(nside_out)[0:lmax])
     CMB["EE"] = hp.almxfl(combalmE, 1/hp.pixwin(nside_out, pol=True)[0][0:lmax])
     CMB["BB"] = hp.almxfl(combalmB, 1/hp.pixwin(nside_out, pol=True)[1][0:lmax])
-    # CMB["EE"] = combalmE
-    # CMB["BB"] = combalmB
-    CMB["QU"] = dict()
 
-    CMB["QU"]['out'] = hp.alm2map([np.zeros_like(CMB["EE"]), CMB["EE"], CMB["BB"]], nside_out)
+    CMB["TQU"]['out'] = hp.alm2map([np.zeros_like(CMB["EE"]), CMB["EE"], CMB["BB"]], nside_out)
 
-    smica_C_lS_unsc = ps.map2cl_spin(qumap=CMB["QU"]['out'][1:3], spin=2, mask=pmask, lmax=lmax,
+    smica_C_lS_unsc = ps.map2cl_spin(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask, lmax=lmax,
                 lmax_mask=lmax_mask)
-    cov_lS_min = ps.map2cl_spin(qumap=CMB_in["QU"][1:3], spin=2, mask=pmask, lmax=lmax,
+    cov_lS_min = ps.map2cl_spin(qumap=CMB["TQU"]["in"][1:3], spin=2, mask=pmask, lmax=lmax,
             lmax_mask=lmax_mask)
     # SMICA result right above
 
-    # CMB["QU"]['in'] = hp.synfast([np.zeros(shape=cov_lS_min['EE'].shape), cov_lS_min['EE'], cov_lS_min['BB'], cov_lS_min['TE']], nside=nside_out)
+    # CMB["TQU"]['in'] = hp.synfast([np.zeros(shape=cov_lS_min['EE'].shape), cov_lS_min['EE'], cov_lS_min['BB'], cov_lS_min['TE']], nside=nside_out)
     # cmb input as given to SMICA
+
 
     # crosscovariance between cmb input and what smica gives
     crosscov = ps.map2cl_spin(
-        qumap=CMB_in["QU"][1:3],
+        qumap=CMB["TQU"]["in"][1:3],
         spin=2,
         mask=pmask,
         lmax=lmax,
         lmax_mask=lmax_mask,
-        qumap2=CMB["QU"]['out'][1:3],
+        qumap2=CMB["TQU"]['out'][1:3],
         mask2=pmask
     )
 
@@ -484,7 +480,6 @@ if __name__ == '__main__':
     io.save_data(transferfunction, "/global/cscratch1/sd/sebibel/misc/tf.npy")
     io.save_data(crosscov[0][:750], "/global/cscratch1/sd/sebibel/misc/crosscov.npy")
     io.save_data(cov_lS_min, "/global/cscratch1/sd/sebibel/misc/covlsmin.npy")  
-
     io.save_data(smica_C_lS_unsc, "/global/cscratch1/sd/sebibel/misc/smicacovlsmin.npy")
 
     """
