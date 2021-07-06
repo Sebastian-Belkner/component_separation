@@ -12,7 +12,7 @@
     "max_polynom": 0,
     "num_sim": 5,
     "split": "",
-    "nside_out": 256,
+    "nside_out": 1024,
     "splitvariation": "GHz",
 
     "freqfilter": [
