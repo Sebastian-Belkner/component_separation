@@ -96,7 +96,7 @@ def tcmb2trj(data: List[Dict], fr, to) -> List[Dict]:
     return data
 
 
-def tcmb2trj_sc(freq) -> List[Dict]:
+def tcmb2trj_sc(freq, fr, to) -> List[Dict]:
     """Converts maps (which are presumably in K_CMB) to K_RJ scale.
 
     Args:
@@ -105,7 +105,7 @@ def tcmb2trj_sc(freq) -> List[Dict]:
     Returns:
         float: Scaling factor
     """
-    factor = slhpastro.convfact(freq=int(freq)*1e9, fr=r'K_CMB',to=r'K_RJ')
+    factor = slhpastro.convfact(freq=int(freq)*1e9, fr=fr,to=to)
     return factor
 
 

@@ -64,10 +64,10 @@ def load_powerspectra(dset, processed = True):
         elif dset == 'signal':
             path_name = signal_unsc_path_name
     C_l = load_data(path_name=path_name)
-    if C_ltot is None:
-        print("couldn't find processed spectrum with given specifications at {}. Trying unprocessed..".format(io.spec_sc_path_name))
+    if C_l is None:
+        print("couldn't find processed spectrum with given specifications at {}.".format(path_name))
         sys.exit()
-    return C_ltot
+    return C_l
 
 
 def _multi(a, b):

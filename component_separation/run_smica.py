@@ -33,12 +33,13 @@ import component_separation.io as io
 import component_separation.powspec as pw
 import component_separation.interface as cslib
 import component_separation.transform_map as trsf_m
-from component_separation.cs_util import Config as csu
+from component_separation.cs_util import Config
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
 
-with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
     cf = json.load(f)
+csu = Config(cf)
 
 # LOGFILE = 'data/tmp/logging/messages.log'
 # logger = logging.getLogger("")
@@ -93,7 +94,7 @@ def cov_lS2cov_lSmin(icov_lS, C_lS):
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
-    run_fit = False
+    run_fit = True
     run_propag = False
 
     CMB = dict()
@@ -137,12 +138,13 @@ if __name__ == '__main__':
         cov_lNEE = cov_lN["EE"]
         print(cov_lNEE.shape)
 
-        ##### new
-        C_lS = cslib.load_powerspectra('signal')
-        cov_lS = pw.build_covmatrices(C_lS, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-        cov_lSEE = cov_lS["EE"]
-        print(cov_lSEE.shape)
-        #####
+        # TODO implement the following lines
+        # ##### new
+        # C_lS = cslib.load_powerspectra('signal')
+        # cov_lS = pw.build_covmatrices(C_lS, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
+        # cov_lSEE = cov_lS["EE"]
+        # print(cov_lSEE.shape)
+        # #####
 
         cov_ltot_bnd = hpf.bin_it(cov_ltotEE, bins=bins)
         print(cov_ltot_bnd.shape)
@@ -152,7 +154,7 @@ if __name__ == '__main__':
         print(cov_lN_bnd.shape)
 
         ##### old
-        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")[1]
+        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")['4242-4242']["EE"]
         cov_lS_EE = np.ones((ndet,ndet,lmax+1)) * C_lS_EE
         
         C_lS_bnd =  hpf.bin_it(cov_lS_EE, bins=bins)
@@ -203,7 +205,7 @@ if __name__ == '__main__':
 
         # full maps
         maps = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
-        maps = trsf_m.process_all(maps)
+        # maps = trsf_m.process_all(maps)
 
         for det in detectors:
             print(det)

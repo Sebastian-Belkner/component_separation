@@ -118,8 +118,8 @@ if __name__ == '__main__':
     print(filename)
     print(40*"$")
     # set_logger(DEBUG)
-    run_map2spec = False
-    run_alm2spec = True
+    run_map2spec = True
+    run_alm2spec = False
 
     import copy
     cf_n = copy.deepcopy(cf)
@@ -129,7 +129,8 @@ if __name__ == '__main__':
     if run_map2spec:
         # TODO remove dictionary from map2spec return value
         nside_out = cf['pa']['nside_out'] if cf['pa']['nside_out'] is not None else cf['pa']['nside_desc_map']
-        for cs, (path_unsc, path_sc) in zip([csu, csu_n], [(io.spec_unsc_path_name, io.spec_sc_path_name), (io.noise_unsc_path_name, io.noise_sc_path_name)]):
+        # for cs, (path_unsc, path_sc) in zip([csu, csu_n], [(io.spec_unsc_path_name, io.spec_sc_path_name), (io.noise_unsc_path_name, io.noise_sc_path_name)]):
+        for cs, (path_unsc, path_sc) in zip([csu_n], [(io.noise_unsc_path_name, io.noise_sc_path_name)]):         
             beamf = io.load_beamf(cs.freqcomb)
             cf_loc = cs.cf
             maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=cf_loc['pa']["nside_out"])

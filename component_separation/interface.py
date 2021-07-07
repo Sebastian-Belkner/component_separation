@@ -23,6 +23,7 @@ import numpy as np
 import component_separation
 import component_separation.io as io
 import component_separation.powspec as pw
+import smica
 import component_separation.transform_map as trsf
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Planckf, Plancks
