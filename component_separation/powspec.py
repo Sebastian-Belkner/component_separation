@@ -47,7 +47,7 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 
 import component_separation
 import component_separation.MSC.MSC.pospace as ps
-import component_separation.preprocess as prep
+import component_separation.transform_map as trsf_m
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Helperfunctions as hpf
 from component_separation.cs_util import Planckf, Planckr, Plancks
@@ -103,13 +103,13 @@ def tqupowerspec(tqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int) ->
         FREQC:
             ps.map2cls(
                 tqumap=tqumap[FREQC.split("-")[0]],
-                tmask=_ud_grade(tmask, FREQC.split("-")[0]),
-                pmask=_ud_grade(pmask, FREQC.split("-")[0]),
+                tmask=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
+                pmask=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
                 lmax=lmax,
                 lmax_mask=lmax_mask,
                 tqumap2=tqumap[FREQC.split("-")[1]],
-                tmask2=_ud_grade(tmask, FREQC.split("-")[1]),
-                pmask2=_ud_grade(pmask, FREQC.split("-")[1])
+                tmask2=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[1]),
+                pmask2=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[1])
                 )
             for FREQC in csu.freqcomb}
     spectrum = dict()
@@ -184,102 +184,9 @@ def create_mapsyn(spectrum: Dict[str, Dict], cf: Dict) -> List[Dict[str, Dict]]:
     return maps
 
 
-@log_on_start(INFO, "Starting to apply scaling onto data {data}")
-@log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
-def apply_scale(data: Dict, scale: str = 'C_l') -> Dict:
-    """Multiplies powerspectra by :math:`l(l+1)/(2\pi)1e12` and the pixwindowfunction
-
-    Args:
-        df (Dict): powerspectra with spectrum and frequency-combinations in the columns
-        
-    Returns:
-        Dict: scaled powerspectra with spectrum and frequency-combinations in the columns
-    """
-    for freqc, spec in data.items():
-        for specID, val in spec.items():
-            lmax = len(next(iter((next(iter(data.values()))).values())))
-            if scale == "D_l":
-                sc = np.array([hpf.llp1e12(idx) for idx in range(lmax)])
-            elif scale == "C_l":
-                sc = np.array([1e12 for idx in range(lmax)])
-            data[freqc][specID] *= sc
-            if int(freqc.split("-")[0]) < 100:
-                data[freqc][specID] /= hp.pixwin(1024)[:lmax]
-            else:
-                data[freqc][specID] /= hp.pixwin(2048)[:lmax]
-            if int(freqc.split("-")[1]) < 100:
-                data[freqc][specID] /= hp.pixwin(1024)[:lmax]
-            else:
-                data[freqc][specID] /= hp.pixwin(2048)[:lmax]
-    return data
-
-
-@log_on_start(INFO, "Starting to apply Beamfunction")
-@log_on_end(DEBUG, "Beamfunction applied successfully: '{result}' ")
-def apply_beamfunction(data: Dict,  beamf: Dict, lmax: int, specfilter: List[str]) -> Dict:
-    """divides the spectrum derived from channel `ij` and provided via `df_(ij)`,
-    by `beamf_i beamf_j` as described by the planck beamf .fits-file header.
-
-    Args:
-        df (Dict): powerspectra with spectrum and frequency-combinations in the columns
-
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-
-    Returns:
-        np.array: powerspectra including effect of Beam, with spectrum and frequency-combinations in the columns
-
-    """
-    TEB_dict = {
-        "T": 0,
-        "E": 1,
-        "B": 2
-    }
-    LFI_dict = {
-        "030": 28,
-        "044": 29,
-        "070": 30
-    }
-    if cf['pa']['freqdset'].startswith('DX12'):
-        for freqc, spec in data.items():
-            freqs = freqc.split('-')
-            hdul = beamf[freqc]
-            for specID, val in spec.items():
-                if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
-                    data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
-                    data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
-                elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
-                    for freq in freqs:
-                        b = np.sqrt(hdul["LFI"][LFI_dict[freq]].data.field(0))
-                        buff = np.concatenate((
-                            b[:min(lmax+1, len(b))],
-                            np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
-                        data[freqc][specID] /= buff
-                else:
-                    b = np.sqrt(hdul["LFI"][LFI_dict[freqs[0]]].data.field(0))
-                    buff = np.concatenate((
-                        b[:min(lmax+1, len(b))],
-                        np.array([np.NaN for n in range(max(0, lmax+1-len(b)))])))
-                    data[freqc][specID] /= buff
-                    data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
-
-    elif cf['pa']['freqdset'].startswith('NPIPE'):
-    	### now that all cross beamfunctions exist, and beamf
-        ### files have the same structure, no difference between applying lfis and hfis anymore
-        for freqc, spec in data.items():
-            freqs = freqc.split('-')
-            hdul = beamf[freqc]
-            for specID, val in spec.items():
-                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmax+1]
-                data[freqc][specID] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmax+1]
-    else:
-        print("Error applying beamfunction to dataset. Dataset might not be supported. Exiting..")
-        sys.exit()
-    return data
-
-
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = "K_CMB") -> Dict[str, np.ndarray]:
+def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = r"K_CMB") -> Dict[str, np.ndarray]:
     """Calculates the covariance matrices from the data
 
     Args:
@@ -323,12 +230,9 @@ def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: 
                                     a = np.concatenate((data[FREQ+'-'+FREQ2][spec][:min(lmax+1, min(LFI_cutoff(FREQ),LFI_cutoff(FREQ2)))], b))
                                 else:
                                     a = data[FREQ+'-'+FREQ2][spec]
-                                if Tscale == "K_RJ":
-                                    cov[spec][ifreq][ifreq2] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
-                                    cov[spec][ifreq2][ifreq] = a * prep.tcmb2trj_sc(FREQ) * prep.tcmb2trj_sc(FREQ2)
-                                else:
-                                    cov[spec][ifreq][ifreq2] = a
-                                    cov[spec][ifreq2][ifreq] = a
+                                    cov[spec][ifreq][ifreq2] = a * trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+                                    cov[spec][ifreq2][ifreq] = a * trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+
     return cov
 
 
@@ -383,7 +287,7 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int):
 
 @log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
 @log_on_end(DEBUG, "channel weights calculated successfully: '{result}' ")
-def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], Tscale: str = "K_CMB") -> np.array:
+def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], Tscale: str = r"K_CMB") -> np.array:
     """Calculates weightings of the respective Frequency channels
 
     Args:
@@ -395,23 +299,12 @@ def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], Tscale: str =
     """
     
     def _elaw(shp):
-        if Tscale == "K_RJ":
-            return np.array([prep.tcmb2trj_sc(FREQ) for FREQ in csu.PLANCKMAPFREQ_f])
-        else:
-            return np.ones((shp))
+        return np.array([trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in csu.PLANCKMAPFREQ_f])
     weight_arr = np.array([
             [(cov[spec][l] @ _elaw(cov[spec][l].shape[0])) / (_elaw(cov[spec][l].shape[0]).T @ cov[spec][l] @ _elaw(cov[spec][l].shape[0]))
                 for l in range(lmax)]
         for spec in csu.PLANCKSPECTRUM_f])
     return weight_arr
-
-
-def smoothC_l(data, smoothing_window=5, max_polynom=2):
-    from scipy.signal import savgol_filter
-    for key, val in data.items():
-        for k, v in val.items():
-            data[key][k] = savgol_filter(v, smoothing_window, max_polynom)
-    return data
 
 
 def map2alm_spin(maps, pmask, spin, lmax):

@@ -23,11 +23,11 @@ import numpy as np
 import component_separation
 import component_separation.io as io
 import component_separation.powspec as pw
-import component_separation.preprocess as prep
+import component_separation.transform_map as trsf
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Planckf, Plancks
 
-with open(os.path.dirname(component_separation.__file__)+'/rm_config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config_rm.json', "r") as f:
     cf = json.load(f)
 
 
@@ -37,6 +37,10 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
+if "sim_id" in cf[mch][freqdset]:
+        sim_id = cf[mch][freqdset]["sim_id"]
+else:
+    sim_id = ""
 
 freqfilter = cf['pa']["freqfilter"]
 
@@ -48,9 +52,22 @@ def create_difference_map(data_hm1, data_hm2):
             ret.update({freq: (data1[freq] - data2[freq])/2.})
         return ret
     ret_data = _difference(data_hm1, data_hm2)
-    ret_data = prep.preprocess_all(ret_data)
+    ret_data = trsf.process_all(ret_data)
 
     return ret_data
+
+
+def cmblm2cmbmap(idx):
+    CMB_in = dict()
+    # TODO: do these lms come from full sky maps or masked?
+    cmb_tlm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=1)
+    cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=2)
+    cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=3)
+
+    # TODO what is a reasonable nside for this?
+    CMB_in["TQU"] = dict()
+    CMB_in["TQU"] = hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nside_out[1])
+    return CMB_in["TQU"], cmb_tlm, cmb_elm, cmb_blm
 
 
 def splitmaps2diffmap():
@@ -70,11 +87,6 @@ def splitmaps2diffmap():
             '857',
         ]
 
-    if "sim_id" in cf[mch][freqdset]:
-            sim_id = cf[mch][freqdset]["sim_id"]
-    else:
-        sim_id = ""
-
     freqdatsplit = cf['pa']["freqdatsplit"]
     cf[mch][freqdset]['ap'] = cf[mch][freqdset]['ap']\
             .replace("{sim_id}", sim_id)\
@@ -90,29 +102,30 @@ def splitmaps2diffmap():
         .replace("{even/odd/half1/half2}", "{odd/half2}")\
         .replace("{n_of_2}", "2of2")
     
-    # scratch = sys.argv[1]
     outpath_name = cf[mch]["outdir_map_ap"]
-    PLANCKMAPNSIDE = cf["pa"]['nside']
+
+    # nside_out = cf["pa"]['nside_desc_map']
     if cf["pa"]['nside_out'] is None:
-        nside_out = PLANCKMAPNSIDE
+        nside_out = cf["pa"]['nside_desc_map']
     else:
         nside_out = [cf["pa"]['nside_out'],cf["pa"]['nside_out']]
 
     for FREQ in csu.PLANCKMAPFREQ_f:
         freqf = [f for f in freqfilter if f != FREQ]
+        ns = nside_out[0] if int(FREQ)<100 else nside_out[1]
         cf['pa']["freqfilter"] = freqf
         
         cf[mch][freqdset]['filename'] = filename_1of2
-        data_hm1 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out[0])
+        data_hm1 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
 
         cf[mch][freqdset]['filename'] = filename_2of2
-        data_hm2 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out[0])
+        data_hm2 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
         data_diff = create_difference_map(data_hm1, data_hm2)
 
         outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
             .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
             .replace("{freq}", FREQ)\
-            .replace("{nside}", str(nside_out[0]) if int(FREQ)<100 else str(nside_out[0]))\
+            .replace("{nside}", str(ns))\
             .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
             .replace("{split}", freqdatsplit)\
             .replace("{sim_id}", sim_id)
@@ -219,17 +232,32 @@ if __name__ == '__main__':
     print(cf['pa'])
     print(60*"$")
 
-    make_emp_noisemap = True
-    make_mask = False
-    make_synmap = False
+    run_emp_noisemap = True
+    run_mask = False
+    run_synmap = False
+    run_cmbmap
 
     freqdset = cf['pa']["freqdset"]
 
-    if make_emp_noisemap:
+
+    if run_emp_noisemap:
         splitmaps2diffmap()
 
-    if make_mask:
+    if run_mask:
         map2mask()
 
-    if make_synmap:
+    if run_synmap:
         cl2synmap()
+
+    if run_cmbmap:
+        """
+        Derives CMB powerspectrum directly from alm data of pure CMB.
+        TODO: change naming convention
+        """
+        CMB["TQU"]["in"], cmb_tlm, cmb_elm, cmb_blm = cmblm2cmbmap(int(sim_id))
+        C_lS = hp.alm2cl([np.zeros_like(cmb_elm), cmb_elm, cmb_blm])[:,:lmax+1]
+        print(C_lS.shape)
+        spectrum_scaled = trsf_s.process_all(spectrum, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
+        io.save_data(spectrum_scaled, io.spec_sc_path_name)
+        io.save_data(C_lS, "/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")  
+        io.save_data(CMB["TQU"]["in"], "/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")

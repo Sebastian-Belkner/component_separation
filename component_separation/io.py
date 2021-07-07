@@ -45,9 +45,31 @@ PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
 
 freqfilter = cf['pa']["freqfilter"]
 
+def load_powerspectra(dset, processed = True):
+    if processed:
+        if dset == 'noise':
+            path_name = noise_sc_path_name
+        elif dset = 'full':
+            path_name = spec_sc_path_name
+        elif dset = 'signal'
+            path_name = signal_sc_path_name
+    else:
+        if dset == 'noise':
+            path_name = noise_unsc_path_name
+        elif dset = 'full':
+            path_name = spec_unsc_path_name
+        elif dset = 'signal'
+            path_name = signal_unsc_path_name
+    C_l = load_data(path_name=path_name)
+    if C_ltot is None:
+        print("couldn't find processed spectrum with given specifications at {}. Trying unprocessed..".format(io.spec_sc_path_name))
+        sys.exit()
+    return C_ltot
+
 
 def _multi(a, b):
     return a*b
+
 
 def read_pf(mask_path, mask_filename):
     return {FREQ: hp.read_map(
@@ -61,6 +83,7 @@ def read_pf(mask_path, mask_filename):
             ), dtype=np.bool)
             for FREQ in PLANCKMAPFREQ_f
         }
+
 
 def read_single(mask_path, mask_filename):
     return hp.read_map(
@@ -137,7 +160,7 @@ def load_data(path_name: str) -> Dict[str, Dict]:
 
 def load_plamap(cf_local, field, nside_out=None):
     if nside_out is None:
-        nside_out = cf_local["pa"]["nside"]
+        nside_out = cf_local["pa"]["nside_desc_map"]
     """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
     Map data in `PATH/map/`.
     Args:
@@ -182,7 +205,7 @@ def load_plamap(cf_local, field, nside_out=None):
             if FREQ not in freqfilter}
 
     maps = {
-        FREQ: hp.ud_grade(hp.read_map(mappath[FREQ], field=field, dtype=np.float64, nest=False), nside_out=nside_out)
+        FREQ: hp.ud_grade(hp.read_map(mappath[FREQ], field=field, dtype=np.float64, nest=False), nside_out=nside_out[0] if int(FREQ)<100 else nside_out[1])
             for FREQ in PLANCKMAPFREQ
             if FREQ not in freqfilter
     }
@@ -221,7 +244,7 @@ def load_mask_per_freq(dg_to=1024):
     return tmask, pmask, pmask
 
 
-def load_one_mask_forallfreq(nside_out=False):
+def load_one_mask_forallfreq(nside_out=None):
     maskset = cf['pa']['mskset']
     pmask_path = cf[mch][maskset]['pmask']["ap"]
     pmask_filename = cf[mch][maskset]['pmask']['filename']
@@ -236,7 +259,7 @@ def load_one_mask_forallfreq(nside_out=False):
     tmask_path = cf[mch][maskset]['tmask']["ap"]
     tmask_filename = cf[mch][maskset]['tmask']['filename']
     tmask = read_single(tmask_path, tmask_filename)
-    if nside_out:
+    if nside_out is not None:
         tmask = hp.ud_grade(tmask, nside_out=nside_out)
         pmask = hp.ud_grade(pmask, nside_out=nside_out)
 

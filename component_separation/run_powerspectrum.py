@@ -21,7 +21,8 @@ from healpy.sphtfunc import smoothing
 import component_separation
 import component_separation.io as io
 import component_separation.powspec as pw
-import component_separation.preprocess as prep
+import component_separation.transform_map as trsf_m
+import component_separation.transform_spec as trsf_s
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Planckf, Plancks
 
@@ -81,15 +82,6 @@ def spec_weight2weighted_spec(spectrum, weights):
     return spec
 
 
-def postprocess_spectrum(data, freqcomb, smoothing_window, max_polynom):
-    if smoothing_window > 0 or max_polynom > 0:
-        spec_sc = pw.smoothC_l(data, smoothing_window=smoothing_window, max_polynom=max_polynom)
-    spec_sc = pw.apply_scale(data, scale=cf['pa']["Spectrum_scale"])
-    beamf = io.load_beamf(freqcomb=freqcomb)
-    spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
-    return spec_scbf
-
-
 if __name__ == '__main__':
     filename_raw = io.total_filename_raw
     filename = io.total_filename
@@ -101,25 +93,20 @@ if __name__ == '__main__':
     print(filename)
     print(40*"$")
     # set_logger(DEBUG)
+    run_map2spec = True
+    run_alm2spec = True
 
-    if cf['pa']['new_spectrum']:
-        data = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
-        data = prep.preprocess_all(data)
-        tmask, pmask, pmask = io.load_one_mask_forallfreq()
+    if run_map2spec:
+        # run this for noise data, and full data. check if files exist
+        for data_desc in ['noise', 'full', 'signal']:
+            prepare_cf(data_desc)
+            maps = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
+            maps = trsf_m.process_all(maps)
+            tmask, pmask, pmask = io.load_one_mask_forallfreq()
 
-        spectrum = map2spec(data, tmask, pmask)
-        io.save_data(spectrum, io.spec_unsc_path_name)
-    else:
-        spectrum = io.load_data(path_name=io.spec_unsc_path_name)
+            C_ltot_unsc = map2spec(maps, tmask, pmask)
+            io.save_data(C_ltot_unsc, io.spec_unsc_path_name)
+            C_ltot = trsf_s.process_all(C_ltot_unsc, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
+            io.save_data(C_ltot, io.spec_sc_path_name)
 
-    if spectrum is None:
-        print("couldn't find spectrum with given specifications at {}. Exiting..".format(io.spec_unsc_path_name))
-        sys.exit()
-
-    spectrum_scaled = postprocess_spectrum(spectrum, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
-    io.save_data(spectrum_scaled, io.spec_sc_path_name)
-
-    # weights = specsc2weights(spectrum_scaled, cf['pa']["Tscale"])
-    # io.save_data(weights, io.weight_path_name)
-
-    # weighted_spec = spec_weight2weighted_spec(spectrum, weights)
+        # spectrum = io.load_data(path_name=io.spec_unsc_path_name)
