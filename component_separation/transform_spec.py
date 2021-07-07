@@ -12,19 +12,17 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 
-def process_all(data, scale=cf['pa']["Spectrum_scale"], beamf, nside):
+def process_all(data, cf, scale, beamf, nside, spectrum_scale, smoothing_window, max_polynom):
     """
     Root function. Executes all tranformations
     """
     data_prep = data
     if smoothing_window > 0 or max_polynom > 0:
-        spec_sc = apply_smoothing(data, smoothing_window=smoothing_window, max_polynom=max_polynom)
-    for freq, val in data.items():
-        data_prep[freq] = apply_pixwin(data_prep[freq])
-        data_prep[freq] = apply_scale(data_prep[freq])
-    beamf = io.load_beamf(freqcomb=csu.freqcomb)
-    data = apply_beamfunction(data_prep, beamf, lmax)
-    return data
+        data_prep = apply_smoothing(data_prep, smoothing_window=smoothing_window, max_polynom=max_polynom)
+    data_prep = apply_pixwin(data_prep, nside)
+    data_prep = apply_scale(data_prep, spectrum_scale)
+    data_prep = apply_beamfunction(data_prep, cf, beamf)
+    return data_prep
 
 
 @log_on_start(INFO, "Starting to apply pixwindow onto data {data}")
@@ -82,7 +80,7 @@ def apply_smoothing(data, smoothing_window=5, max_polynom=2):
 
 @log_on_start(INFO, "Starting to apply Beamfunction")
 @log_on_end(DEBUG, "Beamfunction applied successfully: '{result}' ")
-def apply_beamfunction(data: Dict,  beamf: Dict) -> Dict:
+def apply_beamfunction(data: Dict,  cf, beamf: Dict) -> Dict:
     """divides the spectrum derived from channel `ij` and provided via `df_(ij)`,
     by `beamf_i beamf_j` as described by the planck beamf .fits-file header.
 

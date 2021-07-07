@@ -6,9 +6,7 @@ import itertools
 import numpy as np
 import os
 import component_separation
-
-with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
-    cf = json.load(f)
+import functools
 
 
 class Planckf(Enum):
@@ -41,20 +39,25 @@ class Planckr(Enum):
     HFI = "HFI"
 
 
-class Config(object):
-    PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-    PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-    freqcomb =  ["{}-{}".format(FREQ,FREQ2)
-        for FREQ, FREQ2  in itertools.product(PLANCKMAPFREQ,PLANCKMAPFREQ)
-            if FREQ not in cf['pa']["freqfilter"] and
-            (FREQ2 not in cf['pa']["freqfilter"]) and (int(FREQ2)>=int(FREQ))]
-    speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in cf['pa']["specfilter"]]
+class Config():
+    def __init__(self, cf):
+        self.cf = cf
+        self.PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+        self.PLANCKSPECTRUM = [p.value for p in list(Plancks)]
+        self.freqcomb =  ["{}-{}".format(FREQ,FREQ2)
+            for FREQ, FREQ2  in itertools.product(self.PLANCKMAPFREQ,self.PLANCKMAPFREQ)
+                if FREQ not in cf['pa']["freqfilter"] and
+                (FREQ2 not in cf['pa']["freqfilter"]) and (int(FREQ2)>=int(FREQ))]
+        
+        
+        self.PLANCKMAPFREQ_f = [FREQ for FREQ in self.PLANCKMAPFREQ
+            if FREQ not in cf['pa']["freqfilter"]]
+        if 'specfilter' in cf['pa'].keys():
+            self.PLANCKSPECTRUM_f = [SPEC for SPEC in self.PLANCKSPECTRUM
+                if SPEC not in cf['pa']["specfilter"]]
+            self.speccomb  = [spec for spec in self.PLANCKSPECTRUM if spec not in cf['pa']["specfilter"]]
 
-    PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
-        if FREQ not in cf['pa']["freqfilter"]]
-    PLANCKSPECTRUM_f = [SPEC for SPEC in PLANCKSPECTRUM
-        if SPEC not in cf['pa']["specfilter"]]
-    CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
+        self.CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
                              "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
 
 
@@ -325,6 +328,21 @@ class Helperfunctions:
         mean = sy / n
         std = np.sqrt(sy2/n - mean*mean)
         return mean, std, _
+
+    @staticmethod
+    def deprecated(func):
+        """This is a decorator which can be used to mark functions
+        as deprecated. It will result in a warning being emitted
+        when the function is used."""
+        @functools.wraps(func)
+        def new_func(*args, **kwargs):
+            warnings.simplefilter('always', DeprecationWarning)  # turn off filter
+            warnings.warn("Call to deprecated function {}.".format(func.__name__),
+                        category=DeprecationWarning,
+                        stacklevel=2)
+            warnings.simplefilter('default', DeprecationWarning)  # reset filter
+            return func(*args, **kwargs)
+        return new_func
 
 # K_CMB to K_RJ conversion factors
 

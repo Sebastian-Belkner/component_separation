@@ -24,6 +24,10 @@ from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
 
 import component_separation
+from component_separation.cs_util import Config
+with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
+    cf = json.load(f)
+csu = Config(cf)
 from component_separation.cs_util import Planckf, Planckr, Plancks
 
 uname = platform.uname()
@@ -32,8 +36,7 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
-with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
-    cf = json.load(f)
+
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = cf["pa"]['nside_desc_map']
@@ -49,16 +52,16 @@ def load_powerspectra(dset, processed = True):
     if processed:
         if dset == 'noise':
             path_name = noise_sc_path_name
-        elif dset = 'full':
+        elif dset == 'full':
             path_name = spec_sc_path_name
-        elif dset = 'signal'
+        elif dset == 'signal':
             path_name = signal_sc_path_name
     else:
         if dset == 'noise':
             path_name = noise_unsc_path_name
-        elif dset = 'full':
+        elif dset == 'full':
             path_name = spec_unsc_path_name
-        elif dset = 'signal'
+        elif dset == 'signal':
             path_name = signal_unsc_path_name
     C_l = load_data(path_name=path_name)
     if C_ltot is None:
@@ -262,8 +265,13 @@ def load_one_mask_forallfreq(nside_out=None):
     if nside_out is not None:
         tmask = hp.ud_grade(tmask, nside_out=nside_out)
         pmask = hp.ud_grade(pmask, nside_out=nside_out)
-
-    return tmask, pmask, pmask
+    tdict = {FREQ: tmask
+                for FREQ in PLANCKMAPFREQ
+                if FREQ not in freqfilter}
+    pdict = {FREQ: pmask
+            for FREQ in PLANCKMAPFREQ
+            if FREQ not in freqfilter}
+    return tdict, pdict, pdict
 
 
 def load_truthspectrum(abs_path=""):

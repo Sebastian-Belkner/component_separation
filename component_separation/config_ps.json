@@ -4,7 +4,7 @@
     "mskset": "lens",
     "freqdset": "NPIPE_sim",
     "Spectrum_scale": "C_l",
-    "lmax": 159,
+    "lmax": 150,
     "lmax_mask": 300,
     "freqdatsplit": "",
     "smoothing_window": 0,

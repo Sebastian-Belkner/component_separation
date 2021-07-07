@@ -7,6 +7,7 @@ import numpy as np
 import functools
 import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
+from component_separation.cs_util import Helperfunctions as hpf
 import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 
@@ -17,22 +18,7 @@ def process_all(data):
         data_prep[freq] = subtract_mean(data_prep[freq])
         data_prep[freq] = remove_brightsaturate(data_prep[freq])
         data_prep[freq] = remove_dipole(data_prep[freq])
-    return data
-    
-
-def deprecated(func):
-    """This is a decorator which can be used to mark functions
-    as deprecated. It will result in a warning being emitted
-    when the function is used."""
-    @functools.wraps(func)
-    def new_func(*args, **kwargs):
-        warnings.simplefilter('always', DeprecationWarning)  # turn off filter
-        warnings.warn("Call to deprecated function {}.".format(func.__name__),
-                      category=DeprecationWarning,
-                      stacklevel=2)
-        warnings.simplefilter('default', DeprecationWarning)  # reset filter
-        return func(*args, **kwargs)
-    return new_func
+    return data_prep
 
 
 def remove_unseen(tqumap: List[Dict]) -> List[Dict]:
@@ -157,7 +143,7 @@ def remove_dipole(data):
     return ret
 
 
-@deprecated
+@hpf.deprecated
 def remove_monopole(data):
     "DEPRECATED"
     return hp.remove_monopole(data, fitval=False)

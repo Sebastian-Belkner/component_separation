@@ -48,28 +48,28 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 import component_separation
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.transform_map as trsf_m
-from component_separation.cs_util import Config as csu
+from component_separation.cs_util import Config
 from component_separation.cs_util import Helperfunctions as hpf
 from component_separation.cs_util import Planckf, Planckr, Plancks
 
-with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
     cf = json.load(f)
 
-PLANCKMAPAR = [p.value for p in list(Planckr)]
-PLANCKMAPNSIDE = cf["pa"]['nside_desc_map']
+csu = Config(cf)
+
 if cf["pa"]['nside_out'] is None:
-    nside_out = PLANCKMAPNSIDE
+    nside_out = cf["pa"]['nside_desc_map']
 else:
     nside_out = [cf["pa"]['nside_out'],cf["pa"]['nside_out']]
 
 """ Doctest:
 The following constants be needed because functions are called with globals()
 """
-path='test/data'
-freqfilter = [Planckf.LFI_1.value, Planckf.LFI_2.value, Planckf.HFI_1.value, Planckf.HFI_5.value, Planckf.HFI_6.value]
-specfilter = [Plancks.TE, Plancks.TB, Plancks.ET, Plancks.BT]
-lmax = 20
-lmax_mask = 80
+# path='test/data'
+# freqfilter = [Planckf.LFI_1.value, Planckf.LFI_2.value, Planckf.HFI_1.value, Planckf.HFI_5.value, Planckf.HFI_6.value]
+# specfilter = [Plancks.TE, Plancks.TB, Plancks.ET, Plancks.BT]
+# lmax = 20
+# lmax_mask = 80
 
 
 def _crosscomb(option, f1, f2):

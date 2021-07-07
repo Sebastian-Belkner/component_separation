@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 """
-synmaps.py: script for generating masks
+synmaps.py: script for generating masks. Not yet used but eventually needed
 """
 import json
 import logging
@@ -30,14 +30,6 @@ else:
     mch = "NERSC"
 mask_path = cf[mch]['outdir']
 
-
-def preprocess_map(data):
-    data = prep.replace_undefnan(data)
-    data = prep.subtract_mean(data)
-    data = prep.remove_brightsaturate(data)
-    data = prep.remove_dipole(data)
-    print(data)
-    return data
 
 
 def hitsvar2mask(hitsmap, tresh_low, tresh_up):

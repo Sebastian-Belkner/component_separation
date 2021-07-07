@@ -24,12 +24,11 @@ import component_separation
 import component_separation.io as io
 import component_separation.powspec as pw
 import component_separation.transform_map as trsf
-from component_separation.cs_util import Config as csu
+from component_separation.cs_util import Config
 from component_separation.cs_util import Planckf, Plancks
 
 with open(os.path.dirname(component_separation.__file__)+'/config_rm.json', "r") as f:
     cf = json.load(f)
-
 
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
@@ -37,13 +36,14 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
+freqdset = cf['pa']["freqdset"]
 if "sim_id" in cf[mch][freqdset]:
         sim_id = cf[mch][freqdset]["sim_id"]
 else:
     sim_id = ""
 
 freqfilter = cf['pa']["freqfilter"]
-
+csu = Config(cf)
 
 def create_difference_map(data_hm1, data_hm2):
     def _difference(data1, data2):
@@ -67,7 +67,7 @@ def cmblm2cmbmap(idx):
     # TODO what is a reasonable nside for this?
     CMB_in["TQU"] = dict()
     CMB_in["TQU"] = hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nside_out[1])
-    return CMB_in["TQU"], cmb_tlm, cmb_elm, cmb_blm
+    return CMB_in["TQU"]
 
 
 def splitmaps2diffmap():
@@ -235,13 +235,12 @@ if __name__ == '__main__':
     run_emp_noisemap = True
     run_mask = False
     run_synmap = False
-    run_cmbmap
-
-    freqdset = cf['pa']["freqdset"]
-
+    run_cmbmap = True
 
     if run_emp_noisemap:
+        print('generating noise map from half ring maps..')
         splitmaps2diffmap()
+        print('..Done')
 
     if run_mask:
         map2mask()
@@ -254,10 +253,5 @@ if __name__ == '__main__':
         Derives CMB powerspectrum directly from alm data of pure CMB.
         TODO: change naming convention
         """
-        CMB["TQU"]["in"], cmb_tlm, cmb_elm, cmb_blm = cmblm2cmbmap(int(sim_id))
-        C_lS = hp.alm2cl([np.zeros_like(cmb_elm), cmb_elm, cmb_blm])[:,:lmax+1]
-        print(C_lS.shape)
-        spectrum_scaled = trsf_s.process_all(spectrum, csu.freqcomb, cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
-        io.save_data(spectrum_scaled, io.spec_sc_path_name)
-        io.save_data(C_lS, "/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")  
+        CMB["TQU"]["in"] = cmblm2cmbmap(int(sim_id))  
         io.save_data(CMB["TQU"]["in"], "/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")

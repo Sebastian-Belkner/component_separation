@@ -66,6 +66,21 @@ freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 tmask, pmask, pmask = io.load_mask_per_freq(nside_out[0]) #io.load_one_mask_forallfreq(nside_out=nside_out)
 
+
+def spec_weight2weighted_spec(spectrum, weights):
+    alms = pw.spec2alms(spectrum)
+    alms_w = pw.alms2almsxweight(alms, weights)
+    spec = pw.alms2cls(alms_w)
+    return spec
+
+
+def specsc2weights(spectrum, Tscale):
+    cov = pw.build_covmatrices(spectrum, cf['pa']["lmax"], cf['pa']["freqfilter"], cf['pa']["specfilter"], cf['pa']['Tscale'])
+    cov_inv_l = pw.invert_covmatrices(cov, cf['pa']["lmax"], cf['pa']["freqfilter"], cf['pa']["specfilter"])
+    weights = pw.calculate_weights(cov_inv_l, cf['pa']["lmax"], cf['pa']["freqfilter"], cf['pa']["specfilter"], cf['pa']['Tscale'])
+    return weights
+
+
 if __name__ == '__main__':
     # set_logger(DEBUG)
     run_weight = True
@@ -102,10 +117,7 @@ if __name__ == '__main__':
             C_ltot = calculate_powerspectra(maps, tmask, pmask)
         else:
             C_ltot = load_powerspectra()
-        cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-         
-        cov_inv_ltot = pw.invert_covmatrices(cov_ltot, lmax)
-        weights_tot = pw.calculate_weights(cov_inv_ltot, lmax, "K_CMB")
+        weights_tot = specsc2weights(C_ltot)
         print(weights_tot.shape)
         io.save_data(weights_tot, io.weight_path_name)
 

@@ -1,8 +1,8 @@
 #!/usr/local/bin/python
 """
-run_powerspectrum.py: script for executing main functionality of component_separation
+run_powerspectrum.py: script for executing main functionality of smica.
+Depends on all (noise, signal, full) spectra being generated to begin with. Use ``run_powerspectrum.py``, if e.g. noisespectra are missing.
 """
-
 
 #TODO check single frequency transferfunctions
 
@@ -31,7 +31,8 @@ import component_separation
 import matplotlib.pyplot as plt
 import component_separation.io as io
 import component_separation.powspec as pw
-import component_separation.preprocess as prep
+import component_separation.interface as cslib
+import component_separation.transform_map as trsf_m
 from component_separation.cs_util import Config as csu
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
@@ -70,34 +71,6 @@ def set_logger(loglevel=logging.INFO):
     logging.StreamHandler(sys.stdout)
 
 
-def map2spec(data, tmask, pmask):
-    spectrum = pw.tqupowerspec(data, tmask, pmask, lmax, lmax_mask)
-    return spectrum
-
-
-def specsc2weights(spectrum, Tscale):
-    cov = pw.build_covmatrices(spectrum, lmax, freqfilter, specfilter, Tscale)
-    cov_inv_l = pw.invert_covmatrices(cov, lmax)
-    weights = pw.calculate_weights(cov_inv_l, lmax, Tscale)
-    return weights
-
-
-def spec_weight2weighted_spec(spectrum, weights):
-    alms = pw.spec2alms(spectrum)
-    alms_w = pw.alms2almsxweight(alms, weights)
-    spec = pw.alms2cls(alms_w)
-    return spec
-
-
-def postprocess_spectrum(data, freqcomb, smoothing_window, max_polynom):
-    if smoothing_window > 0 or max_polynom > 0:
-        spec_sc = pw.smoothC_l(data, smoothing_window=smoothing_window, max_polynom=max_polynom)
-    spec_sc = pw.apply_scale(data, scale=cf['pa']["Spectrum_scale"])
-    beamf = io.load_beamf(freqcomb=freqcomb)
-    spec_scbf = pw.apply_beamfunction(spec_sc, beamf, lmax, specfilter)
-    return spec_scbf
-
-
 def calc_nmodes(bins, mask):
     nmode = np.ones((bins.shape[0]))
     for idx,q in enumerate(bins):
@@ -107,168 +80,6 @@ def calc_nmodes(bins, mask):
         nmode *= fsky
     # print('nmodes: {}, fsky: {}'.format(nmode, fsky))
     return nmode
-
-
-def build_smica_model(Q, N_cov_bn, C_lS_bnd):
-    # Noise part
-    nmap = N_cov_bn.shape[0]
-    noise = smica.NoiseAmpl(nmap, Q, name='noise')
-    noise.set_ampl(np.ones((nmap,1)), fixed="all")
-    noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all") # where N is a (nmap, Q) array with noise spectra
-    # print("noise cov: {}".format(N_cov_bn))
-
-    # CMB part
-    cmb = smica.Source1D (nmap, Q, name='cmb')
-    acmb = np.ones((nmap,1)) # if cov in cmb unit
-    cmb.set_mixmat(acmb, fixed='null')
-    
-    cmbcq = C_lS_bnd[0,0,:]
-    cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
-
-    # Galactic foreground part
-    # cmb.set_powspec(cmbcq*0, fixed='all') # B modes fit
-    dim = 3
-    gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
-    gal.fix_mixmat("null")
-    # galmixmat = np.ones((nmap,dim))*0.1
-    # gal.set_mixmat(galmixmat, fixed='null')
-
-    model = smica.Model(complist=[cmb, gal, noise])
-    return model
-
-
-def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_template=None, afix=None, qmin=0, asyn=None, logger=None, qmax=None, no_starting_point=False):
-    """ Fit the model to empirical covariance.
-    
-    """
-    cg_maxiter = 1
-    cg_eps = 1e-20
-    nmap = stats.shape[0]
-    cmb,gal,noise = model._complist
-    print('dim is {}'.format(model.dim))
-
-    # find a starting point
-    acmb = model.get_comp_by_name("cmb").mixmat()
-    fixed = True
-    if fixed:
-        afix = 1-cmb._mixmat.get_mask() #0:free 1:fixed
-        cfix = 1-cmb._powspec.get_mask() #0:free 1:fixed
-    else:
-        afix = 0-cmb._mixmat.get_mask() #0:free 1:fixed
-        cfix = 0-cmb._powspec.get_mask() #0:free 1:fixed
-
-    cmbcq = np.squeeze(model.get_comp_by_name("cmb").powspec())
-    polar = True if acmb.shape[1]==2 else False
-
-    print("starting point chosen.")
-
-    if fixed: # TODO; did i interpret this right?  if not is_mixmat_fixed(model)
-        if not no_starting_point:
-            print(acmb.shape)
-            model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=qmax)
-            cmb.set_mixmat(acmb, fixed=afix)
-            if asyn is not None:
-                agfix = 1-gal._mixmat.get_mask()
-                ag = gal.mixmat()
-                agfix[:,-2:] = 1
-                ag[0:int(nmap/2),-2] = asyn
-                ag[int(nmap/2):,-1]  = asyn
-                gal.set_mixmat(ag, fixed=agfix)
-
-    print('starting quasi newton')
-    model.quasi_newton(np.abs(stats), nmodes)
-    print('starting set_powspec 1')
-    cmb.set_powspec (cmbcq, fixed=cfix)
-    print('starting close_form')
-    model.close_form(stats)
-    print('starting set_powspec 2')
-    cmb.set_powspec (cmbcq, fixed=cfix)
-    cmb.set_powspec (cmbcq, fixed=cfix)
-    mm = model.mismatch(stats, nmodes, exact=True)
-    mmG = model.mismatch(stats, nmodes, exact=True)
-
-    # start CG/close form
-    for i in range(maxiter):
-        # fit mixing matrix
-        gal.fix_powspec("null")
-        cmbfix = "null" if polar else cfix 
-        cmb.fix_powspec(cmbfix)
-        model.conjugate_gradient (stats, nmodes,maxiter=cg_maxiter, avextol=cg_eps)
-        if 0:#logger is not None:
-            np.set_printoptions(precision=5)
-            logger.info(str(cmb.mixmat()/acmb))
-        # fit power spectra
-        gal.fix_powspec("null")
-        if mmG!=model.mismatch(stats, nmodes, exact=True):
-            cmbfix = cfix if polar else "all" 
-            cmb.fix_powspec(cmbfix)
-        if i==int(maxiter/2) and not noise_fix: # fit also noise at some point
-            Nt = noise.powspec()
-            noise = smica.NoiseDiag(nmap, len(nmodes), name='noise')
-            model = smica.Model([cmb, gal, noise])
-            if noise_template is not None:
-                noise.set_powspec(Nt, fixed=noise_template)
-            else:
-                noise.set_powspec(Nt)
-            cmb.set_powspec (cmbcq)
-        model.close_form(stats)
-
-        # compute new mismatch 
-        mm2 = model.mismatch(stats, nmodes, exact=True)
-        mm2G = model.mismatch(stats, nmodes)
-        gain = np.real(mmG-mm2G)
-        if gain==0 and i>maxiter/2.0:
-            break
-        strtoprint = "iter= % 4i mismatch = %10.5f  gain= %7.5f " % (i, np.real(mm2), gain)
-        if logger is not None:
-            logger.info(strtoprint)
-        else:
-            print(strtoprint)
-        mm = mm2
-        mmG = mm2G
-
-    cmb.fix_powspec(cfix)
-    gal.fix_powspec("null")
-    return model
-
-
-def cmbmaps2C_lS():
-    C_lS = dict()
-    cmb_map = dict()
-    for det in detectors:
-        if int(det)<100:
-            nside_desc = cf['pa']['nside_desc_map'][0]
-        else:
-            nside_desc = cf['pa']['nside_desc_map'][1]
-        hdul = fits.open("/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20_sim/0200/input/ffp10_cmb_{det}_alm_mc_0200_nside{nside}_quickpol.fits".format(det=det, nside=nside_desc))
-        cmb_map[det] = np.array([hp.ud_grade(hdul[1].data.field(spec).reshape(-1), nside_out = nside_out, order_in = 'NESTED', order_out='RING')
-                            for spec in [0,1,2]])
-    # C_lS = pw.tqupowerspec(cmb_map, tmask, pmask, lmax, lmax_mask)
-
-    for det in detectors:
-        alms = pw.map2alm_spin(cmb_map[det], pmask[det], 2, lmax) # full sky QU->EB
-        # almT[det] = alms[0]
-        almE[det] = alms[0]
-        almB[det] = alms[1]
-
-    CMB_in = dict()
-    nalm = int((lmax+1)*(lmax+2)/2)
-    signalW = np.ones(shape=(750,7))*1/len(detectors)
-    beamf = io.load_beamf(csu.freqcomb)
-    # combalmT = np.zeros((nalm), dtype=np.complex128)
-    combalmE = np.zeros((nalm), dtype=np.complex128)
-    combalmB = np.zeros((nalm), dtype=np.complex128)
-    for m,det in zip(range(len(detectors)),detectors):
-        # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-        combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(1)[0:lmax]), np.squeeze(signalW[:,m]))
-        combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(2)[0:lmax]), np.squeeze(signalW[:,m]))
-
-    CMB_in["EE"] = hp.almxfl(combalmE, 1/hp.pixwin(nside_out, pol=True)[0][0:lmax])
-    CMB_in["BB"] = hp.almxfl(combalmB, 1/hp.pixwin(nside_out, pol=True)[1][0:lmax])
-
-    CMB_in["TQU"] = dict()
-    CMB_in["TQU"] = hp.alm2map([np.zeros_like(CMB_in["EE"]), CMB_in["EE"], CMB_in["BB"]], nside_out)
-    return CMB_in["TQU"]
 
 
 def cov_lS2cov_lSmin(icov_lS, C_lS):
@@ -282,11 +93,8 @@ def cov_lS2cov_lSmin(icov_lS, C_lS):
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
-    run_weight = True
-    run_cmbmap = False
-    run_smica = False
+    run_fit = False
     run_propag = False
-    run_tf = False
 
     CMB = dict()
     CMB["TQU"] = dict()
@@ -319,18 +127,18 @@ if __name__ == '__main__':
             * signal estimator: C_lS_out.py
             * channel weights: io.weight_path + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + io.total_filename
         """
-        C_ltot = load_powerspectra('full')
+        C_ltot = cslib.load_powerspectra('full')
         cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
         cov_ltotEE = cov_ltot["EE"]
         print(cov_ltotEE.shape)
 
-        C_lN = load_powerspectra('noise')
+        C_lN = cslib.load_powerspectra('noise')
         cov_lN = pw.build_covmatrices(C_lN, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
         cov_lNEE = cov_lN["EE"]
         print(cov_lNEE.shape)
 
         ##### new
-        C_lS = load_powerspectra('signal')
+        C_lS = cslib.load_powerspectra('signal')
         cov_lS = pw.build_covmatrices(C_lS, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
         cov_lSEE = cov_lS["EE"]
         print(cov_lSEE.shape)
@@ -352,9 +160,9 @@ if __name__ == '__main__':
         #####
 
         nmodes = calc_nmodes(bins, pmask['100']) #any mask will do, only fsky needed
-        smica_model = build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
+        smica_model = cslib.build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
 
-        fit_model_to_cov(
+        cslib.fit_model_to_cov(
             smica_model,
             np.abs(cov_ltot_bnd),
             nmodes,
@@ -395,7 +203,7 @@ if __name__ == '__main__':
 
         # full maps
         maps = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
-        maps = prep.preprocess_all(maps)
+        maps = trsf_m.process_all(maps)
 
         for det in detectors:
             print(det)
