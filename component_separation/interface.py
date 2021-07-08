@@ -167,4 +167,4 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
 
 def load_powerspectra(dset, processed = True):
-    return io.load_powerspectra(dset, processed = True)
+    return io.load_powerspectra(dset, processed = processed)

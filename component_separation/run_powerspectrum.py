@@ -6,6 +6,7 @@ Depends on all maps being generated to begin with. Use ``run_map.py``, if e.g. n
 
 __author__ = "S. Belkner"
 
+import copy
 import json
 import logging
 import logging.handlers
@@ -16,18 +17,17 @@ from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
+import healpy as hp
 import numpy as np
 from healpy.sphtfunc import smoothing
 
 import component_separation
 import component_separation.io as io
-import healpy as hp
 import component_separation.powspec as pw
 import component_separation.transform_map as trsf_m
 import component_separation.transform_spec as trsf_s
 from component_separation.cs_util import Config
 from component_separation.cs_util import Helperfunctions as hpf
-
 from component_separation.cs_util import Planckf, Plancks
 
 with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
@@ -77,7 +77,7 @@ def cmbmaps2C_lS():
 
     CMB_in = dict()
     nalm = int((lmax+1)*(lmax+2)/2)
-    signalW = np.ones(shape=(750,7))*1/len(detectors)
+    signalW = np.ones(shape=(lmax+1,7))*1/len(detectors)
     beamf = io.load_beamf(csu.freqcomb)
     # combalmT = np.zeros((nalm), dtype=np.complex128)
     combalmE = np.zeros((nalm), dtype=np.complex128)
@@ -118,31 +118,32 @@ if __name__ == '__main__':
     print(filename)
     print(40*"$")
     # set_logger(DEBUG)
-    run_map2spec = True
-    run_alm2spec = False
-
-    import copy
-    cf_n = copy.deepcopy(cf)
-    cf_n['pa']['freqdset'] = cf['pa']['freqdset']+"_diff"
-    csu_n = Config(cf_n)
+    run_map2spec = False
+    run_alm2spec = True
+    run_map2spec_alsowithnoise = True
 
     if run_map2spec:
-        # TODO remove dictionary from map2spec return value
         nside_out = cf['pa']['nside_out'] if cf['pa']['nside_out'] is not None else cf['pa']['nside_desc_map']
-        # for cs, (path_unsc, path_sc) in zip([csu, csu_n], [(io.spec_unsc_path_name, io.spec_sc_path_name), (io.noise_unsc_path_name, io.noise_sc_path_name)]):
-        for cs, (path_unsc, path_sc) in zip([csu_n], [(io.noise_unsc_path_name, io.noise_sc_path_name)]):         
+        if run_map2spec_alsowithnoise:
+            cf_n = copy.deepcopy(cf)
+            cf_n['pa']['freqdset'] = cf['pa']['freqdset']+"_diff"
+            csu_n = Config(cf_n)
+            cslist = [csu, csu_n]
+            path_name_list = [(io.spec_unsc_path_name, io.spec_sc_path_name), (io.noise_unsc_path_name, io.noise_sc_path_name)]
+        else:
+            cslist = [csu]
+            path_name_list = [(io.spec_unsc_path_name, io.spec_sc_path_name)]
+        for cs, (path_unsc, path_sc) in zip(cslist, path_name_list):        
             beamf = io.load_beamf(cs.freqcomb)
             cf_loc = cs.cf
             maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=cf_loc['pa']["nside_out"])
-            # maps = trsf_m.process_all(maps)
+            maps = trsf_m.process_all(maps)
             tmask, pmask, pmask = io.load_one_mask_forallfreq()
-
             C_l_unsc = map2spec(maps, tmask, pmask)
             io.save_data(C_l_unsc, path_unsc)
 
-
             C_l_unsc = io.load_data(path_unsc)
-            C_l = trsf_s.process_all(C_l_unsc, cf_loc, cf_loc['pa']['Tscale'], beamf, nside_out, cf_loc['pa']["Spectrum_scale"], cf_loc['pa']['smoothing_window'], cf_loc['pa']['max_polynom'])
+            C_l = trsf_s.process_all(C_l_unsc, cf_loc, cs.freqcomb, cs.PLANCKSPECTRUM, cf_loc['pa']['Tscale'], beamf, nside_out, cf_loc['pa']["Spectrum_scale"], cf_loc['pa']['smoothing_window'], cf_loc['pa']['max_polynom'])
             io.save_data(C_l, path_sc)
 
     if run_alm2spec:
@@ -154,16 +155,7 @@ if __name__ == '__main__':
         cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=2)
         cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=3)
         buff = hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:cf['pa']['lmax']+1]
-        C_lS_unsc = {
-            '4242-4242': {
-                'TT': buff[0],
-                'EE': buff[1],
-                'BB': buff[2],
-                'TE': buff[3],
-                'TB': buff[4],
-                'EB': buff[5]
-            }
-        }
+        C_lS_unsc = np.array([[buff]])
         #TODO to process spectrum, need to know the beamfunction. is it 5arcmin?
         # C_lS = trsf_s.process_all(C_lS_unsc, cf, cf['pa']['Tscale'], beamf, nside_out, cf['pa']["Spectrum_scale"], cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
         C_lS = C_lS_unsc

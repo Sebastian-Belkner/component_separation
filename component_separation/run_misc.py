@@ -17,6 +17,7 @@ import logging
 from astropy.io import fits
 from scipy import interpolate
 import logging.handlers
+import component_separation.interface as cslib
 
 import numpy as np
 
@@ -33,13 +34,14 @@ import component_separation
 import matplotlib.pyplot as plt
 import component_separation.io as io
 import component_separation.powspec as pw
-import component_separation.preprocess as prep
-from component_separation.cs_util import Config as csu
+import component_separation.transform_map as trsf_m
+from component_separation.cs_util import Config
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
 
-with open(os.path.dirname(component_separation.__file__)+'/config.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
     cf = json.load(f)
+csu = Config(cf)
 
 # LOGFILE = 'data/tmp/logging/messages.log'
 # logger = logging.getLogger("")
@@ -74,17 +76,20 @@ def spec_weight2weighted_spec(spectrum, weights):
     return spec
 
 
-def specsc2weights(spectrum, Tscale):
-    cov = pw.build_covmatrices(spectrum, cf['pa']["lmax"], cf['pa']["freqfilter"], cf['pa']["specfilter"], cf['pa']['Tscale'])
-    cov_inv_l = pw.invert_covmatrices(cov, cf['pa']["lmax"], cf['pa']["freqfilter"], cf['pa']["specfilter"])
-    weights = pw.calculate_weights(cov_inv_l, cf['pa']["lmax"], cf['pa']["freqfilter"], cf['pa']["specfilter"], cf['pa']['Tscale'])
+def specsc2weights(spectrum):
+    print(spectrum.shape)
+    cov = pw.build_covmatrices(spectrum, cf['pa']['Tscale'])
+    print(cov.shape)
+    cov_inv_l = pw.invert_covmatrices(cov)
+    print(cov_inv_l.shape)
+    weights = pw.calculate_weights(cov_inv_l, cf['pa']['Tscale'])
     return weights
 
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
     run_weight = True
-    run_tf = False
+    run_tf = True
 
     CMB = dict()
     CMB["TQU"] = dict()
@@ -94,7 +99,6 @@ if __name__ == '__main__':
     filename = io.total_filename
     ndet = len(detectors)
     bins =  const.SMICA_lowell_bins    #const.linear_equisized_bins_10 #const.linear_equisized_bins_1
-    maxiter = 50
     freqdset = cf['pa']['freqdset']
     sim_id = cf[mch][freqdset]['sim_id']
 
@@ -111,12 +115,7 @@ if __name__ == '__main__':
         No SMICA, straightforward weight derivation.
         Needed for combining maps without SMICA.
         """
-        if cf['pa']['new_spectrum']:
-            maps = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
-            maps = prep.preprocess_all(maps)
-            C_ltot = calculate_powerspectra(maps, tmask, pmask)
-        else:
-            C_ltot = load_powerspectra()
+        C_ltot = cslib.load_powerspectra('full')
         weights_tot = specsc2weights(C_ltot)
         print(weights_tot.shape)
         io.save_data(weights_tot, io.weight_path_name)
@@ -136,7 +135,7 @@ if __name__ == '__main__':
 
         # another way would be to do crosscovariance pure cmb in with minimum variance map derived from smica. that is easy and works.
 
-        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")[1]
+        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")[0][0]
         # io.save_data(CMB["TQU"]['out'], "/global/cscratch1/sd/sebibel/misc/cmboutmap.npy")
 
         # crosscovariance between cmb input and what smica gives

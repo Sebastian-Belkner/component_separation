@@ -104,7 +104,6 @@ def splitmaps2diffmap():
     
     outpath_name = cf[mch]["outdir_map_ap"]
 
-    # nside_out = cf["pa"]['nside_desc_map']
     if cf["pa"]['nside_out'] is None:
         nside_out = cf["pa"]['nside_desc_map']
     else:
@@ -233,20 +232,14 @@ if __name__ == '__main__':
     print(60*"$")
 
     run_emp_noisemap = True
+    run_cmbmap = True
     run_mask = False
     run_synmap = False
-    run_cmbmap = True
 
     if run_emp_noisemap:
         print('generating noise map from half ring maps..')
         splitmaps2diffmap()
         print('..Done')
-
-    if run_mask:
-        map2mask()
-
-    if run_synmap:
-        cl2synmap()
 
     if run_cmbmap:
         """
@@ -255,3 +248,9 @@ if __name__ == '__main__':
         """
         CMB["TQU"]["in"] = cmblm2cmbmap(int(sim_id))  
         io.save_data(CMB["TQU"]["in"], "/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")
+
+    if run_mask:
+        map2mask()
+
+    if run_synmap:
+        cl2synmap()

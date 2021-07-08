@@ -95,7 +95,7 @@ def cov_lS2cov_lSmin(icov_lS, C_lS):
 if __name__ == '__main__':
     # set_logger(DEBUG)
     run_fit = True
-    run_propag = False
+    run_propag = True
 
     CMB = dict()
     CMB["TQU"] = dict()
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     filename = io.total_filename
     ndet = len(detectors)
     bins =  const.SMICA_lowell_bins    #const.linear_equisized_bins_10 #const.linear_equisized_bins_1
-    maxiter = 50
+    maxiter = 5
     freqdset = cf['pa']['freqdset']
     sim_id = cf[mch][freqdset]['sim_id']
 
@@ -130,12 +130,12 @@ if __name__ == '__main__':
         """
         C_ltot = cslib.load_powerspectra('full')
         cov_ltot = pw.build_covmatrices(C_ltot, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-        cov_ltotEE = cov_ltot["EE"]
+        cov_ltotEE = cov_ltot[1]
         print(cov_ltotEE.shape)
 
         C_lN = cslib.load_powerspectra('noise')
         cov_lN = pw.build_covmatrices(C_lN, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-        cov_lNEE = cov_lN["EE"]
+        cov_lNEE = cov_lN[1]
         print(cov_lNEE.shape)
 
         # TODO implement the following lines
@@ -154,11 +154,10 @@ if __name__ == '__main__':
         print(cov_lN_bnd.shape)
 
         ##### old
-        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")['4242-4242']["EE"]
+        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")[0][0]
         cov_lS_EE = np.ones((ndet,ndet,lmax+1)) * C_lS_EE
-        
         C_lS_bnd =  hpf.bin_it(cov_lS_EE, bins=bins)
-        print(C_lS_bnd.shape)
+        print(cov_lSEE.shape)
         #####
 
         nmodes = calc_nmodes(bins, pmask['100']) #any mask will do, only fsky needed
@@ -188,7 +187,7 @@ if __name__ == '__main__':
         #TODO smica needs to run for both BB and EE, as BB-weights are needed for later map generation
         smica_cov_full = dict()
         zer = np.zeros_like(smica_model.covariance())
-        for spec in csu.PLANCKSPECTRUM_f:
+        for spec in csu.PLANCKSPECTRUM:
             smica_cov_full[spec] = zer
         smica_cov_full["EE"] = smica_model.covariance()
         smica_cov_full_inv_ltot = pw.invert_covmatrices(smica_cov_full, len(bins))

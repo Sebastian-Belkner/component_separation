@@ -99,9 +99,10 @@ def tqupowerspec(tqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int) ->
             return hp.pixelfunc.ud_grade(data, nside_out=nside_out[0])
         else:
             return hp.pixelfunc.ud_grade(data, nside_out=nside_out[1])
-    buff = {
-        FREQC:
-            ps.map2cls(
+
+    # retval = np.array(shape=(len(buff.items()),len(csu.PLANCKSPECTRUM_f), lmax+1))
+    retval = np.array([
+        ps.map2cls(
                 tqumap=tqumap[FREQC.split("-")[0]],
                 tmask=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
                 pmask=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
@@ -110,17 +111,32 @@ def tqupowerspec(tqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int) ->
                 tqumap2=tqumap[FREQC.split("-")[1]],
                 tmask2=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[1]),
                 pmask2=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[1])
-                )
-            for FREQC in csu.freqcomb}
-    spectrum = dict()
-    for FREQC, _ in buff.items():
-        spectrum.update({
-            FREQC: {
-                spec: buff[FREQC][idx]
-                    for idx, spec in enumerate([p for p in csu.PLANCKSPECTRUM_f])
-                    }
-           })
-    return spectrum
+        ) for FREQC in csu.freqcomb 
+    ])
+    # buff = {
+    #     FREQC:
+    #         ps.map2cls(
+    #             tqumap=tqumap[FREQC.split("-")[0]],
+    #             tmask=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
+    #             pmask=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
+    #             lmax=lmax,
+    #             lmax_mask=lmax_mask,
+    #             tqumap2=tqumap[FREQC.split("-")[1]],
+    #             tmask2=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[1]),
+    #             pmask2=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[1])
+    #             )
+    #         for FREQC in csu.freqcomb}
+    # spectrum = dict()
+    # for FREQC, _ in buff.items():
+    #     spectrum.update({
+    #         FREQC: {
+    #             spec: buff[FREQC][idx]
+    #                 for idx, spec in enumerate(csu.PLANCKSPECTRUM_f)
+    #                 }
+    #        })
+
+    
+    return retval
 
 
 @log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
@@ -186,59 +202,51 @@ def create_mapsyn(spectrum: Dict[str, Dict], cf: Dict) -> List[Dict[str, Dict]]:
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(data: Dict, lmax: int, freqfilter: List[str], specfilter: List[str], Tscale: str = r"K_CMB") -> Dict[str, np.ndarray]:
+def build_covmatrices(data: np.array, Tscale: str = r"K_CMB"):
     """Calculates the covariance matrices from the data
 
     Args:
         data (Dict): powerspectra with spectrum and frequency-combinations in the columns
-        lmax (int): Maximum multipol of data to be considered
-        freqfilter (List[str]): Frequency channels which are to be ignored
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-
+        
     Returns:
         Dict[str, np.ndarray]: The covariance matrices of Dimension [Nspec,Nspec,lmax]
     """
-    NFREQUENCIES = len([FREQ for FREQ in csu.PLANCKMAPFREQ_f])
-    cov = {spec: np.zeros(shape=(NFREQUENCIES, NFREQUENCIES, lmax+1))
-                for spec in csu.PLANCKSPECTRUM_f}
-    def LFI_cutoff(fr):
-        # KEEP. Cutting off LFI channels for ell=700 as they cause numerical problems
-        return {
-            '030': 2000,
-            '044': 2000,
-            '070': 2000,
-            '100': lmax,
-            '143': lmax,
-            '217': lmax,
-            '353': lmax
-        }[fr]
-    ifreq, ifreq2, ispec = -1, -1, 0
-    for FREQ in csu.PLANCKMAPFREQ:
-        ifreq2 = -1
-        if FREQ not in freqfilter:
-            ifreq+=1
-            for FREQ2 in csu.PLANCKMAPFREQ:
-                if FREQ2 not in freqfilter:
-                    ifreq2+=1
-                    if _crosscomb(True, FREQ, FREQ2):
-                        ispec=-1
-                        for spec in csu.PLANCKSPECTRUM:
-                            if spec not in specfilter:
-                                ispec+=1
-                                if int(FREQ)<100 or int(FREQ2)<100:
-                                    b  = np.array([np.nan for n in range(max(lmax+1-min(LFI_cutoff(FREQ),LFI_cutoff(FREQ2)), 0))])
-                                    a = np.concatenate((data[FREQ+'-'+FREQ2][spec][:min(lmax+1, min(LFI_cutoff(FREQ),LFI_cutoff(FREQ2)))], b))
-                                else:
-                                    a = data[FREQ+'-'+FREQ2][spec]
-                                    cov[spec][ifreq][ifreq2] = a * trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
-                                    cov[spec][ifreq2][ifreq] = a * trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
 
-    return cov
+    lmaxp1 = data.shape[-1]
+    def LFI_cutoff(fr):
+        # KEEP. Cuts LFI channels for ell=700 as they cause numerical problems
+        return {
+            30: 1000,
+            44: 1000,
+            70: 1000,
+            100: lmaxp1,
+            143: lmaxp1,
+            217: lmaxp1,
+            353: lmaxp1
+        }[fr]
+
+    NFREQUENCIES = len([FREQ for FREQ in csu.PLANCKMAPFREQ_f])
+    covn = np.zeros(shape=(len(csu.PLANCKSPECTRUM), NFREQUENCIES, NFREQUENCIES, lmaxp1))
+    for sidx in range(covn.shape[0]):
+        for fcombidx, freqc in enumerate(csu.freqcomb):
+            FREQ1, FREQ2 = int(freqc.split('-')[0]), int(freqc.split('-')[1])
+            freqf = np.array([int(n) for n in csu.PLANCKMAPFREQ_f])
+            fidx1 = np.where(freqf == FREQ1)[0][0]
+            fidx2 = np.where(freqf == FREQ2)[0][0]
+ 
+            if FREQ1<100 or FREQ2<100:
+                b  = np.array([np.nan for n in range(max(lmaxp1-min(LFI_cutoff(FREQ1),LFI_cutoff(FREQ2)), 0))])
+                a = np.concatenate((data[fcombidx,sidx][:min(lmaxp1, min(LFI_cutoff(FREQ1),LFI_cutoff(FREQ2)))], b))
+            else:
+                a = data[fcombidx,sidx]
+            covn[sidx,fidx1,fidx2] = a * trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+            covn[sidx,fidx1,fidx2] = a * trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+    return covn
 
 
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
-def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int):
+def invert_covmatrices(cov: np.array):
     """Inverts a covariance matrix
 
     Args:
@@ -247,6 +255,8 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int):
         freqfilter (List[str]): Frequency channels which are to be ignored
         specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
     """
+
+    nfreq = 7 #KEEP. shape of weights shall have all frequencies. cov['EE'].shape[0]
     def maskit(a):
         """drops all row and columns with np.nan's.
         """
@@ -266,7 +276,7 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int):
         return a
 
     def pad_shape(a):
-        return ((7-a.shape[0],0),(7-a.shape[0],0))
+        return ((nfreq-a.shape[0],0),(nfreq-a.shape[0],0))
 
     def pad_with(vector, pad_width, iaxis, kwargs):
         pad_value = kwargs.get('padder', 0.0)
@@ -274,36 +284,62 @@ def invert_covmatrices(cov: Dict[str, np.ndarray], lmax: int):
         if pad_width[1] != 0:                      # <-- (0 indicates no padding)
             vector[-pad_width[1]:] = pad_value
     
-    cov_inv_l = {
-        spec: {
-            l: np.pad(np.linalg.inv(maskit(cov[spec][:,:,l])), pad_shape(maskit(cov[spec][:,:,l])), pad_with)
-            if is_invertible(maskit(cov[spec][:,:,l]), l)
-            else np.pad(shp2cov_nan(maskit(cov[spec][:,:,l]).shape), pad_shape(maskit(cov[spec][:,:,l])), pad_with)
-                for l in range(lmax)
-            }for spec in csu.PLANCKSPECTRUM_f
-        }
-    return cov_inv_l
+    # cov_inv_l = {
+    #     spec: {
+    #         l: np.pad(np.linalg.inv(maskit(cov[spec][:,:,l])), pad_shape(maskit(cov[spec][:,:,l])), pad_with)
+    #         if is_invertible(maskit(cov[spec][:,:,l]), l)
+    #         else np.pad(shp2cov_nan(maskit(cov[spec][:,:,l]).shape), pad_shape(maskit(cov[spec][:,:,l])), pad_with)
+    #             for l in range(lmax)
+    #         }for spec in csu.PLANCKSPECTRUM
+    #     }
+
+    ret = np.zeros(shape=(cov.shape[0], nfreq, nfreq, cov.shape[-1]))
+    for spec in range(len(csu.PLANCKSPECTRUM)):
+        for l in range(cov.shape[-1]):
+            if is_invertible(maskit(cov[spec,:,:,l]), l):
+                ret[spec,:,:,l] = np.pad(
+                    np.linalg.inv(maskit(cov[spec,:,:,l])),
+                    pad_shape(maskit(cov[spec,:,:,l])),
+                    pad_with)
+    
+            else:
+                ret[spec,:,:,l] = np.pad(
+                    shp2cov_nan(maskit(cov[spec,:,:,l]).shape),
+                    pad_shape(maskit(cov[spec,:,:,l])), pad_with)
+    # cov_inv_l = np.array([
+    #     [np.pad(
+    #         np.linalg.inv(maskit(cov[spec,:,:,l])),
+    #         pad_shape(maskit(cov[spec,:,:,l])),
+    #         pad_with).T
+    # if is_invertible(maskit(cov[spec,:,:,l]), l)
+    # else np.pad(
+    #         shp2cov_nan(maskit(cov[spec,:,:,l]).shape),
+    #         pad_shape(maskit(cov[spec,:,:,l])), pad_with).T
+    #     for spec in range(len(csu.PLANCKSPECTRUM))]
+    #     for l in range(lmax)])
+    return ret
 
 
 @log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
 @log_on_end(DEBUG, "channel weights calculated successfully: '{result}' ")
-def calculate_weights(cov: Dict, lmax: int, freqfilter: List[str], Tscale: str = r"K_CMB") -> np.array:
+def calculate_weights(cov: np.array, Tscale: str = r"K_CMB") -> np.array:
     """Calculates weightings of the respective Frequency channels
 
     Args:
         cov (Dict): The inverted covariance matrices of Dimension [lmax,Nspec,Nspec]
-        lmax (int): Maximum multipol of data to be considered
 
     Returns:
         np.array: The weightings of the respective Frequency channels
     """
-    
-    def _elaw(shp):
-        return np.array([trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in csu.PLANCKMAPFREQ_f])
-    weight_arr = np.array([
-            [(cov[spec][l] @ _elaw(cov[spec][l].shape[0])) / (_elaw(cov[spec][l].shape[0]).T @ cov[spec][l] @ _elaw(cov[spec][l].shape[0]))
-                for l in range(lmax)]
-        for spec in csu.PLANCKSPECTRUM_f])
+    # def _elaw(shp):
+    #     return np.array([trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in csu.PLANCKMAPFREQ[:-2]])
+
+    elaw = np.array([trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in csu.PLANCKMAPFREQ[:-2]])
+    weight_arr = np.zeros(shape=(np.take(cov.shape, [0,1,-1])))
+    for spec in range(len(csu.PLANCKSPECTRUM)):
+        for l in range(cov.shape[-1]):
+            weight_arr[spec,:,l] = np.array([
+                    (cov[spec,:,:,l] @ elaw) / (elaw.T @ cov[spec,:,:,l] @ elaw)])
     return weight_arr
 
 
