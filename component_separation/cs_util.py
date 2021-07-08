@@ -59,7 +59,7 @@ class Config():
 
         self.CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
                              "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
-
+        
 
 class Constants:
     SMICA_a_fit_bins = np.array([

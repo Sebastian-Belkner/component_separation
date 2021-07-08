@@ -118,7 +118,7 @@ if __name__ == '__main__':
     print(filename)
     print(40*"$")
     # set_logger(DEBUG)
-    run_map2spec = False
+    run_map2spec = True
     run_alm2spec = True
     run_map2spec_alsowithnoise = True
 
@@ -155,8 +155,8 @@ if __name__ == '__main__':
         cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=2)
         cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=3)
         buff = hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:cf['pa']['lmax']+1]
-        C_lS_unsc = np.array([[buff]])
-        #TODO to process spectrum, need to know the beamfunction. is it 5arcmin?
+        C_lS_unsc = np.array([buff])
+        #TODO to process spectrum, need to know the beamfunction? is it 5arcmin?
         # C_lS = trsf_s.process_all(C_lS_unsc, cf, cf['pa']['Tscale'], beamf, nside_out, cf['pa']["Spectrum_scale"], cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
         C_lS = C_lS_unsc
         io.save_data(C_lS, "/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")

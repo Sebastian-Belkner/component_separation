@@ -88,7 +88,7 @@ def specsc2weights(spectrum):
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
-    run_weight = True
+    run_weight = False
     run_tf = True
 
     CMB = dict()
@@ -97,10 +97,7 @@ if __name__ == '__main__':
 
     filename_raw = io.total_filename_raw
     filename = io.total_filename
-    ndet = len(detectors)
-    bins =  const.SMICA_lowell_bins    #const.linear_equisized_bins_10 #const.linear_equisized_bins_1
-    freqdset = cf['pa']['freqdset']
-    sim_id = cf[mch][freqdset]['sim_id']
+    ndet = len(detectors)   #const.linear_equisized_bins_10 #const.linear_equisized_bins_1
 
     print(40*"$")
     print("Starting run with the following settings:")
@@ -121,28 +118,9 @@ if __name__ == '__main__':
         io.save_data(weights_tot, io.weight_path_name)
 
     if run_tf:
-        #### State: deriving a map from the cmb spectrum of smica turns out to be difficult, as either synalm or synfast needs to be used. then smica uses binned data, so the data
-        #### needs to be interpolated -> deriving crosscovariance between pure cmb in and pure cmb out is difficult
-
-        # CMB["TT"] = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_0200.fits', hdu=1)[:281625]
-        # buff = io.load_data("/global/cscratch1/sd/sebibel/smica/C_lS_out.npy")[0][0]
-        # xnew = np.arange(0,lmax,1)
-        # buffinterp = interpolate.interp1d(np.mean(bins, axis=1), buff, bounds_error = False, fill_value='extrapolate')
-        # CMB["EEinterp"] = hp.synalm(buffinterp(xnew))
-        # CMB["BB"] = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_0200.fits', hdu=3)[:281625]
-        # print(CMB["TT"].shape, CMB["EEinterp"].shape , CMB["BB"].shape, hp.Alm.getlmax(len(CMB["BB"])))
-        # CMB["TQU"]['out'] = hp.alm2map([CMB["TT"], CMB["EEinterp"] , CMB["BB"]], nside_out)
-
-        # another way would be to do crosscovariance pure cmb in with minimum variance map derived from smica. that is easy and works.
-
-        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")[0][0]
-        # io.save_data(CMB["TQU"]['out'], "/global/cscratch1/sd/sebibel/misc/cmboutmap.npy")
-
-        # crosscovariance between cmb input and what smica gives
-        # CMB["TQU"]["in"] = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")
+        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")[0,1]
         CMB["TQU"]["in"] = io.load_data("/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")
         CMB["TQU"]['out'] = io.load_data("/global/cscratch1/sd/sebibel/misc/smicaminvarmap.npy")
-        # CMB["TQU"]['out'] = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_out.npy")
 
         # any mask will do here
         crosscov = ps.map2cl_spin(

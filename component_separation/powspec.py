@@ -240,7 +240,7 @@ def build_covmatrices(data: np.array, Tscale: str = r"K_CMB"):
             else:
                 a = data[fcombidx,sidx]
             covn[sidx,fidx1,fidx2] = a * trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
-            covn[sidx,fidx1,fidx2] = a * trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+            covn[sidx,fidx2,fidx1] = a * trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
     return covn
 
 
@@ -283,15 +283,7 @@ def invert_covmatrices(cov: np.array):
         vector[:pad_width[0]] = pad_value
         if pad_width[1] != 0:                      # <-- (0 indicates no padding)
             vector[-pad_width[1]:] = pad_value
-    
-    # cov_inv_l = {
-    #     spec: {
-    #         l: np.pad(np.linalg.inv(maskit(cov[spec][:,:,l])), pad_shape(maskit(cov[spec][:,:,l])), pad_with)
-    #         if is_invertible(maskit(cov[spec][:,:,l]), l)
-    #         else np.pad(shp2cov_nan(maskit(cov[spec][:,:,l]).shape), pad_shape(maskit(cov[spec][:,:,l])), pad_with)
-    #             for l in range(lmax)
-    #         }for spec in csu.PLANCKSPECTRUM
-    #     }
+
 
     ret = np.zeros(shape=(cov.shape[0], nfreq, nfreq, cov.shape[-1]))
     for spec in range(len(csu.PLANCKSPECTRUM)):
@@ -301,22 +293,10 @@ def invert_covmatrices(cov: np.array):
                     np.linalg.inv(maskit(cov[spec,:,:,l])),
                     pad_shape(maskit(cov[spec,:,:,l])),
                     pad_with)
-    
             else:
                 ret[spec,:,:,l] = np.pad(
                     shp2cov_nan(maskit(cov[spec,:,:,l]).shape),
                     pad_shape(maskit(cov[spec,:,:,l])), pad_with)
-    # cov_inv_l = np.array([
-    #     [np.pad(
-    #         np.linalg.inv(maskit(cov[spec,:,:,l])),
-    #         pad_shape(maskit(cov[spec,:,:,l])),
-    #         pad_with).T
-    # if is_invertible(maskit(cov[spec,:,:,l]), l)
-    # else np.pad(
-    #         shp2cov_nan(maskit(cov[spec,:,:,l]).shape),
-    #         pad_shape(maskit(cov[spec,:,:,l])), pad_with).T
-    #     for spec in range(len(csu.PLANCKSPECTRUM))]
-    #     for l in range(lmax)])
     return ret
 
 
