@@ -17,13 +17,12 @@ def process_all(data, cf, freqcomb, speccomb, scale, beamf, nside, spectrum_scal
     """
     Root function. Executes all tranformations
     """
-    data_prep = data
     if smoothing_window > 0 or max_polynom > 0:
-        data_prep = apply_smoothing(data_prep, smoothing_window=smoothing_window, max_polynom=max_polynom)
-    data_prep = apply_pixwin(data_prep, freqcomb, nside)
-    data_prep = apply_scale(data_prep, spectrum_scale)
-    data_prep = apply_beamfunction(data_prep, cf, freqcomb, speccomb, beamf)
-    return data_prep
+        data = apply_smoothing(data, smoothing_window=smoothing_window, max_polynom=max_polynom)
+    data = apply_pixwin(data, freqcomb, nside)
+    data = apply_scale(data, spectrum_scale)
+    data = apply_beamfunction(data, cf, freqcomb, speccomb, beamf)
+    return data
 
 
 @log_on_start(INFO, "Starting to apply pixwindow onto data {data}")

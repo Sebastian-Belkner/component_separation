@@ -118,9 +118,9 @@ if __name__ == '__main__':
         io.save_data(weights_tot, io.weight_path_name)
 
     if run_tf:
-        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")[0,1]
-        CMB["TQU"]["in"] = io.load_data("/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")
-        CMB["TQU"]['out'] = io.load_data("/global/cscratch1/sd/sebibel/misc/smicaminvarmap.npy")
+        C_lS_EE = io.load_data(io.signal_sc_path_name)[0,1]
+        CMB["TQU"]["in"] = io.load_data(io.map_cmb_sc_path_name)
+        CMB["TQU"]['out'] = io.load_data(io.cmbmap_smica_path_name)
 
         # any mask will do here
         crosscov = ps.map2cl_spin(
@@ -133,5 +133,5 @@ if __name__ == '__main__':
             mask2=pmask['100']
         )
         transferfunction = np.sqrt(crosscov[0][:lmax]/C_lS_EE[:lmax])
-        io.save_data(transferfunction, "/global/cscratch1/sd/sebibel/misc/tf.npy")
-        io.save_data(crosscov, "/global/cscratch1/sd/sebibel/misc/crosscov.npy")
+        io.save_data(transferfunction, io.out_misc_path+"tf_{}.npy".format(cf['pa']['binname']))
+        io.save_data(crosscov, io.out_misc_path+"crosscov_{}.npy".format(cf['pa']['binname']))

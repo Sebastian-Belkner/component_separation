@@ -281,6 +281,13 @@ class Helperfunctions:
                     ret[i,j,k] = np.mean(np.nan_to_num(data[i,j,int(bins[k][0]):int(bins[k][1])]))
         return np.nan_to_num(ret)
 
+    @staticmethod
+    def bin_it1D(data):
+        ret = np.ones(len(bins))
+        for k in range(bins.shape[0]):
+            ret[k] = np.mean(np.nan_to_num(data[int(bins[k][0]):int(bins[k][1])]))
+        return np.nan_to_num(ret)
+
 
     @staticmethod
     def multi(a,b):
@@ -328,6 +335,7 @@ class Helperfunctions:
         mean = sy / n
         std = np.sqrt(sy2/n - mean*mean)
         return mean, std, _
+
 
     @staticmethod
     def deprecated(func):

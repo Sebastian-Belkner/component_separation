@@ -17,7 +17,9 @@ from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from os import path
 from typing import Dict, List, Optional, Tuple
+import sys
 
+import healpy as hp
 import numpy as np
 
 import component_separation
@@ -168,3 +170,13 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
 def load_powerspectra(dset, processed = True):
     return io.load_powerspectra(dset, processed = processed)
+
+def load_alms(component, id):
+    if component == 'cmb':
+        cmb_tlm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=1)
+        cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=2)
+        cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=3)
+        return cmb_tlm, cmb_elm, cmb_blm
+    else:
+        print('unclear request of loading alms. Exiting..')
+        sys.exit()

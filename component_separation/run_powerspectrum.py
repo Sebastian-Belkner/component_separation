@@ -4,6 +4,11 @@ Depends on all maps being generated to begin with. Use ``run_map.py``, if e.g. n
 
 """
 
+# TODO run everything for 
+#   high_ell_bins
+#   low_ell_bins
+#   DX12 data
+#   NPIPE data
 __author__ = "S. Belkner"
 
 import copy
@@ -16,6 +21,7 @@ import sys
 from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
+import component_separation.interface as cslib
 
 import healpy as hp
 import numpy as np
@@ -48,6 +54,10 @@ if uname.node == "DESKTOP-KMIGUPV":
     mch = "XPS"
 else:
     mch = "NERSC"
+
+freqdset = cf['pa']["freqdset"]
+sim_id = cf[mch][freqdset]["sim_id"]
+
 
 def set_logger(loglevel=logging.INFO):
     logger.setLevel(loglevel)
@@ -118,7 +128,7 @@ if __name__ == '__main__':
     print(filename)
     print(40*"$")
     # set_logger(DEBUG)
-    run_map2spec = True
+    run_map2spec = False
     run_alm2spec = True
     run_map2spec_alsowithnoise = True
 
@@ -136,7 +146,7 @@ if __name__ == '__main__':
         for cs, (path_unsc, path_sc) in zip(cslist, path_name_list):        
             beamf = io.load_beamf(cs.freqcomb)
             cf_loc = cs.cf
-            maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=cf_loc['pa']["nside_out"])
+            maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=nside_out)
             maps = trsf_m.process_all(maps)
             tmask, pmask, pmask = io.load_one_mask_forallfreq()
             C_l_unsc = map2spec(maps, tmask, pmask)
@@ -147,17 +157,12 @@ if __name__ == '__main__':
             io.save_data(C_l, path_sc)
 
     if run_alm2spec:
-        nside_out = cf['pa']['nside_out'] if cf['pa']['nside_out'] is not None else cf['pa']['nside_desc_map']
-        idx = 200
-        beamf = io.load_beamf(csu.freqcomb)
-        #TODO adapt for any data, not hardcoded
-        cmb_tlm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=1)
-        cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=2)
-        cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=3)
-        buff = hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:cf['pa']['lmax']+1]
-        C_lS_unsc = np.array([buff])
+        cmb_tlm, cmb_elm, cmb_blm = cslib.load_alms('cmb', sim_id)
+        C_lS_unsc = np.array([hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:cf['pa']['lmax']+1]])
+        C_lS = trsf_s.apply_scale(C_lS_unsc, cf['pa']["Spectrum_scale"]) 
+        io.save_data(C_lS, io.signal_sc_path_name)
+
         #TODO to process spectrum, need to know the beamfunction? is it 5arcmin?
-        # C_lS = trsf_s.process_all(C_lS_unsc, cf, cf['pa']['Tscale'], beamf, nside_out, cf['pa']["Spectrum_scale"], cf['pa']['smoothing_window'], cf['pa']['max_polynom'])
-        C_lS = C_lS_unsc
-        io.save_data(C_lS, "/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")
-        # spectrum = io.load_data(path_name=io.spec_unsc_path_name)
+        # beamf = {'12345-12345': hp.gauss_beam()}
+        # C_lS_unsc = trsf_s.apply_beamf(C_lS_unsc, cf, ['12345-12345'], speccomb, beamf)
+

@@ -36,13 +36,17 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
+freqdset = cf["pa"]['freqdset']
+if "sim_id" in cf[mch][freqdset]:
+    sim_id = cf[mch][freqdset]["sim_id"]
+else:
+    sim_id = ""
 
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
 PLANCKMAPNSIDE = cf["pa"]['nside_desc_map']
 PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
-freqdset = cf["pa"]['freqdset']
 PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
     if FREQ not in cf['pa']["freqfilter"]]
 
@@ -114,10 +118,7 @@ def make_filenamestring(cf_local, desc='scaled'):
 
     smoothing_window = cf_local['pa']["smoothing_window"]
     max_polynom = cf_local['pa']["max_polynom"]
-    if "sim_id" in cf[mch][freqdset]:
-        sim_id = cf[mch][freqdset]["sim_id"]
-    else:
-        sim_id = ""
+
     if desc == 'raw':
         return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(#'{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(#'{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(
             # '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{freqs}_{spec}_{split}.npy'.format(
@@ -429,8 +430,12 @@ def iff_make_dir(outpath_name):
 """
 
 ##TODO find a way to make this work for both, drawing and analysing
+##TODO improve path management
 total_filename = make_filenamestring(cf)
 total_filename_raw = make_filenamestring(cf, 'raw')
+
+out_misc_path = cf[mch]['outdir_misc_ap']
+iff_make_dir(out_misc_path)
 
 out_spec_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(out_spec_path)
@@ -440,6 +445,8 @@ iff_make_dir(out_map_path)
 map_sc_filename = "MAP" + total_filename
 map_sc_path_name = out_map_path + map_sc_filename
 
+nside_out = cf['pa']['nside_out'] if cf['pa']['nside_out'] is not None else cf['pa']['nside_desc_map']
+map_cmb_sc_path_name = out_misc_path + "map_cmb_in_nside_{}_sim_id_{}.npy".format(nside_out[1],sim_id)
 
 out_mapsyn_path = cf[mch]['outdir_map_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(out_mapsyn_path)
@@ -460,18 +467,22 @@ cmb_unsc_path_name = out_spec_path + cmb_unsc_filename
 spec_sc_filename = "SPEC" + total_filename
 spec_sc_path_name = out_spec_path + spec_sc_filename
 
-out_specsmica_path = cf[mch]['outdir_spectrum_ap'] + cf['pa']["freqdset"] + "/"
+signal_sc_filename = "C_lS_in_sim_id_{}.npy".format(sim_id)
+signal_sc_path_name = out_misc_path + signal_sc_filename
+
+out_specsmica_path = cf[mch]['outdir_smica_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(out_specsmica_path)
 specsmica_sc_filename = "SPECSMICA" + total_filename
 specsmica_sc_path_name = out_specsmica_path + specsmica_sc_filename
+weight_smica_path_name = cf[mch]['outdir_smica_ap'] + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + total_filename
+
+cmbmap_smica_path_name = cf[mch]['outdir_smica_ap'] + "smicaminvarmap_{}.npy".format(cf['pa']['binname'])
+clmin_smica_path_name = cf[mch]['outdir_smica_ap'] + "smicaclmin_{}.npy".format(cf['pa']['binname'])
+cmb_specsmica_sc_path_name = out_specsmica_path + "CMB_" + specsmica_sc_filename
 
 weight_path = cf[mch]['outdir_weight_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(weight_path)
 weight_path_name = weight_path + "WEIG_" + cf['pa']["Tscale"] + "_" + total_filename
-
-out_misc_path = cf[mch]['outdir_misc_ap']
-iff_make_dir(out_misc_path)
-
 
 #TODO the following part needs reviewing
 import copy
@@ -492,4 +503,3 @@ noise_unsc_path_name = noise_path + 'SPEC-RAW_' + noise_filename_raw
 noise_sc_path_name = noise_path + "SPEC" + noise_filename
 
 cf_copy['pa']['freqdset'] = buff
-

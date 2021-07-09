@@ -61,7 +61,6 @@ num_sim = cf['pa']["num_sim"]
 
 lmax = cf['pa']["lmax"]
 lmax_mask = cf['pa']["lmax_mask"]
-detectors = csu.PLANCKMAPFREQ_f
 freqfilter = cf['pa']["freqfilter"]
 specfilter = cf['pa']["specfilter"]
 tmask, pmask, pmask = io.load_mask_per_freq(nside_out[0]) #io.load_one_mask_forallfreq(nside_out=nside_out)
@@ -94,8 +93,11 @@ def cov_lS2cov_lSmin(icov_lS, C_lS):
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
-    run_fit = True
+    run_fit = False
     run_propag = True
+
+    bins = getattr(const, cf['pa']['binname'])
+    maxiter = 50
 
     CMB = dict()
     CMB["TQU"] = dict()
@@ -103,9 +105,8 @@ if __name__ == '__main__':
 
     filename_raw = io.total_filename_raw
     filename = io.total_filename
-    ndet = len(detectors)
-    bins =  const.SMICA_highell_bins #SMICA_lowell_bins    #const.linear_equisized_bins_10 #const.linear_equisized_bins_1
-    maxiter = 50
+    nfreqs = len(csu.PLANCKMAPFREQ_f)
+
     freqdset = cf['pa']['freqdset']
     sim_id = cf[mch][freqdset]['sim_id']
 
@@ -138,13 +139,15 @@ if __name__ == '__main__':
         cov_lNEE = cov_lN[1]
         print(cov_lNEE.shape)
 
-        # TODO implement the following lines and remove the lines marked old
-        # ##### new
-        # C_lS = cslib.load_powerspectra('signal')
-        # cov_lS = pw.build_covmatrices(C_lS, lmax=lmax, freqfilter=freqfilter, specfilter=specfilter)
-        # cov_lSEE = cov_lS["EE"]
-        # print(cov_lSEE.shape)
-        # #####
+        C_lS = cslib.load_powerspectra('signal')
+        # Fakes the same shape so pw.build_covmatrices() may be used
+        C_lS_shaped = np.zeros_like(C_lN)
+        for freqcom in range(C_lS_shaped.shape[0]):
+            C_lS_shaped[freqcom,1,:] = C_lS[0,1]
+        cov_lS = pw.build_covmatrices(C_lS_shaped)
+        cov_lSEE = cov_lS[1]
+        print(cov_lNEE.shape)
+
 
         cov_ltot_bnd = hpf.bin_it(cov_ltotEE, bins=bins)
         print(cov_ltot_bnd.shape)
@@ -153,12 +156,9 @@ if __name__ == '__main__':
         cov_lN_bnd = np.diagonal(cov_lN_bnd, axis1=0, axis2=1).T
         print(cov_lN_bnd.shape)
 
-        ##### old
-        C_lS_EE = io.load_data("/global/cscratch1/sd/sebibel/misc/C_lS_in.npy")[0,1]
-        cov_lS_EE = np.ones((ndet,ndet,lmax+1)) * C_lS_EE * 1e12
-        C_lS_bnd =  hpf.bin_it(cov_lS_EE, bins=bins)
-        print(cov_lS_EE.shape)
-        #####
+        C_lS_bnd =  hpf.bin_it(cov_lSEE, bins=bins)
+        print(C_lS_bnd.shape)
+
 
         nmodes = calc_nmodes(bins, pmask['100']) #any mask will do, only fsky needed
         smica_model = cslib.build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
@@ -176,13 +176,10 @@ if __name__ == '__main__':
             qmax=len(nmodes),
             no_starting_point=False)
 
-        cmb_specsmica_sc_path_name = io.out_specsmica_path + "CMB_" + io.specsmica_sc_filename
-        io.save_data(smica_model.get_comp_by_name('cmb').powspec(), cmb_specsmica_sc_path_name)
-
-        io.save_data(smica_model.get_comp_by_name('cmb').powspec(), "/global/cscratch1/sd/sebibel/smica/C_lS_out.npy")
-        io.save_data(smica_model.get_theta(), "/global/cscratch1/sd/sebibel/smica/theta.npy")
-        io.save_data(smica_model.covariance4D(), "/global/cscratch1/sd/sebibel/smica/cov4D.npy")
-        io.save_data(smica_model.covariance(), "/global/cscratch1/sd/sebibel/smica/cov.npy")
+        io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.cmb_specsmica_sc_path_name)
+        io.save_data(smica_model.get_theta(), io.out_specsmica_path+"theta.npy")
+        io.save_data(smica_model.covariance4D(), io.out_specsmica_path+"cov4D.npy")
+        io.save_data(smica_model.covariance(), io.out_specsmica_path+"cov.npy")
 
         #TODO smica needs to run for both BB and EE, as BB-weights are needed for later map generation
         zer = np.zeros_like(smica_model.covariance())
@@ -192,33 +189,35 @@ if __name__ == '__main__':
         smica_cov_full_inv_ltot = pw.invert_covmatrices(smica_cov_full)
         smica_weights_tot = pw.calculate_weights(smica_cov_full_inv_ltot, cf['pa']["Tscale"])
         print(smica_weights_tot.shape)
-        io.save_data(smica_weights_tot, io.weight_path + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + io.total_filename)
+
+        io.save_data(smica_weights_tot, io.weight_smica_path_name)
 
 
     if run_propag:
+        lmaxbin = int(bins[-1][1]+1)
         """
         Follows the SMICA propagation code to combine maps with set of weights.
+        Only runs for the chosen bins and up to the max value of bins
         """
-        W = io.load_data(io.weight_path + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + io.total_filename)
+        W = io.load_data(io.weight_smica_path_name)
 
         # full maps
         maps = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
         # maps = trsf_m.process_all(maps)
 
-        for det in detectors:
-            print(det)
-            alms = pw.map2alm_spin(maps[det], pmask[det], 2, lmax) # full sky QU->EB
+        for freq in csu.PLANCKMAPFREQ_f:
+            alms = pw.map2alm_spin(maps[freq], pmask[freq], 2, lmaxbin-1) # full sky QU->EB
             # almT[det] = alms[0]
-            almE[det] = alms[0]
-            almB[det] = alms[1]
+            almE[freq] = alms[0]
+            almB[freq] = alms[1]
 
-        nalm = int((lmax+1)*(lmax+2)/2)  
+        nalm = int((lmaxbin)*(lmaxbin-1+2)/2)  
         # combalmT = np.zeros((nalm), dtype=np.complex128)
         combalmE = np.zeros((nalm), dtype=np.complex128)
         combalmB = np.zeros((nalm), dtype=np.complex128)
         beamf = io.load_beamf(freqcomb=csu.freqcomb)
 
-        xnew = np.arange(0,lmax,1)
+        xnew = np.arange(0,lmaxbin,1)
         for it, det in enumerate(csu.PLANCKMAPFREQ): #weights do not dependent on freqfilter, but almE/B do
             if det in csu.PLANCKMAPFREQ_f:
                 ns = nside_out[0] if int(det) < 100 else nside_out[1]
@@ -227,13 +226,13 @@ if __name__ == '__main__':
                 W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W[1,it,:], bounds_error = False, fill_value='extrapolate')
 
                 # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-                combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(1)[0:lmax]), np.squeeze(W_Einterp(xnew)))
-                combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][0:lmax])
-                combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(2)[0:lmax]), np.squeeze(W_Binterp(xnew)))
-                combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][0:lmax])
+                combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(1)[:lmaxbin]), np.squeeze(W_Einterp(xnew)))
+                combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmaxbin])
+                combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(2)[:lmaxbin]), np.squeeze(W_Binterp(xnew)))
+                combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmaxbin])
 
         CMB["TQU"]['out'] = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], nside_out[1])
-        io.save_data(CMB["TQU"]['out'], "/global/cscratch1/sd/sebibel/misc/smicaminvarmap.npy")
-        smica_C_lmin_unsc = ps.map2cl_spin(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask['100'], lmax=lmax,
-            lmax_mask=lmax_mask)
-        io.save_data(smica_C_lmin_unsc, "/global/cscratch1/sd/sebibel/misc/smicaclmin.npy")
+        io.save_data(CMB["TQU"]['out'], io.cmbmap_smica_path_name)
+        smica_C_lmin_unsc = ps.map2cl_spin(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask['100'], lmax=lmaxbin-1,
+            lmax_mask=lmaxbin*2)
+        io.save_data(smica_C_lmin_unsc, io.clmin_smica_path_name)

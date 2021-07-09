@@ -13,6 +13,7 @@ import json
 import os
 import os.path
 import platform
+import healpy as hp
 from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from os import path
@@ -42,6 +43,11 @@ if "sim_id" in cf[mch][freqdset]:
 else:
     sim_id = ""
 
+if cf["pa"]['nside_out'] is None:
+    nside_out = cf["pa"]['nside_desc_map']
+else:
+    nside_out = cf["pa"]['nside_out']
+
 freqfilter = cf['pa']["freqfilter"]
 csu = Config(cf)
 
@@ -59,15 +65,15 @@ def create_difference_map(data_hm1, data_hm2):
 
 def cmblm2cmbmap(idx):
     CMB_in = dict()
-    # TODO: do these lms come from full sky maps or masked?
+    nsi = nside_out[1]
     cmb_tlm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=1)
     cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=2)
     cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx, hdu=3)
 
     # TODO what is a reasonable nside for this?
     CMB_in["TQU"] = dict()
-    CMB_in["TQU"] = hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nside_out[1])
-    return CMB_in["TQU"]
+    CMB_in["TQU"] = hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nsi)
+    return CMB_in["TQU"], nsi
 
 
 def splitmaps2diffmap():
@@ -103,11 +109,6 @@ def splitmaps2diffmap():
         .replace("{n_of_2}", "2of2")
     
     outpath_name = cf[mch]["outdir_map_ap"]
-
-    if cf["pa"]['nside_out'] is None:
-        nside_out = cf["pa"]['nside_desc_map']
-    else:
-        nside_out = [cf["pa"]['nside_out'],cf["pa"]['nside_out']]
 
     for FREQ in csu.PLANCKMAPFREQ_f:
         freqf = [f for f in freqfilter if f != FREQ]
@@ -231,7 +232,7 @@ if __name__ == '__main__':
     print(cf['pa'])
     print(60*"$")
 
-    run_emp_noisemap = True
+    run_emp_noisemap = False
     run_cmbmap = True
     run_mask = False
     run_synmap = False
@@ -242,12 +243,15 @@ if __name__ == '__main__':
         print('..Done')
 
     if run_cmbmap:
+        CMB = dict()
+        CMB["TQU"] = dict()
+
         """
         Derives CMB powerspectrum directly from alm data of pure CMB.
         TODO: change naming convention
         """
-        CMB["TQU"]["in"] = cmblm2cmbmap(int(sim_id))  
-        io.save_data(CMB["TQU"]["in"], "/global/cscratch1/sd/sebibel/misc/cmbinmap.npy")
+        CMB["TQU"]["in"], nsi = cmblm2cmbmap(int(sim_id))  
+        io.save_data(CMB["TQU"]["in"], io.map_cmb_sc_path_name)
 
     if run_mask:
         map2mask()
