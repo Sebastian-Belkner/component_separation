@@ -4,11 +4,6 @@ Depends on all maps being generated to begin with. Use ``run_map.py``, if e.g. n
 
 """
 
-# TODO run everything for 
-#   high_ell_bins
-#   low_ell_bins
-#   DX12 data
-#   NPIPE data
 __author__ = "S. Belkner"
 
 import copy

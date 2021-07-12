@@ -311,8 +311,12 @@ class Helperfunctions:
 
 
     @staticmethod
-    def std_dev_binned(d, lmax=3000, binwidth=200):
-        bins = np.logspace(np.log10(1), np.log10(lmax+1), binwidth)
+    def std_dev_binned(d, lmax=3000, binwidth=200, log=True):
+        if log == False:
+            bins = np.logspace(0, lmax+1, binwidth)
+        else:
+            bins = np.logspace(np.log10(1), np.log10(lmax+1), binwidth)
+
         bl = bins[:-1]
         br = bins[1:]
         if type(d) == np.ndarray:
