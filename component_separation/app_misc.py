@@ -10,37 +10,21 @@ run_powerspectrum.py: script for executing main functionality of component_separ
 __author__ = "S. Belkner"
 
 import os
+
 os.environ["OMP_NUM_THREADS"] = "8"
-import json
-import logging
-from astropy.io import fits
-from scipy import interpolate
-import logging.handlers
-import component_separation.interface as cslib
 
-import numpy as np
-
-import platform
 import healpy as hp
-import sys
-from logging import CRITICAL, DEBUG, ERROR, INFO
-from typing import Dict, List, Optional, Tuple
-import component_separation.MSC.MSC.pospace as ps
-import pandas as pd
+import numpy as np
 import smica
 
 import component_separation
-import matplotlib.pyplot as plt
+import component_separation.interface as cslib
 import component_separation.io as io
+import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
-import component_separation.transform_map as trsf_m
 from component_separation.cs_util import Config
-from component_separation.cs_util import Constants as const
-from component_separation.cs_util import Helperfunctions as hpf
 
-with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
-    cf = json.load(f)
-csu = Config(cf)
+csu = Config()
 
 # LOGFILE = 'data/tmp/logging/messages.log'
 # logger = logging.getLogger("")

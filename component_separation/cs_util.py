@@ -4,6 +4,9 @@ from enum import Enum
 import json
 import itertools
 import numpy as np
+import logging
+import logging.handlers
+import platform
 import os
 import component_separation
 import functools
@@ -40,10 +43,21 @@ class Planckr(Enum):
 
 
 class Config():
+    LOGFILE = 'data/tmp/logging/messages.log'
+    logger = logging.getLogger("")
+    handler = logging.handlers.RotatingFileHandler(
+            LOGFILE, maxBytes=(1048576*5), backupCount=0
+    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
-    @Helperfunctions.show_config(cf)
-    def __init__(self, cf):
-        self.cf = cf
+    def __init__(self, cf=None):
+        if cf == None:
+            with open(os.path.dirname(component_separation.__file__)+'/config_rm.json', "r") as f:
+                self.cf = json.load(f)
+        else:
+            self.cf = cf
         self.PLANCKMAPFREQ = [p.value for p in list(Planckf)]
         self.PLANCKSPECTRUM = [p.value for p in list(Plancks)]
         self.freqcomb =  ["{}-{}".format(FREQ,FREQ2)
@@ -61,7 +75,28 @@ class Config():
 
         self.CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
                              "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
-        
+        self.freqdset = cf['pa']["freqdset"]
+        self.freqfilter = cf['pa']["freqfilter"]
+
+        if "sim_id" in cf[mch][freqdset]:
+            self.sim_id = cf[mch][freqdset]["sim_id"]
+        else:
+            self.sim_id = ""
+        self.nside_out = cf['pa']['nside_out'] if cf['pa']['nside_out'] is not None else cf['pa']['nside_desc_map']
+        uname = platform.uname()
+        if uname.node == "DESKTOP-KMIGUPV":
+            self.mch = "XPS"
+        else:
+            self.mch = "NERSC"
+            
+        print(40*"$")
+        print("Run with the following settings:")
+        print(cf['pa'])
+        print(40*"$")
+
+    def set_logger(loglevel=logging.INFO):
+        logger.setLevel(loglevel)
+        logging.StreamHandler(sys.stdout)
 
 class Constants:
     SMICA_a_fit_bins = np.array([
@@ -271,13 +306,6 @@ class Constants:
 
 
 class Helperfunctions:
-
-    @staticmethod
-    def show_config(cf):
-        print(40*"$")
-        print("Run with the following settings:")
-        print(cf['pa'])
-        print(40*"$")
 
     llp1e12 = lambda x: x*(x+1)*1e12/(2*np.pi)
 
