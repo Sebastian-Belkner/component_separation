@@ -41,13 +41,11 @@ alms
 
 
 
-
-
-
 wishlist
 =============
  * unit test
  * run with subset?
+ * check if files have been generated before 
 
 
 

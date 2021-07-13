@@ -113,6 +113,14 @@ def splitmaps2diffmap():
     for FREQ in csu.PLANCKMAPFREQ_f:
         freqf = [f for f in freqfilter if f != FREQ]
         ns = nside_out[0] if int(FREQ)<100 else nside_out[1]
+        outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
+            .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
+            .replace("{freq}", FREQ)\
+            .replace("{nside}", str(ns))\
+            .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
+            .replace("{split}", freqdatsplit)\
+            .replace("{sim_id}", sim_id)
+        io.alert_cached(outpathfile_name)
         cf['pa']["freqfilter"] = freqf
         
         cf[mch][freqdset]['filename'] = filename_1of2
@@ -122,19 +130,11 @@ def splitmaps2diffmap():
         data_hm2 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
         data_diff = create_difference_map(data_hm1, data_hm2)
 
-        outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
-            .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
-            .replace("{freq}", FREQ)\
-            .replace("{nside}", str(ns))\
-            .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
-            .replace("{split}", freqdatsplit)\
-            .replace("{sim_id}", sim_id)
         io.save_map(data_diff[FREQ], outpathfile_name)
         del data_diff
 
 
 def map2mask():
-
     """This routine generates masks based on the standard SMICA or lensing masks and
         the noise variance due to the scanning strategy from planck
     """
@@ -232,26 +232,23 @@ if __name__ == '__main__':
     print(cf['pa'])
     print(60*"$")
 
-    run_emp_noisemap = False
-    run_cmbmap = True
+    run_emp_noisemap = True
+    run_cmbmap = False
     run_mask = False
     run_synmap = False
 
     if run_emp_noisemap:
-        print('generating noise map from half ring maps..')
+        print('Generating noise map from half ring maps..')
         splitmaps2diffmap()
         print('..Done')
 
     if run_cmbmap:
-        CMB = dict()
-        CMB["TQU"] = dict()
-
         """
         Derives CMB powerspectrum directly from alm data of pure CMB.
-        TODO: change naming convention
         """
-        CMB["TQU"]["in"], nsi = cmblm2cmbmap(int(sim_id))  
-        io.save_data(CMB["TQU"]["in"], io.map_cmb_sc_path_name)
+        io.alert_cached(io.map_cmb_sc_path_name)
+        CMB, nsi = cmblm2cmbmap(int(sim_id))  
+        io.save_data(CMB, io.map_cmb_sc_path_name)
 
     if run_mask:
         map2mask()

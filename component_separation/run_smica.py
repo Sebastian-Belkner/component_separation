@@ -50,6 +50,14 @@ csu = Config(cf)
 # handler.setFormatter(formatter)
 # logger.addHandler(handler)
 
+
+
+# TODO run everything for 
+#   high_ell_bins
+#   low_ell_bins
+#   DX12 data
+#   NPIPE data
+
 uname = platform.uname()
 if uname.node == "DESKTOP-KMIGUPV":
     mch = "XPS"
@@ -93,7 +101,7 @@ def cov_lS2cov_lSmin(icov_lS, C_lS):
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
-    run_fit = False
+    run_fit = True
     run_propag = True
 
     bins = getattr(const, cf['pa']['binname'])
@@ -108,7 +116,6 @@ if __name__ == '__main__':
     nfreqs = len(csu.PLANCKMAPFREQ_f)
 
     freqdset = cf['pa']['freqdset']
-    sim_id = cf[mch][freqdset]['sim_id']
 
     print(40*"$")
     print("Starting run with the following settings:")
@@ -119,6 +126,11 @@ if __name__ == '__main__':
 
 
     if run_fit:
+        io.alert_cached(io.cmb_specsmica_sc_path_name)
+        io.alert_cached(io.out_specsmica_path+"theta.npy")
+        io.alert_cached(io.out_specsmica_path+"cov4D.npy")
+        io.alert_cached(io.out_specsmica_path+"cov.npy")
+        io.alert_cached(io.weight_smica_path_name)
         """
         Runs SMICA using,
             * signal estimator: C_lS_in.py 
@@ -194,6 +206,9 @@ if __name__ == '__main__':
 
 
     if run_propag:
+        io.alert_cached(io.cmbmap_smica_path_name)
+        io.alert_cached(io.clmin_smica_path_name)
+        
         lmaxbin = int(bins[-1][1]+1)
         """
         Follows the SMICA propagation code to combine maps with set of weights.

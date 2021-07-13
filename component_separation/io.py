@@ -36,11 +36,13 @@ if uname.node == "DESKTOP-KMIGUPV":
 else:
     mch = "NERSC"
 
+
+#TODO C_lS estimator is faked for non simulated maps. it currently takes sim_id 0200
 freqdset = cf["pa"]['freqdset']
 if "sim_id" in cf[mch][freqdset]:
     sim_id = cf[mch][freqdset]["sim_id"]
 else:
-    sim_id = ""
+    sim_id = "0200"
 
 
 PLANCKMAPFREQ = [p.value for p in list(Planckf)]
@@ -51,6 +53,17 @@ PLANCKMAPFREQ_f = [FREQ for FREQ in PLANCKMAPFREQ
     if FREQ not in cf['pa']["freqfilter"]]
 
 freqfilter = cf['pa']["freqfilter"]
+
+
+def alert_cached(filepathname):
+    if os.path.isfile(filepathname):
+        print('Output file {} already exists. Overwrite settings are set to {}.'format(filepathname, cf['pa']['overwrite_cache']))
+        if cf['pa']['overwrite_cache']:
+            print('Overwriting cache')
+        else:
+            print('Exiting..')
+            sys.exit()
+
 
 def load_powerspectra(dset, processed = True):
     if processed:
@@ -474,10 +487,10 @@ out_specsmica_path = cf[mch]['outdir_smica_ap'] + cf['pa']["freqdset"] + "/"
 iff_make_dir(out_specsmica_path)
 specsmica_sc_filename = "SPECSMICA" + total_filename
 specsmica_sc_path_name = out_specsmica_path + specsmica_sc_filename
-weight_smica_path_name = cf[mch]['outdir_smica_ap'] + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + total_filename
+weight_smica_path_name = cf[mch]['outdir_smica_ap'] + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + cf['pa']['binname'] + total_filename
 
-cmbmap_smica_path_name = cf[mch]['outdir_smica_ap'] + "smicaminvarmap_{}.npy".format(cf['pa']['binname'])
-clmin_smica_path_name = cf[mch]['outdir_smica_ap'] + "smicaclmin_{}.npy".format(cf['pa']['binname'])
+cmbmap_smica_path_name = cf[mch]['outdir_smica_ap'] + "smicaminvarmap_{}".format(cf['pa']['binname']) + "_" + total_filename
+clmin_smica_path_name = cf[mch]['outdir_smica_ap'] + "smicaclmin_{}".format(cf['pa']['binname']) + "_" + total_filename
 cmb_specsmica_sc_path_name = out_specsmica_path + "CMB_" + specsmica_sc_filename
 
 weight_path = cf[mch]['outdir_weight_ap'] + cf['pa']["freqdset"] + "/"

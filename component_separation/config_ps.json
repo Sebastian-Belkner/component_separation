@@ -2,7 +2,7 @@
 "pa":{
     "Tscale": "K_CMB",
     "mskset": "lens",
-    "freqdset": "NPIPE_sim",
+    "freqdset": "NPIPE",
     "Spectrum_scale": "C_l",
     "lmax": 4000,
     "lmax_mask": 6000,
@@ -10,7 +10,8 @@
     "smoothing_window": 0,
     "max_polynom": 0,
     "num_sim": 5,
-    "binname": "SMICA_highell_bins",
+    "binname": "linear_equisized_bins_10",
+    "overwrite_cache": true,
     "split": "",
     "nside_out": null,
     "splitvariation": "GHz",
@@ -59,6 +60,11 @@
             "B",
             ""
         ]
+    },
+    "NPIPE_diff":{
+        "ap": "/global/cscratch1/sd/sebibel/map/frequency/",
+        "filename": "half_diff_npipe6v20_{freq}_{nside}.fits",
+        "order": "NESTED"
     },
     "NPIPE_sim":{
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/",

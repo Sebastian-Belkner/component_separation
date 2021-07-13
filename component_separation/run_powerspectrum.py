@@ -51,7 +51,10 @@ else:
     mch = "NERSC"
 
 freqdset = cf['pa']["freqdset"]
-sim_id = cf[mch][freqdset]["sim_id"]
+if "sim_id" in cf[mch][freqdset]:
+        sim_id = cf[mch][freqdset]["sim_id"]
+else:
+    sim_id = ""
 
 
 def set_logger(loglevel=logging.INFO):
@@ -123,9 +126,9 @@ if __name__ == '__main__':
     print(filename)
     print(40*"$")
     # set_logger(DEBUG)
-    run_map2spec = False
-    run_alm2spec = True
-    run_map2spec_alsowithnoise = True
+    run_map2spec = True
+    run_alm2spec = False
+    run_map2spec_alsowithnoise = False
 
     if run_map2spec:
         nside_out = cf['pa']['nside_out'] if cf['pa']['nside_out'] is not None else cf['pa']['nside_desc_map']
@@ -134,10 +137,15 @@ if __name__ == '__main__':
             cf_n['pa']['freqdset'] = cf['pa']['freqdset']+"_diff"
             csu_n = Config(cf_n)
             cslist = [csu, csu_n]
-            path_name_list = [(io.spec_unsc_path_name, io.spec_sc_path_name), (io.noise_unsc_path_name, io.noise_sc_path_name)]
+            path_name_list = [
+                (io.spec_unsc_path_name, io.spec_sc_path_name),
+                (io.noise_unsc_path_name, io.noise_sc_path_name)
+            ]
         else:
             cslist = [csu]
             path_name_list = [(io.spec_unsc_path_name, io.spec_sc_path_name)]
+        for path in path_name_list:
+            io.alert_cached(path)
         for cs, (path_unsc, path_sc) in zip(cslist, path_name_list):        
             beamf = io.load_beamf(cs.freqcomb)
             cf_loc = cs.cf
@@ -152,6 +160,7 @@ if __name__ == '__main__':
             io.save_data(C_l, path_sc)
 
     if run_alm2spec:
+        io.alert_cached(io.signal_sc_path_name)
         cmb_tlm, cmb_elm, cmb_blm = cslib.load_alms('cmb', sim_id)
         C_lS_unsc = np.array([hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:cf['pa']['lmax']+1]])
         C_lS = trsf_s.apply_scale(C_lS_unsc, cf['pa']["Spectrum_scale"]) 
@@ -160,4 +169,3 @@ if __name__ == '__main__':
         #TODO to process spectrum, need to know the beamfunction? is it 5arcmin?
         # beamf = {'12345-12345': hp.gauss_beam()}
         # C_lS_unsc = trsf_s.apply_beamf(C_lS_unsc, cf, ['12345-12345'], speccomb, beamf)
-
