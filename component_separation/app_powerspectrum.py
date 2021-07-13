@@ -17,7 +17,8 @@ import healpy as hp
 import numpy as np
 
 import component_separation
-import component_separation.io as io
+from component_separation.io import IO
+import component_separation.io as csio
 import component_separation.powspec as pw
 import component_separation.transform_map as trsf_m
 import component_separation.transform_spec as trsf_s
@@ -26,11 +27,11 @@ from component_separation.cs_util import Config
 from component_separation.cs_util import Helperfunctions as hpf
 
 csu = Config()
+io = IO(csu)
 
-
-def run_map2spec(bool_with_noise)
-    @io.alert_cached(path_unsc)
-    @io.alert_cached(path_sc)
+def run_map2spec(bool_with_noise):
+    @csio.alert_cached(path_unsc, csu.cf['pa']['overwrite_cache'])
+    @csio.alert_cached(path_sc, csu.cf['pa']['overwrite_cache'])
     def r_m2s(cs, path_unsc, path_sc):        
         beamf = io.load_beamf(cs.freqcomb)
         cf_loc = cs.cf
@@ -60,22 +61,23 @@ def run_map2spec(bool_with_noise)
         r_m2s(cs, path_unsc, path_sc)
 
 
-@io.alert_cached(io.signal_sc_path_name)
-def run_alm2spec()
+@csio.alert_cached(io.fh.signal_sc_path_name, csu.cf['pa']['overwrite_cache'])
+def run_alm2spec():
     #TODO to process spectrum, need to know the beamfunction? is it 5arcmin?
     # beamf = {'12345-12345': hp.gauss_beam()}
     # C_lS_unsc = trsf_s.apply_beamf(C_lS_unsc, cf, ['12345-12345'], speccomb, beamf)
-    io.alert_cached(io.signal_sc_path_name)
+    # io.alert_cached(io.signal_sc_path_name)
     cmb_tlm, cmb_elm, cmb_blm = cslib.load_alms('cmb', csu.sim_id)
-    C_lS_unsc = np.array([hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:cf['pa']['lmax']+1]])
-    C_lS = trsf_s.apply_scale(C_lS_unsc, cf['pa']["Spectrum_scale"]) 
-    io.save_data(C_lS, io.signal_sc_path_name)
+    C_lS_unsc = np.array([hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:csu.cf['pa']['lmax']+1]])
+    # C_lS = trsf_s.apply_scale(C_lS_unsc, cf['pa']["Spectrum_scale"])
+    C_lS = C_lS_unsc
+    io.save_data(C_lS, io.fh.signal_sc_path_name)
 
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_map2spec = True
-    bool_alm2spec = False
+    bool_map2spec = False
+    bool_alm2spec = True
     bool_with_noise = False
 
     if bool_map2spec:

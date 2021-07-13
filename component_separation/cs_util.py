@@ -12,6 +12,9 @@ import component_separation
 import functools
 
 
+#TODO change binnings to INT
+
+
 class Planckf(Enum):
     LFI_1 = '030'
     LFI_2 = '044'
@@ -43,18 +46,18 @@ class Planckr(Enum):
 
 
 class Config():
-    LOGFILE = 'data/tmp/logging/messages.log'
-    logger = logging.getLogger("")
-    handler = logging.handlers.RotatingFileHandler(
-            LOGFILE, maxBytes=(1048576*5), backupCount=0
-    )
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    # LOGFILE = 'data/tmp/logging/messages.log'
+    # logger = logging.getLogger("")
+    # handler = logging.handlers.RotatingFileHandler(
+    #         LOGFILE, maxBytes=(1048576*5), backupCount=0
+    # )
+    # formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    # handler.setFormatter(formatter)
+    # logger.addHandler(handler)
 
     def __init__(self, cf=None):
-        if cf == None:
-            with open(os.path.dirname(component_separation.__file__)+'/config_rm.json', "r") as f:
+        if cf is None:
+            with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
                 self.cf = json.load(f)
         else:
             self.cf = cf
@@ -62,36 +65,40 @@ class Config():
         self.PLANCKSPECTRUM = [p.value for p in list(Plancks)]
         self.freqcomb =  ["{}-{}".format(FREQ,FREQ2)
             for FREQ, FREQ2  in itertools.product(self.PLANCKMAPFREQ,self.PLANCKMAPFREQ)
-                if FREQ not in cf['pa']["freqfilter"] and
-                (FREQ2 not in cf['pa']["freqfilter"]) and (int(FREQ2)>=int(FREQ))]
+                if FREQ not in self.cf['pa']["freqfilter"] and
+                (FREQ2 not in self.cf['pa']["freqfilter"]) and (int(FREQ2)>=int(FREQ))]
         
         
         self.PLANCKMAPFREQ_f = [FREQ for FREQ in self.PLANCKMAPFREQ
-            if FREQ not in cf['pa']["freqfilter"]]
-        if 'specfilter' in cf['pa'].keys():
+            if FREQ not in self.cf['pa']["freqfilter"]]
+        if 'specfilter' in self.cf['pa'].keys():
             self.PLANCKSPECTRUM_f = [SPEC for SPEC in self.PLANCKSPECTRUM
-                if SPEC not in cf['pa']["specfilter"]]
-            self.speccomb  = [spec for spec in self.PLANCKSPECTRUM if spec not in cf['pa']["specfilter"]]
-
+                if SPEC not in self.cf['pa']["specfilter"]]
+            self.speccomb  = [spec for spec in self.PLANCKSPECTRUM if spec not in self.cf['pa']["specfilter"]]
+            self.specfilter = self.cf['pa']["specfilter"]
         self.CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
                              "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
-        self.freqdset = cf['pa']["freqdset"]
-        self.freqfilter = cf['pa']["freqfilter"]
+        self.freqdset = self.cf['pa']["freqdset"]
+        self.freqfilter = self.cf['pa']["freqfilter"]
+        if 'lmax' in self.cf['pa'].keys():
+            self.lmax = self.cf['pa']["lmax"]
+        
 
-        if "sim_id" in cf[mch][freqdset]:
-            self.sim_id = cf[mch][freqdset]["sim_id"]
-        else:
-            self.sim_id = ""
-        self.nside_out = cf['pa']['nside_out'] if cf['pa']['nside_out'] is not None else cf['pa']['nside_desc_map']
         uname = platform.uname()
         if uname.node == "DESKTOP-KMIGUPV":
             self.mch = "XPS"
         else:
             self.mch = "NERSC"
-            
+
+        if "sim_id" in self.cf[self.mch][self.freqdset]:
+            self.sim_id = self.cf[self.mch][self.freqdset]["sim_id"]
+        else:
+            self.sim_id = "0200"
+        self.nside_out = self.cf['pa']['nside_out'] if self.cf['pa']['nside_out'] is not None else self.cf['pa']['nside_desc_map']
+
         print(40*"$")
         print("Run with the following settings:")
-        print(cf['pa'])
+        print(self.cf['pa'])
         print(40*"$")
 
     def set_logger(loglevel=logging.INFO):
@@ -350,7 +357,7 @@ class Helperfunctions:
     @staticmethod
     def std_dev_binned(d, lmax=3000, binwidth=200, log=True):
         if log == False:
-            bins = np.logspace(0, lmax+1, binwidth)
+            bins = np.linspace(0, lmax+1, binwidth)
         else:
             bins = np.logspace(np.log10(1), np.log10(lmax+1), binwidth)
 

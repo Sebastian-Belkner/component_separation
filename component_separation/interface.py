@@ -23,27 +23,14 @@ import healpy as hp
 import numpy as np
 
 import component_separation
-import component_separation.io as io
+from component_separation.io import IO
 import component_separation.powspec as pw
 import smica
 import component_separation.transform_map as trsf
-from component_separation.cs_util import Config as csu
+from component_separation.cs_util import Config
 from component_separation.cs_util import Planckf, Plancks
-
-with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
-    cf = json.load(f)
-
-uname = platform.uname()
-if uname.node == "DESKTOP-KMIGUPV":
-    mch = "XPS"
-else:
-    mch = "NERSC"
-
-freqdset = cf['pa']['freqdset']
-if "sim_id" in cf[mch][freqdset]:
-        sim_id = cf[mch][freqdset]["sim_id"]
-else:
-    sim_id = ""
+csu = Config()
+io = IO(csu)
 
 def build_smica_model(Q, N_cov_bn, C_lS_bnd):
     # Noise part
@@ -167,9 +154,6 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     gal.fix_powspec("null")
     return model
 
-
-def load_powerspectra(dset, processed = True):
-    return io.load_powerspectra(dset, processed = processed)
 
 def load_alms(component, id):
     if component == 'cmb':

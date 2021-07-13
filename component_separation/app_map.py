@@ -18,47 +18,45 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 import component_separation
-import component_separation.io as io
+from component_separation.io import IO
+import component_separation.io as csio
 import component_separation.powspec as pw
 import component_separation.transform_map as trsf
 from component_separation.cs_util import Config
 
-with open(os.path.dirname(component_separation.__file__)+'/config_rm.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
     cf = json.load(f)
 csu = Config(cf)
+io = IO(csu)
 
-
-def create_difference_map(data_hm1, data_hm2):
-    def _difference(data1, data2):
-        ret = dict()
-        for freq, val in data1.items():
-            ret.update({freq: (data1[freq] - data2[freq])/2.})
-        return ret
-    ret_data = _difference(data_hm1, data_hm2)
-    ret_data = trsf.process_all(ret_data)
-
-    return ret_data
-
-@io.alert_cached(io.map_cmb_sc_path_name)
-def cmblm2cmbmap(idx):
-        """
+@csio.alert_cached(io.fh.map_cmb_sc_path_name, csu.cf['pa']['overwrite_cache'])
+def run_cmbmap():
+    """
     Derives CMB powerspectrum directly from alm data of pure CMB.
     """
-    nsi = nside_out[1]
+    nsi = csu.nside_out[1]
     cmb_tlm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(csu.sim_id), hdu=1)
     cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(csu.sim_id), hdu=2)
     cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(csu.sim_id), hdu=3)
 
     # TODO what is a reasonable nside for this?
-    CMB_in = hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nsi)
-    CMB_in, nsi = cmblm2cmbmap()  
-    io.save_data(CMB, io.map_cmb_sc_path_name)
+    CMB = hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nsi)
+    io.save_data(CMB, io.fh.map_cmb_sc_path_name)
 
 
 def run_splitmaps2diffmap():
     """This routine loads the even-odd planck maps, takes the half-difference and
     saves it as a new map. 
     """
+    def create_difference_map(data_hm1, data_hm2):
+        def _difference(data1, data2):
+            ret = dict()
+            for freq, val in data1.items():
+                ret.update({freq: (data1[freq] - data2[freq])/2.})
+            return ret
+        ret_data = _difference(data_hm1, data_hm2)
+        ret_data = trsf.process_all(ret_data)
+        return ret_data
     buff = cf[mch][freqdset]['filename']
 
     freqdatsplit = cf['pa']["freqdatsplit"]
@@ -103,9 +101,8 @@ def run_splitmaps2diffmap():
 
 
 if __name__ == '__main__':
-
-    bool_emp_noisemap = True
-    bool_cmbmap = False
+    bool_emp_noisemap = False
+    bool_cmbmap = True
     bool_synmap = False
 
     if bool_emp_noisemap:

@@ -3,10 +3,8 @@ import logging
 
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
-import warnings
 import numpy as np
 import functools
-import component_separation.io as io
 import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
 from scipy.signal import savgol_filter
@@ -29,7 +27,6 @@ def process_all(data, cf, freqcomb, speccomb, scale, beamf, nside, spectrum_scal
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
 def apply_pixwin(data: np.array, freqcomb, nside) -> Dict:
     """Applies Pixel Windowfunction with nside specified
-
     Args:
         data (Dict): powerspectra with spectrum and frequency-combinations in the columns
         

@@ -1,9 +1,8 @@
 #!/usr/local/bin/python
 """
-run_powerspectrum.py: script for executing main functionality of smica.
-Depends on all (noise, signal, full) spectra being generated to begin with. Use ``run_powerspectrum.py``, if e.g. noisespectra are missing.
+app_smica.py: script for executing main functionality of smica.
+Depends on all (noise, signal, full) spectra being generated to begin with. Use ``app_powerspectrum.py``, if e.g. noisespectra are missing.
 """
-
 
 __author__ = "S. Belkner"
 
@@ -21,7 +20,7 @@ import component_separation.MSC.MSC.pospace as ps
 import smica
 
 import component_separation
-import component_separation.io as io
+from component_separation.io import IO
 import component_separation.powspec as pw
 import component_separation.interface as cslib
 import component_separation.transform_map as trsf_m
@@ -30,15 +29,17 @@ from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
 
 csu = Config()
+io = IO(csu)
+
 bins = getattr(const, csu.cf['pa']['binname'])
 
 tmask, pmask, pmask = io.load_mask_per_freq(csu.nside_out[0]) #io.load_one_mask_forallfreq(nside_out=nside_out)
 
-@io.alert_cached(io.cmb_specsmica_sc_path_name)
-@io.alert_cached(io.out_specsmica_path+"theta.npy")
-@io.alert_cached(io.out_specsmica_path+"cov4D.npy")
-@io.alert_cached(io.out_specsmica_path+"cov.npy")
-@io.alert_cached(io.weight_smica_path_name)
+@csio.alert_cached(io.fh.cmb_specsmica_sc_path_name)
+@csio.alert_cached(io.fh.out_specsmica_path+"theta.npy")
+@csio.alert_cached(io.fh.out_specsmica_path+"cov4D.npy")
+@csio.alert_cached(io.fh.out_specsmica_path+"cov.npy")
+@csio.alert_cached(io.fh.weight_smica_path_name)
 def run_fit(maxiter)
     """
     Runs SMICA using,
@@ -107,10 +108,10 @@ def run_fit(maxiter)
         qmax=len(nmodes),
         no_starting_point=False)
 
-    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.cmb_specsmica_sc_path_name)
-    io.save_data(smica_model.get_theta(), io.out_specsmica_path+"theta.npy")
-    io.save_data(smica_model.covariance4D(), io.out_specsmica_path+"cov4D.npy")
-    io.save_data(smica_model.covariance(), io.out_specsmica_path+"cov.npy")
+    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.fh.cmb_specsmica_sc_path_name)
+    io.save_data(smica_model.get_theta(), io.fh.out_specsmica_path+"theta.npy")
+    io.save_data(smica_model.covariance4D(), io.fh.out_specsmica_path+"cov4D.npy")
+    io.save_data(smica_model.covariance(), io.fh.out_specsmica_path+"cov.npy")
 
     #TODO smica needs to run for both BB and EE, as BB-weights are needed for later map generation
     zer = np.zeros_like(smica_model.covariance())
@@ -124,8 +125,8 @@ def run_fit(maxiter)
     io.save_data(smica_weights_tot, io.weight_smica_path_name)
 
 
-@io.alert_cached(io.cmbmap_smica_path_name)
-@io.alert_cached(io.clmin_smica_path_name)
+@csio.alert_cached(io.fh.cmbmap_smica_path_name)
+@csio.alert_cached(io.fh.clmin_smica_path_name)
 def run_propag():
     """
     Follows the SMICA propagation code to combine maps with set of weights.
@@ -136,7 +137,7 @@ def run_propag():
     almT, almE, almB = dict(), dict(), dict()
     lmaxbin = int(bins[-1][1]+1)
 
-    W = io.load_data(io.weight_smica_path_name)
+    W = io.load_data(io.fh.weight_smica_path_name)
 
     # full maps
     maps = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
