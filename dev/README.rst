@@ -5,6 +5,27 @@ Collection of files for development of this software..
 
 
 
+TODO
+*******
+
+ run NPIPE_sim without masks
+    lowell
+    highell
+crosscov
+tf
+
+ run NPIPE with lensmask
+    lowell
+    highell
+ run NPIPE with smicamask
+    lowell
+    highell
+
+ run DX12 with mask
+    lowell
+    highell
+
+
 
 
 structure

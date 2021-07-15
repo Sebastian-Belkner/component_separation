@@ -1,8 +1,8 @@
 {
 "pa":{
     "Tscale": "K_CMB",
-    "mskset": "lens",
-    "freqdset": "NPIPE_sim",
+    "mskset": "smica",
+    "freqdset": "DX12",
     "Spectrum_scale": "C_l",
     "lmax": 4000,
     "lmax_mask": 6000,
@@ -10,7 +10,7 @@
     "smoothing_window": 0,
     "max_polynom": 0,
     "num_sim": 5,
-    "binname": "SMICA_highell_bins",
+    "binname": "SMICA_lowell_bins",
     "overwrite_cache": true,
     "split": "",
     "nside_out": null,
@@ -52,6 +52,14 @@
             }
         }
     },
+    "DX12":{ 
+        "ap": "/global/cfs/cdirs/cmb/data/planck2018/pr3/frequencymaps/",
+        "filename": "{LorH}_SkyMap_{freq}-field_{nside}_R3.{00/1}_full.fits"
+    },
+    "DX12_diff":{ 
+        "ap": "/global/cscratch1/sd/sebibel/map/frequency/",
+        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"
+    },
     "NPIPE":{
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/",
         "filename": "npipe6v20{split}_{freq}_map.fits",
@@ -79,15 +87,15 @@
             ]
         },
     "NPIPE_sim_diff":{
-            "ap": "/global/cscratch1/sd/sebibel/map/frequency/",
-            "filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}_{nside}.fits",
-            "order": "NESTED",
-            "sim_id": "0200",
-            "split": [
-                "A",
-                "B",
-                ""
-                ]
+        "ap": "/global/cscratch1/sd/sebibel/map/frequency/",
+        "filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}_{nside}.fits",
+        "order": "NESTED",
+        "sim_id": "0200",
+        "split": [
+            "A",
+            "B",
+            ""
+        ]
     },
     "NPIPE_sim_cmb":{
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/input/",
@@ -98,7 +106,7 @@
             "A",
             "B",
             ""
-            ]
+        ]
 },
     "lens":{
         "tmask":{
@@ -169,8 +177,8 @@
             "filename": [
                 "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
             ]
-            }
-        },
+        }
+    },
     "smica":{
         "tmask":{
             "ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/mask/",
@@ -181,9 +189,9 @@
             "filename": [
                 "psmaskP_2048.fits.gz",
                 "gmaskP_apodized_0_2048.fits.gz"
-                ]
-            }
-        },
+            ]
+        }
+    },
     "outdir_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/",
     "outdir_misc_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/misc/",
     "outdir_spectrum_ap": "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/spectrum/",

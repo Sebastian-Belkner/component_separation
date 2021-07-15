@@ -11,7 +11,7 @@ from scipy.signal import savgol_filter
 import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 
-def process_all(data, cf, freqcomb, speccomb, scale, beamf, nside, spectrum_scale, smoothing_window, max_polynom):
+def process_all(data, cf, freqcomb, speccomb, beamf, nside, spectrum_scale, smoothing_window, max_polynom):
     """
     Root function. Executes all tranformations
     """
@@ -106,6 +106,7 @@ def apply_beamfunction(data: np.array, cf, freqcomb, speccomb, beamf: Dict) -> D
         hdul = beamf[freqcomb[fidx]]
         for sidx, specl in enumerate(freql):
             specID = speccomb[sidx]
+            # TODO this cf dependency could be removed. beamf data should be more abstract and independent of cf. howto: fix beamf datastructure
             if cf['pa']['freqdset'].startswith('DX12'):
                 if int(freqc[0]) >= 100 and int(freqc[1]) >= 100:
                     data[fidx, sidx] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmaxp1]

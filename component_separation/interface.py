@@ -13,7 +13,6 @@ import json
 import os
 import os.path
 import platform
-from functools import reduce
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from os import path
 from typing import Dict, List, Optional, Tuple
@@ -24,11 +23,9 @@ import numpy as np
 
 import component_separation
 from component_separation.io import IO
-import component_separation.powspec as pw
 import smica
 import component_separation.transform_map as trsf
 from component_separation.cs_util import Config
-from component_separation.cs_util import Planckf, Plancks
 csu = Config()
 io = IO(csu)
 
@@ -50,7 +47,7 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd):
 
     # Galactic foreground part
     # cmb.set_powspec(cmbcq*0, fixed='all') # B modes fit
-    dim = 3
+    dim = 6
     gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
     gal.fix_mixmat("null")
     # galmixmat = np.ones((nmap,dim))*0.1

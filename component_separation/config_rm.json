@@ -1,7 +1,8 @@
 {
 "pa":{
+    "overwrite_cache": true,
     "freqdatsplit": "",
-    "freqdset": "NPIPE_half_ring",
+    "freqdset": "DX12_evenodd_ring",
     "freqfilter": [
         "545",
         "857"
@@ -13,6 +14,11 @@
     ]
 },
 "NERSC":{
+    "DX12_evenodd_ring":{
+        "ap": "/global/cfs/cdirs/cmb/data/planck2018/pr3/frequencymaps/",
+        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-{even/odd/half1/half2}.fits",
+        "out_filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits" 
+    },
     "NPIPE":{
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/",
         "filename": "npipe6v20{split}/npipe6v20{split}_{freq}_map.fits",
@@ -54,7 +60,8 @@
     "outdir_map_ap": "/global/cscratch1/sd/sebibel/map/frequency/",
     "outdir_mask_ap": "/global/cscratch1/sd/sebibel/mask/frequency/",
     "outdir_map": "map/frequency/",
-    "outdir_mask": "mask/frequency/"
+    "outdir_mask": "mask/frequency/",
+    "outdir_misc_ap": "/global/cscratch1/sd/sebibel/misc/"
     },
 "XPS":{
     "DX12":{

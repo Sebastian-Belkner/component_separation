@@ -24,13 +24,14 @@ import component_separation.powspec as pw
 import component_separation.transform_map as trsf
 from component_separation.cs_util import Config
 
-with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
+with open(os.path.dirname(component_separation.__file__)+'/config_rm.json', "r") as f:
     cf = json.load(f)
 csu = Config(cf)
 io = IO(csu)
 
-@csio.alert_cached(io.fh.map_cmb_sc_path_name, csu.cf['pa']['overwrite_cache'])
-def run_cmbmap():
+
+@csio.alert_cached
+def run_cmbmap(pathname, overwr):
     """
     Derives CMB powerspectrum directly from alm data of pure CMB.
     """
@@ -57,7 +58,23 @@ def run_splitmaps2diffmap():
         ret_data = _difference(data_hm1, data_hm2)
         ret_data = trsf.process_all(ret_data)
         return ret_data
-    buff = cf[mch][freqdset]['filename']
+    mch = csu.mch
+    freqdset = csu.freqdset
+    sim_id = csu.sim_id
+    buff = csu.cf[mch][freqdset]['filename']
+    nside_out = csu.nside_out
+
+    @csio.alert_cached
+    def wrap(outpath_filename, overw, freqf, filename_1of2, filename_2of2):
+        cf['pa']["freqfilter"] = freqf
+        cf[mch][freqdset]['filename'] = filename_1of2
+        data_hm1 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
+
+        cf[mch][freqdset]['filename'] = filename_2of2
+        data_hm2 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
+        data_diff = create_difference_map(data_hm1, data_hm2)
+
+        io.save_map(data_diff[FREQ], outpathfile_name)
 
     freqdatsplit = cf['pa']["freqdatsplit"]
     cf[mch][freqdset]['ap'] = cf[mch][freqdset]['ap']\
@@ -78,38 +95,26 @@ def run_splitmaps2diffmap():
 
     for FREQ in csu.PLANCKMAPFREQ_f:
         freqf = [f for f in csu.PLANCKMAPFREQ if f != FREQ]
-        ns = nside_out[0] if int(FREQ)<100 else nside_out[1]
         outpathfile_name = outpath_name+cf[mch][freqdset]["out_filename"]\
             .replace("{LorH}", "LFI" if int(FREQ)<100 else "HFI")\
             .replace("{freq}", FREQ)\
-            .replace("{nside}", str(ns))\
+            .replace("{nside}", str(nside_out[0]) if int(FREQ)<100 else str(nside_out[1]))\
             .replace("{00/1}", "00" if int(FREQ)<100 else "01")\
             .replace("{split}", freqdatsplit)\
             .replace("{sim_id}", sim_id)
-        io.alert_cached(outpathfile_name)
-        cf['pa']["freqfilter"] = freqf
-        
-        cf[mch][freqdset]['filename'] = filename_1of2
-        data_hm1 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
-
-        cf[mch][freqdset]['filename'] = filename_2of2
-        data_hm2 = io.load_plamap(cf, field=(0,1,2), nside_out=nside_out)
-        data_diff = create_difference_map(data_hm1, data_hm2)
-
-        io.save_map(data_diff[FREQ], outpathfile_name)
-        del data_diff
+        wrap(outpathfile_name, csu.overwrite_cache, freqf, filename_1of2, filename_2of2)
 
 
 if __name__ == '__main__':
-    bool_emp_noisemap = False
-    bool_cmbmap = True
+    bool_emp_noisemap = True
+    bool_cmbmap = False
     bool_synmap = False
 
     if bool_emp_noisemap:
         run_splitmaps2diffmap()
 
     if bool_cmbmap:
-        run_cmbmap()
+        run_cmbmap(io.fh.map_cmb_sc_path_name, csu.overwrite_cache)
 
     if bool_synmap:
         run_cl2synmap()

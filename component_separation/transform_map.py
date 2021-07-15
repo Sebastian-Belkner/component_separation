@@ -12,13 +12,12 @@ import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 
 def process_all(data):
-    data_prep = data
     for freq, val in data.items():
-        data_prep[freq] = replace_undefnan(data_prep[freq])
-        data_prep[freq] = subtract_mean(data_prep[freq])
-        data_prep[freq] = remove_brightsaturate(data_prep[freq])
-        data_prep[freq] = remove_dipole(data_prep[freq])
-    return data_prep
+        data[freq] = replace_undefnan(data[freq])
+        data[freq] = subtract_mean(data[freq])
+        data[freq] = remove_brightsaturate(data[freq])
+        data[freq] = remove_dipole(data[freq])
+    return data
 
 
 def remove_unseen(tqumap: List[Dict]) -> List[Dict]:
