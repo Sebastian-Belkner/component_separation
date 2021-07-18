@@ -1,8 +1,8 @@
 {
 "pa":{
     "Tscale": "K_CMB",
-    "mskset": "smica",
-    "freqdset": "DX12",
+    "mskset": null,
+    "freqdset": "NPIPE_sim",
     "Spectrum_scale": "C_l",
     "lmax": 4000,
     "lmax_mask": 6000,
@@ -54,7 +54,7 @@
     },
     "DX12":{ 
         "ap": "/global/cfs/cdirs/cmb/data/planck2018/pr3/frequencymaps/",
-        "filename": "{LorH}_SkyMap_{freq}-field_{nside}_R3.{00/1}_full.fits"
+        "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full.fits"
     },
     "DX12_diff":{ 
         "ap": "/global/cscratch1/sd/sebibel/map/frequency/",

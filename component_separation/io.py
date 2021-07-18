@@ -237,8 +237,8 @@ class IO:
                         .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
                         .replace("{nside}", str(nside_desc[0]) if int(FREQ)<100 else str(nside_desc[1]))
                         .replace("{00/1}", "00" if int(FREQ)<100 else "01")
-                        .replace("{even/half1}", "even" if int(FREQ)>=100 else "ringhalf-1")
-                        .replace("{odd/half2}", "odd" if int(FREQ)>=100 else "ringhalf-2")
+                        .replace("{even/half1}", "evenring" if int(FREQ)>=100 else "ringhalf-1")
+                        .replace("{odd/half2}", "oddring" if int(FREQ)>=100 else "ringhalf-2")
                         .replace("{sim_id}", self.csu.sim_id)\
                         .replace("{split}", cf_local['pa']['freqdatsplit'] if "split" in cf_local[mch][freqdset] else "")
                     )

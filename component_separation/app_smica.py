@@ -68,12 +68,12 @@ def run_fit(path_name, overw):
         return nmode
 
     C_ltot = io.load_powerspectra('full')
-    cov_ltot = pw.build_covmatrices(C_ltot, csu.Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_ltot = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
     cov_ltotEE = cov_ltot[1]
     print(cov_ltotEE.shape)
 
     C_lN = io.load_powerspectra('noise')
-    cov_lN = pw.build_covmatrices(C_lN, csu.Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_lN = pw.build_covmatrices(C_lN, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
     cov_lNEE = cov_lN[1]
     print(cov_lNEE.shape)
 
@@ -82,7 +82,7 @@ def run_fit(path_name, overw):
     C_lS_shaped = np.zeros_like(C_lN)
     for freqcom in range(C_lS_shaped.shape[0]):
         C_lS_shaped[freqcom,1,:] = C_lS[0,1]
-    cov_lS = pw.build_covmatrices(C_lS_shaped, csu.Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_lS = pw.build_covmatrices(C_lS_shaped, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
     cov_lSEE = cov_lS[1]
     print(cov_lNEE.shape)
     
@@ -101,11 +101,11 @@ def run_fit(path_name, overw):
     nmodes = calc_nmodes(bins, pmask['100']) #any mask will do, only fsky needed
     smica_model = cslib.build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
 
-    cslib.fit_model_to_cov(
+    smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
         cov_ltot_bnd,
         nmodes,
-        maxiter=20,
+        maxiter=100,
         noise_fix=True,
         noise_template=cov_lN_bnd,
         afix=None, qmin=0,
@@ -118,6 +118,7 @@ def run_fit(path_name, overw):
     io.save_data(smica_model.get_theta(), io.fh.out_specsmica_path+"theta.npy")
     io.save_data(smica_model.covariance4D(), io.fh.out_specsmica_path+"cov4D.npy")
     io.save_data(smica_model.covariance(), io.fh.out_specsmica_path+"cov.npy")
+    io.save_data(hist, io.fh.out_specsmica_path+"hist.npy")
 
     #TODO smica needs to run for both BB and EE, as BB-weights are needed for later map generation
     zer = np.zeros_like(smica_model.covariance())
@@ -168,9 +169,10 @@ def run_propag():
             W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W[1,it,:], bounds_error = False, fill_value='extrapolate')
 
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(1)[:lmaxbin]), np.squeeze(W_Einterp(xnew)))
+            LHFI = "LFI" if int(det)<100 else "HFI"
+            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(1)[:lmaxbin]), np.squeeze(W_Einterp(xnew)))
             combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmaxbin])
-            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)]["HFI"][1].data.field(2)[:lmaxbin]), np.squeeze(W_Binterp(xnew)))
+            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(2)[:lmaxbin]), np.squeeze(W_Binterp(xnew)))
             combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmaxbin])
 
     CMB["TQU"]['out'] = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
@@ -183,7 +185,7 @@ def run_propag():
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
     bool_fit = True
-    bool_propag = True
+    bool_propag = False
 
     if bool_fit:
         run_fit(io.fh.weight_smica_path_name, csu.overwrite_cache)

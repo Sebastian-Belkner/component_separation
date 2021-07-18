@@ -108,6 +108,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     mmG = model.mismatch(stats, nmodes, exact=True)
 
     # start CG/close form
+    hist = np.ones(shape=(maxiter,2))
     for i in range(maxiter):
         # fit mixing matrix
         gal.fix_powspec("null")
@@ -137,6 +138,8 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
         mm2 = model.mismatch(stats, nmodes, exact=True)
         mm2G = model.mismatch(stats, nmodes)
         gain = np.real(mmG-mm2G)
+        hist[i,0] = np.real(mm2)
+        hist[i,1] = gain
         if gain==0 and i>maxiter/2.0:
             break
         strtoprint = "iter= % 4i mismatch = %10.5f  gain= %7.5f " % (i, np.real(mm2), gain)
@@ -149,7 +152,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
     cmb.fix_powspec(cfix)
     gal.fix_powspec("null")
-    return model
+    return model, hist
 
 
 def load_alms(component, id):

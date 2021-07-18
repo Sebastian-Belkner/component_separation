@@ -625,7 +625,7 @@ class Helperfunctions:
 
 
     @staticmethod
-    def bin_it1D(data):
+    def bin_it1D(data, bins):
         ret = np.ones(len(bins))
         for k in range(bins.shape[0]):
             ret[k] = np.mean(np.nan_to_num(data[int(bins[k][0]):int(bins[k][1])]))
