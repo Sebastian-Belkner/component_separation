@@ -105,7 +105,7 @@ def run_fit(path_name, overw):
         smica_model,
         cov_ltot_bnd,
         nmodes,
-        maxiter=100,
+        maxiter=50,
         noise_fix=True,
         noise_template=cov_lN_bnd,
         afix=None, qmin=0,
