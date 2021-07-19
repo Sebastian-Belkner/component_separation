@@ -35,16 +35,10 @@ def run_weight(path_name, overw):
     No SMICA, straightforward weight derivation.
     Needed for combining maps without SMICA.
     """
-    def specsc2weights(spectrum):
-        print(spectrum.shape)
-        cov = pw.build_covmatrices(spectrum, csu.Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
-        print(cov.shape)
-        cov_inv_l = pw.invert_covmatrices(cov)
-        print(cov_inv_l.shape)
-        weights = pw.calculate_weights(cov_inv_l, csu.PLANCKMAPFREQ[:-2], csu.Tscale)
-        return weights
+
     C_ltot = io.load_powerspectra('full')
-    weights_tot = specsc2weights(C_ltot)
+    cov = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    weights_tot = pw.cov2weight(cov, Tscale=csu.Tscale)
     print(weights_tot.shape)
     io.save_data(weights_tot, path_name)
 
@@ -81,8 +75,8 @@ def run_tf(path_name, overwr):
 if __name__ == '__main__':
     # set_logger(DEBUG)
     bool_weight = True
-    bool_crosscov = False
-    bool_tf = False
+    bool_crosscov = True
+    bool_tf = True
 
     if bool_weight:
         run_weight(io.fh.weight_path_name, csu.overwrite_cache)

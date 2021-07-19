@@ -4,16 +4,9 @@ app_smica.py: script for executing main functionality of smica.
 Depends on all (noise, signal, full) spectra being generated to begin with. Use ``app_powerspectrum.py``, if e.g. noisespectra are missing.
 """
 
-
-
-#TODO ISSUE: 
-#   possibly, K_CMB and K_RJ are not taken into account when storing smica fit data which leads to erronoeus results
-#   SMICA fit input should ignore Tscale?   Only use Tscale for deriving weights?
-
-
-# next steps: for npipemask: switch bins to highellbins. switch to K_RJ
-#             for dx12smica: switch to highell bins. switch to K_RJ
-
+#TODO prepare data_viewer for meeting
+# run with various binnings
+# check if fixing LFI covariances to high values solves the issue?
 
 __author__ = "S. Belkner"
 
@@ -67,14 +60,19 @@ def run_fit(path_name, overw):
         # print('nmodes: {}, fsky: {}'.format(nmode, fsky))
         return nmode
 
+    _Tscale = "K_CMB"#csu.Tscale
     C_ltot = io.load_powerspectra('full')
-    cov_ltot = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_ltot = pw.build_covmatrices(C_ltot, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
     cov_ltotEE = cov_ltot[1]
     print(cov_ltotEE.shape)
 
     C_lN = io.load_powerspectra('noise')
-    cov_lN = pw.build_covmatrices(C_lN, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_lN = pw.build_covmatrices(C_lN, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
     cov_lNEE = cov_lN[1]
+    for n in range(cov_lNEE.shape[0]):
+        for m in range(cov_lNEE.shape[1]):
+            if n != m:
+                cov_lNEE[n,m] = np.zeros(shape=cov_lNEE.shape[2])
     print(cov_lNEE.shape)
 
     C_lS = io.load_powerspectra('signal')
@@ -82,7 +80,7 @@ def run_fit(path_name, overw):
     C_lS_shaped = np.zeros_like(C_lN)
     for freqcom in range(C_lS_shaped.shape[0]):
         C_lS_shaped[freqcom,1,:] = C_lS[0,1]
-    cov_lS = pw.build_covmatrices(C_lS_shaped, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_lS = pw.build_covmatrices(C_lS_shaped, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
     cov_lSEE = cov_lS[1]
     print(cov_lNEE.shape)
     
@@ -99,15 +97,15 @@ def run_fit(path_name, overw):
 
 
     nmodes = calc_nmodes(bins, pmask['100']) #any mask will do, only fsky needed
-    smica_model = cslib.build_smica_model(len(nmodes), cov_lN_bnd, C_lS_bnd)
+    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd))
 
     smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
-        cov_ltot_bnd,
+        np.nan_to_num(cov_ltot_bnd),
         nmodes,
         maxiter=50,
         noise_fix=True,
-        noise_template=cov_lN_bnd,
+        noise_template=np.nan_to_num(cov_lN_bnd),
         afix=None, qmin=0,
         asyn=None,
         logger=None,
@@ -115,20 +113,16 @@ def run_fit(path_name, overw):
         no_starting_point=False)
 
     io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.fh.cmb_specsmica_sc_path_name)
-    io.save_data(smica_model.get_theta(), io.fh.out_specsmica_path+"theta.npy")
-    io.save_data(smica_model.covariance4D(), io.fh.out_specsmica_path+"cov4D.npy")
-    io.save_data(smica_model.covariance(), io.fh.out_specsmica_path+"cov.npy")
-    io.save_data(hist, io.fh.out_specsmica_path+"hist.npy")
+    io.save_data(smica_model.get_theta(), io.fh.out_specsmica_path+"theta_{}".format(csu.cf['pa']['binname']) + "_" + io.fh.total_filename)
+    io.save_data(smica_model.covariance4D(), io.fh.out_specsmica_path+"cov4D_{}".format(csu.cf['pa']['binname']) + "_" + io.fh.total_filename)
+    io.save_data(smica_model.covariance(), io.fh.out_specsmica_path+"cov_{}".format(csu.cf['pa']['binname']) + "_" + io.fh.total_filename)
+    io.save_data(hist, io.fh.out_specsmica_path+"hist_{}".format(csu.cf['pa']['binname']) + "_" + io.fh.total_filename)
 
-    #TODO smica needs to run for both BB and EE, as BB-weights are needed for later map generation
-    zer = np.zeros_like(smica_model.covariance())
-    smica_cov_full = np.zeros(shape=(len(csu.PLANCKSPECTRUM), *zer.shape))
-    
-    smica_cov_full[1] = smica_model.covariance()
-    smica_cov_full_inv_ltot = pw.invert_covmatrices(smica_cov_full)
-    smica_weights_tot = pw.calculate_weights(smica_cov_full_inv_ltot, csu.PLANCKMAPFREQ[:-2], csu.Tscale)
+
+    smica_weights_tot = pw.cov2weight(np.array([smica_model.covariance()])) #EE
     print(smica_weights_tot.shape)
     io.save_data(smica_weights_tot, path_name)
+    #TODO smica needs to run for both BB and EE, as BB-weights are needed for later map generation
 
 
 def run_propag():
@@ -145,7 +139,7 @@ def run_propag():
 
     # full maps
     maps = io.load_plamap(csu.cf, field=(0,1,2), nside_out=csu.nside_out)
-    maps = trsf_m.process_all(maps)
+    # maps = trsf_m.process_all(maps)
 
     for freq in csu.PLANCKMAPFREQ_f:
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
@@ -164,12 +158,15 @@ def run_propag():
     for it, det in enumerate(csu.PLANCKMAPFREQ): #weights do not depend on freqfilter, but almE/B do
         if det in csu.PLANCKMAPFREQ_f:
             ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
-            W_Einterp = interpolate.interp1d(np.mean(bins, axis=1), W[1,it,:], bounds_error = False, fill_value='extrapolate')
+            W_Einterp = interpolate.interp1d(np.mean(bins, axis=1), W[0,it,:], bounds_error = False, fill_value='extrapolate')
             #TODO switch to W[2,:] once BB-weights are correctly calculated
-            W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W[1,it,:], bounds_error = False, fill_value='extrapolate')
+            W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W[0,it,:], bounds_error = False, fill_value='extrapolate')
 
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
             LHFI = "LFI" if int(det)<100 else "HFI"
+            if csu.cf['pa']['freqdset'].startswith('NPIPE'):
+                LHFI = "HFI"
+            
             combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(1)[:lmaxbin]), np.squeeze(W_Einterp(xnew)))
             combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmaxbin])
             combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(2)[:lmaxbin]), np.squeeze(W_Binterp(xnew)))

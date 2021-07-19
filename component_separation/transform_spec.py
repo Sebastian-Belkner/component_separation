@@ -106,7 +106,7 @@ def apply_beamfunction(data: np.array, cf, freqcomb, speccomb, beamf: Dict) -> D
         hdul = beamf[freqcomb[fidx]]
         for sidx, specl in enumerate(freql):
             specID = speccomb[sidx]
-            # TODO this cf dependency could be removed. beamf data should be more abstract and independent of cf. howto: fix beamf datastructure
+            # TODO this cf dependency could be removed. beamf data should be more abstract and independent of cf, and astropy. howto: fix beamf datastructure
             if cf['pa']['freqdset'].startswith('DX12'):
                 if int(freqc[0]) >= 100 and int(freqc[1]) >= 100:
                     data[fidx, sidx] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmaxp1]

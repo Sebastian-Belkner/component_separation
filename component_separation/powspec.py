@@ -47,8 +47,6 @@ from logdecorator import log_on_end, log_on_error, log_on_start
 import component_separation
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.transform_map as trsf_m
-from component_separation.cs_util import Config
-from component_separation.cs_util import Helperfunctions as hpf
 from component_separation.cs_util import Planckf, Planckr, Plancks
 
 
@@ -112,6 +110,87 @@ def create_mapsyn(spectrum: Dict[str, Dict], cf: Dict, freqcomb) -> List[Dict[st
 
     #TODO return only numpy
     return np.array([])
+
+
+@log_on_start(INFO, "Starting to build convariance matrices with {data}")
+@log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
+def cov2weight(data: np.array, freqs=np.array([F.value for F in list(Planckf)[:-2]]), Tscale='K_CMB'):
+    """Calculates weights vector from cov matrix
+
+    Args:
+        data: powerspectra with spectrum and frequency-combinations in the columns
+        
+    Returns:
+        Dict[str, np.ndarray]: The covariance matrices of Dimension [Nspec,Nspec,lmax]
+    """
+    nfreq = len(freqs) #KEEP. shape of weights shall have all frequencies
+    def invert_cov(cov: np.array):
+        """Inverts a covariance matrix
+        Args:
+            cov: The covariance matrices of Dimension [Nspec,Nspec,lmax]
+        """
+        def maskit(a):
+            """drops all row and columns with np.nan's.
+            """
+            masked = a[ ~np.isnan(a) ]
+            mskd = masked.reshape(int(np.sqrt(len(masked))),int(np.sqrt(len(masked))))
+            return mskd
+
+        def is_invertible(a):
+            truth = a.shape[0] == a.shape[1] and np.linalg.matrix_rank(a) == a.shape[0]
+            if not truth:
+                pass
+                # print('not invertible: {}'.format(a) )
+            return truth
+
+        def shp2cov_nan(shp):
+            a = np.empty(shp)
+            a[:] = np.nan
+            return a
+
+        def pad_shape(a):
+            return ((nfreq-a.shape[0],0),(nfreq-a.shape[0],0))
+
+        def pad_with(vector, pad_width, iaxis, kwargs):
+            pad_value = kwargs.get('padder', 0.0)
+            vector[:pad_width[0]] = pad_value
+            if pad_width[1] != 0:                      # <-- (0 indicates no padding)
+                vector[-pad_width[1]:] = pad_value
+
+        ret = np.zeros(shape=(cov.shape[0], nfreq, nfreq, cov.shape[-1]))
+        if is_invertible(maskit(cov)):
+            ret = np.pad(
+                np.linalg.inv(maskit(cov)),
+                pad_shape(maskit(cov)),
+                pad_with)
+        else:
+            ret = np.pad(
+                shp2cov_nan(maskit(cov).shape),
+                pad_shape(maskit(cov)), pad_with)
+        return ret
+
+    def calc_w(cov: np.array) -> np.array:
+        """Calculates weightings of the frequency channels
+        Args:
+            cov: The inverted covariance matrices of Dimension [lmax,Nspec,Nspec]
+        Returns:
+            np.array: The weightings of the respective Frequency channels
+        """
+
+        Tscale_mat = np.zeros(shape=(nfreq,nfreq)) #keep shape as if for all frequencies
+        for idx1, FREQ1 in enumerate(freqs):
+            for idx2, FREQ2 in enumerate(freqs):
+                Tscale_mat[idx1,idx2] = trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+
+        elaw = np.array([trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in freqs])
+        weight_arr = np.zeros(shape=(np.take(cov.shape, [0,1,-1])))
+        for spec in range(weight_arr.shape[0]):
+            for l in range(cov.shape[-1]):
+                weight_arr[spec,:,l] = np.array([
+                    (invert_cov(np.multiply(cov[spec,:,:,l],Tscale_mat)) @ elaw) / (elaw.T @ invert_cov(np.multiply(cov[spec,:,:,l],Tscale_mat)) @ elaw)])
+        return weight_arr
+
+    return calc_w(data)
 
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
