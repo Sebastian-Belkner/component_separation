@@ -620,7 +620,7 @@ class Helperfunctions:
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
                 for k in range(bins.shape[0]):
-                    ret[i,j,k] = np.mean(np.nan_to_num(data[i,j,int(bins[k][0]):int(bins[k][1])]))
+                    ret[i,j,k] = np.mean(np.nan_to_num(data[i,j,int(bins[k][0]):int(bins[k][1])+1]))
         return np.nan_to_num(ret)
 
 

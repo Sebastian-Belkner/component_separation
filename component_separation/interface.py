@@ -1,8 +1,6 @@
 #!/usr/local/bin/python
 """
-run_map.py: script for generating empiric noisemaps or masks, which are based on maps.
-Input are maps, input directory to be specified in the `rm_config.json`
-output are maps or masks. output directory to be specified in `rm_config.json`
+interface.py: in the future, this could be somewhat serve as connecting application level with backend
 
 """
 
@@ -108,7 +106,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     mmG = model.mismatch(stats, nmodes, exact=True)
 
     # start CG/close form
-    hist = np.ones(shape=(maxiter,2))
+    hist = np.array([[np.nan, np.nan] for n in range(maxiter)])
     for i in range(maxiter):
         # fit mixing matrix
         gal.fix_powspec("null")

@@ -103,7 +103,7 @@ def run_fit(path_name, overw):
         smica_model,
         np.nan_to_num(cov_ltot_bnd),
         nmodes,
-        maxiter=50,
+        maxiter=500,
         noise_fix=True,
         noise_template=np.nan_to_num(cov_lN_bnd),
         afix=None, qmin=0,
@@ -139,9 +139,74 @@ def run_propag():
 
     # full maps
     maps = io.load_plamap(csu.cf, field=(0,1,2), nside_out=csu.nside_out)
-    # maps = trsf_m.process_all(maps)
+    maps = trsf_m.process_all(maps)
 
     for freq in csu.PLANCKMAPFREQ_f:
+        print('freq: ', freq)
+        ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
+        alms = pw.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, lmaxbin-1) # full sky QU->EB
+        # almT[det] = alms[0]
+        almE[freq] = alms[0]
+        almB[freq] = alms[1]
+
+    nalm = int((lmaxbin)*(lmaxbin-1+2)/2)  
+    # combalmT = np.zeros((nalm), dtype=np.complex128)
+    combalmE = np.zeros((nalm), dtype=np.complex128)
+    combalmB = np.zeros((nalm), dtype=np.complex128)
+    beamf = io.load_beamf(freqcomb=csu.freqcomb)
+
+    xnew = np.arange(0,lmaxbin,1)
+    for it, det in enumerate(csu.PLANCKMAPFREQ): #weights do not depend on freqfilter, but almE/B do
+        if det in csu.PLANCKMAPFREQ_f:
+            ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
+            W_Einterp = interpolate.interp1d(np.mean(bins, axis=1), W[0,it,:], bounds_error = False, fill_value='extrapolate')
+            #TODO switch to W[2,:] once BB-weights are correctly calculated
+            W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W[0,it,:], bounds_error = False, fill_value='extrapolate')
+
+            # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
+            LHFI = "LFI" if int(det)<100 else "HFI"
+            if csu.cf['pa']['freqdset'].startswith('NPIPE'):
+                LHFI = "HFI"
+            
+            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(1)[:lmaxbin]), np.squeeze(W_Einterp(xnew)))
+            combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmaxbin])
+            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(2)[:lmaxbin]), np.squeeze(W_Binterp(xnew)))
+            combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmaxbin])
+
+    CMB["TQU"]['out'] = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
+    io.save_data(CMB["TQU"]['out'], io.fh.cmbmap_smica_path_name)
+    smica_C_lmin_unsc = np.array(ps.map2cl_spin(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask['100'], lmax=lmaxbin-1,
+        lmax_mask=lmaxbin*2))*1e12 #maps are different scale than processed powerspectra from this' package pipeline, thus *1e12
+    io.save_data(smica_C_lmin_unsc, io.fh.clmin_smica_path_name)
+
+
+def run_propag_complete():
+    """
+    Follows the SMICA propagation code to combine maps with set of weights.
+    Only runs for the chosen bins and up to the max value of bins
+    """
+    CMB = dict()
+    CMB["TQU"] = dict()
+    almT, almE, almB = dict(), dict(), dict()
+    lmaxbin = int(bins[-1][1]+1)
+
+    W_smica = io.load_data(io.fh.weight_smica_path_name)
+    W_mv = io.load_data(io.fh.weight_path_name)
+    W_total = np.zeros(shape=(*W_mv.shape[:-1], csu.lmax))
+
+    xnew = np.arange(0,lmaxbin+1,1)
+    for it, det in enumerate(csu.PLANCKMAPFREQ): #weights do not depend on freqfilter, but almE/B do
+        if det in csu.PLANCKMAPFREQ_f:
+            ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
+            W_Einterp = interpolate.interp1d(np.mean(bins, axis=1), W[0,it,:], bounds_error = False, fill_value='extrapolate')
+            W_total[0,it] = np.concatenate(W_Einterp(xnew),W_mv)
+
+    # full maps
+    maps = io.load_plamap(csu.cf, field=(0,1,2), nside_out=csu.nside_out)
+    maps = trsf_m.process_all(maps)
+
+    for freq in csu.PLANCKMAPFREQ_f:
+        print('freq: ', freq)
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
         alms = pw.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, lmaxbin-1) # full sky QU->EB
         # almT[det] = alms[0]
@@ -183,9 +248,13 @@ if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
     bool_fit = True
     bool_propag = False
+    bool_propag_complete = False
 
     if bool_fit:
         run_fit(io.fh.weight_smica_path_name, csu.overwrite_cache)
 
     if bool_propag:
         run_propag()
+
+    if bool_propag_complete:
+        run_propag_complete()

@@ -1,8 +1,8 @@
 {
 "pa":{
     "Tscale": "K_CMB",
-    "mskset": null,
-    "freqdset": "NPIPE_sim",
+    "mskset": "smica",
+    "freqdset": "NPIPE",
     "Spectrum_scale": "C_l",
     "lmax": 4000,
     "lmax_mask": 6000,
@@ -10,7 +10,7 @@
     "smoothing_window": 0,
     "max_polynom": 0,
     "num_sim": 5,
-    "binname": "linear_equisized_bins_10",
+    "binname": "SMICA_highell_bins",
     "overwrite_cache": true,
     "split": "",
     "nside_out": null,

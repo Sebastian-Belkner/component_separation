@@ -42,7 +42,7 @@ def run_cmbmap(pathname, overwr):
 
     # TODO what is a reasonable nside for this?
     CMB = hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nsi)
-    io.save_data(CMB, io.fh.map_cmb_sc_path_name)
+    io.save_data(CMB, pathname)
 
 
 def run_splitmaps2diffmap():
