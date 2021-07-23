@@ -27,29 +27,29 @@ from component_separation.cs_util import Config
 csu = Config()
 io = IO(csu)
 
-def build_smica_model(Q, N_cov_bn, C_lS_bnd):
-    # Noise part
+def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None):
+    ### Noise part
     nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
     noise.set_ampl(np.ones((nmap,1)), fixed="all")
     noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all") # where N is a (nmap, Q) array with noise spectra
-    # print("noise cov: {}".format(N_cov_bn))
 
-    # CMB part
+    ### CMB part
     cmb = smica.Source1D (nmap, Q, name='cmb')
     acmb = np.ones((nmap,1)) # if cov in cmb unit
     cmb.set_mixmat(acmb, fixed='null')
-    
     cmbcq = C_lS_bnd[0,0,:]
     cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
-
-    # Galactic foreground part
     # cmb.set_powspec(cmbcq*0, fixed='all') # B modes fit
+
+    ### Galactic foreground part
     dim = 6
-    gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
-    gal.fix_mixmat("null")
-    # galmixmat = np.ones((nmap,dim))*0.1
-    # gal.set_mixmat(galmixmat, fixed='null')
+    if gal_mixmat is None:
+        gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
+        gal.fix_mixmat("null")
+    else:
+        gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
+        gal.set_mixmat(gal_mixmat, fixed='all')
 
     model = smica.Model(complist=[cmb, gal, noise])
     return model

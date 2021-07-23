@@ -2,6 +2,7 @@
 """
 run_powerspectrum.py: script for executing main functionality of component_separation
 
+#TODO why is NPIPE_sim CMB map uncorrelated with NPIPE MV map? Both contain signal
 
 """
 
@@ -74,7 +75,7 @@ def run_tf(path_name, overwr):
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
-    bool_weight = True
+    bool_weight = False
     bool_crosscov = True
     bool_tf = True
 

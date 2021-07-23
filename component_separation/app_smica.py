@@ -50,6 +50,19 @@ def run_fit(path_name, overw):
         * signal estimator: C_lS_out.py
         * channel weights: io.weight_path + "SMICAWEIG_" + cf['pa']["Tscale"] + "_" + io.total_filename
     """
+    def bin_data():
+        bins = getattr(const, binname)
+        cov_ltot_bnd = hpf.bin_it(cov_ltotEE, bins=bins)
+        print(cov_ltot_bnd.shape)
+
+        cov_lN_bnd = hpf.bin_it(cov_lNEE, bins=bins)
+        cov_lN_bnd = np.diagonal(cov_lN_bnd, axis1=0, axis2=1).T
+        print(cov_lN_bnd.shape)
+
+        C_lS_bnd =  hpf.bin_it(cov_lSEE, bins=bins)
+        print(C_lS_bnd.shape)
+        return cov_ltot_bnd, cov_lN_bnd, C_lS_bnd
+
     def calc_nmodes(bins, mask):
         nmode = np.ones((bins.shape[0]))
         for idx,q in enumerate(bins):
@@ -83,27 +96,35 @@ def run_fit(path_name, overw):
     cov_lS = pw.build_covmatrices(C_lS_shaped, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
     cov_lSEE = cov_lS[1]
     print(cov_lNEE.shape)
-    
 
-    cov_ltot_bnd = hpf.bin_it(cov_ltotEE, bins=bins)
-    print(cov_ltot_bnd.shape)
-
-    cov_lN_bnd = hpf.bin_it(cov_lNEE, bins=bins)
-    cov_lN_bnd = np.diagonal(cov_lN_bnd, axis1=0, axis2=1).T
-    print(cov_lN_bnd.shape)
-
-    C_lS_bnd =  hpf.bin_it(cov_lSEE, bins=bins)
-    print(C_lS_bnd.shape)
-
-
+    #Fitting galactic emissivity only
+    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname = "SMICA_lowell_bins")
     nmodes = calc_nmodes(bins, pmask['100']) #any mask will do, only fsky needed
-    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd))
-
+    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None)
     smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
         np.nan_to_num(cov_ltot_bnd),
         nmodes,
-        maxiter=500,
+        maxiter=20,
+        noise_fix=True,
+        noise_template=np.nan_to_num(cov_lN_bnd),
+        afix=None, qmin=0,
+        asyn=None,
+        logger=None,
+        qmax=len(nmodes),
+        no_starting_point=False)
+    gal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
+
+    #Fitting everything with fixed gal emis
+    binname = "SMICA_highell_bins"
+    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname=binname)
+    nmodes = calc_nmodes(bins, pmask['100']) #any mask will do, only fsky needed
+    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), gal_mixmat)
+    smica_model, hist = cslib.fit_model_to_cov(
+        smica_model,
+        np.nan_to_num(cov_ltot_bnd),
+        nmodes,
+        maxiter=20,
         noise_fix=True,
         noise_template=np.nan_to_num(cov_lN_bnd),
         afix=None, qmin=0,
@@ -113,11 +134,10 @@ def run_fit(path_name, overw):
         no_starting_point=False)
 
     io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.fh.cmb_specsmica_sc_path_name)
-    io.save_data(smica_model.get_theta(), io.fh.out_specsmica_path+"theta_{}".format(csu.cf['pa']['binname']) + "_" + io.fh.total_filename)
-    io.save_data(smica_model.covariance4D(), io.fh.out_specsmica_path+"cov4D_{}".format(csu.cf['pa']['binname']) + "_" + io.fh.total_filename)
-    io.save_data(smica_model.covariance(), io.fh.out_specsmica_path+"cov_{}".format(csu.cf['pa']['binname']) + "_" + io.fh.total_filename)
-    io.save_data(hist, io.fh.out_specsmica_path+"hist_{}".format(csu.cf['pa']['binname']) + "_" + io.fh.total_filename)
-
+    io.save_data(smica_model.get_theta(), io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(smica_model.covariance4D(), io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(smica_model.covariance(), io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
 
     smica_weights_tot = pw.cov2weight(np.array([smica_model.covariance()])) #EE
     print(smica_weights_tot.shape)
@@ -246,8 +266,8 @@ def run_propag_complete():
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_fit = True
-    bool_propag = False
+    bool_fit = False
+    bool_propag = True
     bool_propag_complete = False
 
     if bool_fit:
