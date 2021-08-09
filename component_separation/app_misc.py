@@ -1,10 +1,8 @@
 #!/usr/local/bin/python
 """
 run_powerspectrum.py: script for executing main functionality of component_separation
-
-#TODO why is NPIPE_sim CMB map uncorrelated with NPIPE MV map? Both contain signal
-
 """
+#TODO why is NPIPE_sim CMB map uncorrelated with NPIPE MV map? Both contain signal
 
 __author__ = "S. Belkner"
 
@@ -36,10 +34,10 @@ def run_weight(path_name, overw):
     No SMICA, straightforward weight derivation.
     Needed for combining maps without SMICA.
     """
-
     C_ltot = io.load_powerspectra('full')
     cov = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
-    weights_tot = pw.cov2weight(cov, Tscale=csu.Tscale)
+    weights_tot = np.zeros(shape=(2,7,len(bins)))
+    weights_tot[1] = pw.cov2weight(cov, Tscale=csu.Tscale) #BB
     print(weights_tot.shape)
     io.save_data(weights_tot, path_name)
 

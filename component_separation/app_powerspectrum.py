@@ -76,7 +76,6 @@ def run_alm2spec(path_name, overw):
     C_lS = trsf_s.apply_scale(C_lS_unsc, csu.cf['pa']["Spectrum_scale"])
     io.save_data(C_lS, path_name)
 
-    C_lS = hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)

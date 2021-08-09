@@ -75,6 +75,7 @@ class Filehandling:
             self.cmbmap_smica_path_name = cfmch['outdir_smica_ap'] + "smicaminvarmap_{}".format(cfpa['binname']) + "_" + self.total_filename
             self.clmin_smica_path_name = cfmch['outdir_smica_ap'] + "smicaclmin_{}".format(cfpa['binname']) + "_" + self.total_filename
             self.cmb_specsmica_sc_path_name = self.out_specsmica_path + "CMB_" + self.specsmica_sc_filename
+            self.gal_specsmica_sc_path_name = self.out_specsmica_path + "GAL_" + self.specsmica_sc_filename
 
             self.weight_path = cfmch['outdir_weight_ap'] + cfpa["freqdset"] + "/"
             iff_make_dir(self.weight_path)

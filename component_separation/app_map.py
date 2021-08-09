@@ -36,10 +36,7 @@ def run_cmbmap(pathname, overwr):
     Derives CMB powerspectrum directly from alm data of pure CMB.
     """
     nsi = csu.nside_out[1]
-    cmb_tlm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(csu.sim_id), hdu=1)
-    cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(csu.sim_id), hdu=2)
-    cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(csu.sim_id), hdu=3)
-
+    cmb_tlm, cmb_elm, cmb_blm = cslib.load_alms('cmb', csu.sim_id)
     # TODO what is a reasonable nside for this?
     CMB = hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nsi)
     io.save_data(CMB, pathname)

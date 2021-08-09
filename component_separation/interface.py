@@ -27,20 +27,23 @@ from component_separation.cs_util import Config
 csu = Config()
 io = IO(csu)
 
-def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None):
+def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     ### Noise part
     nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
     noise.set_ampl(np.ones((nmap,1)), fixed="all")
+    print(Q, N_cov_bn.shape)
     noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all") # where N is a (nmap, Q) array with noise spectra
 
     ### CMB part
-    cmb = smica.Source1D (nmap, Q, name='cmb')
+    cmb = smica.Source1D(nmap, Q, name='cmb')
     acmb = np.ones((nmap,1)) # if cov in cmb unit
     cmb.set_mixmat(acmb, fixed='null')
     cmbcq = C_lS_bnd[0,0,:]
-    cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
-    # cmb.set_powspec(cmbcq*0, fixed='all') # B modes fit
+    if B_fit:
+        cmb.set_powspec(cmbcq*0, fixed='all') # B modes fit
+    else:
+        cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 
     ### Galactic foreground part
     dim = 6
@@ -48,6 +51,7 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None):
         gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
         gal.fix_mixmat("null")
     else:
+        print(gal_mixmat.shape)
         gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
         gal.set_mixmat(gal_mixmat, fixed='all')
 
@@ -57,7 +61,6 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None):
 
 def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_template=None, afix=None, qmin=0, asyn=None, logger=None, qmax=None, no_starting_point=False):
     """ Fit the model to empirical covariance.
-    
     """
     cg_maxiter = 1
     cg_eps = 1e-20
