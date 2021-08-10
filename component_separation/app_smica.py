@@ -5,8 +5,7 @@ Depends on all (noise, signal, full) spectra being generated to begin with. Use 
 """
 
 #TODO
-# check if fixing LFI covariances to high values solves the issue?
-# compare NPIPE-maudes_weights mv map with NPIPE lens_weights mv map 
+# check if fixing LFI covariances to high values solves the issue? 
 
 __author__ = "S. Belkner"
 
@@ -19,16 +18,14 @@ import numpy as np
 
 import healpy as hp
 import sys
-from typing import Dict, List, Optional, Tuple
 import component_separation.MSC.MSC.pospace as ps
 import smica
-import component_separation.io as csio
 
-import component_separation
 from component_separation.io import IO
 import component_separation.powspec as pw
 import component_separation.interface as cslib
 import component_separation.transform_map as trsf_m
+import component_separation.transform_spec as trsf_s
 from component_separation.cs_util import Config
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
@@ -61,7 +58,7 @@ def run_fit(path_name, overw):
 
         C_lS_bnd =  hpf.bin_it(cov_lS_s, bins=bins)
         print(C_lS_bnd.shape)
-        return cov_ltot_bnd, cov_lN_bnd, C_lS_bnd
+        return cov_ltot_bnd.copy(), cov_lN_bnd.copy(), C_lS_bnd.copy()
 
     def calc_nmodes(bins, mask):
         nmode = np.ones((bins.shape[0]))
@@ -89,7 +86,7 @@ def run_fit(path_name, overw):
     print(cov_lNEE.shape)
 
     C_lS = io.load_powerspectra('signal')
-    print(C_lN.shape)
+    print(C_lS.shape)
     # Fakes the same shape so pw.build_covmatrices() may be used
     C_lS_shaped = np.zeros_like(C_lN)
     for freqcom in range(C_lS_shaped.shape[0]):
@@ -98,7 +95,7 @@ def run_fit(path_name, overw):
     cov_lS = pw.build_covmatrices(C_lS_shaped, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
     print(cov_lS.shape)
     cov_lSEE = cov_lS[1]
-    print(cov_lNEE.shape)
+    print(cov_lSEE.shape)
 
     #Fitting galactic emissivity only
     binname = "SMICA_lowell_bins"
@@ -190,6 +187,11 @@ def run_fit(path_name, overw):
     #Fitting everything with fixed gal emis
     binname = "SMICA_highell_bins"
     cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
+    for n in range(cov_ltot_bnd.shape[0]):
+        cov_lN_bnd[n,:] = trsf_s.apply_smoothing(cov_lN_bnd[n,:])
+        for m in range(cov_ltot_bnd.shape[1]):
+            # if n != m:
+                cov_ltot_bnd[n,m,:] = trsf_s.apply_smoothing(cov_ltot_bnd[n,m,:])
     nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
     smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), gal_mixmat)
     smica_model, hist = cslib.fit_model_to_cov(

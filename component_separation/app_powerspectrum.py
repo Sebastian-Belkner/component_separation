@@ -10,13 +10,11 @@ import copy
 
 import os
 import sys
-from typing import Dict, List, Optional, Tuple
 import component_separation.interface as cslib
 
 import healpy as hp
 import numpy as np
 
-import component_separation
 from component_separation.io import IO
 import component_separation.io as csio
 import component_separation.powspec as pw

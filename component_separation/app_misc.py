@@ -14,8 +14,6 @@ import healpy as hp
 import numpy as np
 import smica
 
-import component_separation
-import component_separation.interface as cslib
 from component_separation.io import IO
 import component_separation.io as csio
 import component_separation.MSC.MSC.pospace as ps

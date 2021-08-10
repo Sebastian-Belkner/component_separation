@@ -13,14 +13,12 @@ import json
 import os
 import healpy as hp
 from os import path
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
 import component_separation
 from component_separation.io import IO
 import component_separation.io as csio
-import component_separation.powspec as pw
 import component_separation.transform_map as trsf
 from component_separation.cs_util import Config
 

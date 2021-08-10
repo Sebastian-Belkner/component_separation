@@ -65,13 +65,21 @@ def apply_scale(data: np.array, scale: str = 'C_l') -> Dict:
 def apply_smoothing(data, smoothing_window=5, max_polynom=2):
     """
     smoothes the powerspectrum using a savgol_filter. Possibly needed for some cross-powerspectra (LFI)
+    Works for any data input dimension
     """
-    # for key, val in data.items():
-    #     for k, v in val.items():
-    #         data[key][k] = savgol_filter(v, smoothing_window, max_polynom)
-    # return data
     #TODO this needs being tested
-    return savgol_filter(data, smoothing_window, max_polynom)
+    buff = data.copy()
+    if len(data.shape)==1:
+        return savgol_filter(data, smoothing_window, max_polynom)
+    elif len(data.shape)==2:
+        for n in range(len(data)):
+            buff[n] = savgol_filter(data[n], smoothing_window, max_polynom)
+        return buff
+    elif len(data.shape)==3:
+        for n in range(len(data)):
+            for m in range(len(data)):
+                buff[n,m] = savgol_filter(data[n,m], smoothing_window, max_polynom)
+        return buff
 
 
 @log_on_start(INFO, "Starting to apply Beamfunction")
