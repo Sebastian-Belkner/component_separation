@@ -1,8 +1,8 @@
 {
 "pa":{
     "Tscale": "K_CMB",
-    "mskset": "lens",
-    "freqdset": "DX12",
+    "mskset": "smica",
+    "freqdset": "NPIPE",
     "Spectrum_scale": "C_l",
     "lmax": 4000,
     "lmax_mask": 6000,

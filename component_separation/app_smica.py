@@ -11,7 +11,6 @@ __author__ = "S. Belkner"
 
 import os
 os.environ["OMP_NUM_THREADS"] = "32"
-from astropy.io import fits
 from scipy import interpolate
 
 import numpy as np
@@ -97,6 +96,12 @@ def run_fit(path_name, overw):
     cov_lSEE = cov_lS[1]
     print(cov_lSEE.shape)
 
+
+    ## EE fitting
+    ##
+    ##
+    ##
+
     #Fitting galactic emissivity only
     binname = "SMICA_lowell_bins"
     cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
@@ -104,11 +109,11 @@ def run_fit(path_name, overw):
     smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None)
     smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
-        np.nan_to_num(cov_ltot_bnd),
+        cov_ltot_bnd,
         nmodes,
         maxiter=100,
         noise_fix=True,
-        noise_template=np.nan_to_num(cov_lN_bnd),
+        noise_template=cov_lN_bnd,
         afix=None, qmin=0,
         asyn=None,
         logger=None,
@@ -124,11 +129,11 @@ def run_fit(path_name, overw):
     smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), gal_mixmat)
     smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
-        np.nan_to_num(cov_ltot_bnd),
+        cov_ltot_bnd,
         nmodes,
         maxiter=100,
         noise_fix=True,
-        noise_template=np.nan_to_num(cov_lN_bnd),
+        noise_template=cov_lN_bnd,
         afix=None, qmin=0,
         asyn=None,
         logger=None,
@@ -148,6 +153,7 @@ def run_fit(path_name, overw):
     # io.save_data(smica_weights_tot, path_name)
 
 
+
     ## BB fitting
     ##
     ##
@@ -162,20 +168,21 @@ def run_fit(path_name, overw):
                 cov_lNBB[n,m] = np.zeros(shape=cov_lNBB.shape[2])
     print(cov_lNBB.shape)
 
-    cov_lSBB = cov_lS[1]
+    cov_lSBB = cov_lS[2]
     print(cov_lNBB.shape)
 
     binname = "SMICA_lowell_bins"
     cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
     nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
     smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None)
+    io.save_data(cov_ltot_bnd, '/global/cscratch1/sd/sebibel/stats.npy')
     smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
-        np.nan_to_num(cov_ltot_bnd),
+        cov_ltot_bnd,
         nmodes,
         maxiter=100,
         noise_fix=True,
-        noise_template=np.nan_to_num(cov_lN_bnd),
+        noise_template=cov_lN_bnd,
         afix=None, qmin=0,
         asyn=None,
         logger=None,
@@ -187,16 +194,16 @@ def run_fit(path_name, overw):
     #Fitting everything with fixed gal emis
     binname = "SMICA_highell_bins"
     cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
-    for n in range(cov_ltot_bnd.shape[0]):
-        cov_lN_bnd[n,:] = trsf_s.apply_smoothing(cov_lN_bnd[n,:])
-        for m in range(cov_ltot_bnd.shape[1]):
-            # if n != m:
-                cov_ltot_bnd[n,m,:] = trsf_s.apply_smoothing(cov_ltot_bnd[n,m,:])
+    # for n in range(cov_ltot_bnd.shape[0]):
+    #     cov_lN_bnd[n,:] = trsf_s.apply_smoothing(cov_lN_bnd[n,:])
+    #     for m in range(cov_ltot_bnd.shape[1]):
+    #         # if n != m:
+    #             cov_ltot_bnd[n,m,:] = trsf_s.apply_smoothing(cov_ltot_bnd[n,m,:])
     nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
     smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), gal_mixmat)
     smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
-        np.nan_to_num(cov_ltot_bnd),
+        cov_ltot_bnd,
         nmodes,
         maxiter=100,
         noise_fix=True,
@@ -217,6 +224,8 @@ def run_fit(path_name, overw):
     smica_weights_tot[1] = pw.cov2weight(np.array([smica_model.covariance()])) #BB
     print(smica_weights_tot.shape)
     io.save_data(smica_weights_tot, path_name)
+
+    
 
 
 def run_propag():

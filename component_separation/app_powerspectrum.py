@@ -42,7 +42,7 @@ def run_map2spec(bool_with_noise):
     @csio.alert_cached
     def r_s2sc(path_sc, overw, cs, C_l_unsc):
         beamf = io.load_beamf(cs.freqcomb)
-        C_l = trsf_s.process_all(C_l_unsc, cs.cf, cs.freqcomb, cs.PLANCKSPECTRUM, beamf, cs.nside_out, cs.cf['pa']["Spectrum_scale"], cs.cf['pa']['smoothing_window'], cs.cf['pa']['max_polynom'])
+        C_l = trsf_s.process_all(C_l_unsc, cs.freqcomb, beamf, cs.nside_out, cs.cf['pa']["Spectrum_scale"], cs.cf['pa']['smoothing_window'], cs.cf['pa']['max_polynom'])
         io.save_data(C_l, path_sc)
 
     if bool_with_noise:

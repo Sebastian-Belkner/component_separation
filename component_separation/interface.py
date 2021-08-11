@@ -19,7 +19,6 @@ import sys
 import healpy as hp
 import numpy as np
 
-import component_separation
 from component_separation.io import IO
 import smica
 import component_separation.transform_map as trsf
@@ -31,7 +30,7 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     ### Noise part
     nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
-    noise.set_ampl(np.ones((nmap,1)), fixed="all")
+    noise.set_ampl(np.ones((nmap,1)), fixed="null")
     print(Q, N_cov_bn.shape)
     noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all") # where N is a (nmap, Q) array with noise spectra
 
@@ -66,7 +65,6 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
     cg_eps = 1e-20
     nmap = stats.shape[0]
     cmb,gal,noise = model._complist
-    print('dim is {}'.format(model.dim))
 
     # find a starting point
     acmb = model.get_comp_by_name("cmb").mixmat()
@@ -85,7 +83,6 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
     if fixed: # TODO; did i interpret this right?  if not is_mixmat_fixed(model)
         if not no_starting_point:
-            print(acmb.shape)
             model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=qmax)
             cmb.set_mixmat(acmb, fixed=afix)
             if asyn is not None:
@@ -97,13 +94,12 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
                 gal.set_mixmat(ag, fixed=agfix)
 
     print('starting quasi newton')
-    model.quasi_newton(np.abs(stats), nmodes)
-    print('starting set_powspec 1')
+    model.quasi_newton(stats, nmodes)
+    print('starting set_powspec')
     cmb.set_powspec (cmbcq, fixed=cfix)
     print('starting close_form')
     model.close_form(stats)
     print('starting set_powspec 2')
-    cmb.set_powspec (cmbcq, fixed=cfix)
     cmb.set_powspec (cmbcq, fixed=cfix)
     mm = model.mismatch(stats, nmodes, exact=True)
     mmG = model.mismatch(stats, nmodes, exact=True)
@@ -115,7 +111,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
         gal.fix_powspec("null")
         cmbfix = "null" if polar else cfix 
         cmb.fix_powspec(cmbfix)
-        model.conjugate_gradient (stats, nmodes,maxiter=cg_maxiter, avextol=cg_eps)
+        model.conjugate_gradient(stats, nmodes,maxiter=cg_maxiter, avextol=cg_eps)
         if 0:#logger is not None:
             np.set_printoptions(precision=5)
             logger.info(str(cmb.mixmat()/acmb))

@@ -364,7 +364,7 @@ class IO:
             freqcomb (List): Frequency channels which are to be ignored
 
         Returns:
-            Dict: Planck beamfunctions
+            np.array: Planck beamfunctions with dimension (Nspec, nfreq, nfreq, lmaxp1)
         """
         beamf = dict()
         cf = self.csu.cf
@@ -443,8 +443,56 @@ class IO:
                             ))
                         }
                     })
-
-        return beamf
+        TEB_dict = {
+            "T": 0,
+            "E": 1,
+            "B": 2
+        }
+        LFI_dict = {
+            "030": 28,
+            "044": 29,
+            "070": 30
+        }
+        freqs = self.csu.PLANCKMAPFREQ_f
+        lmaxp1 = self.csu.lmax+1
+        beamf_array = np.zeros(shape=(3, len(freqs), len(freqs), lmaxp1))
+        
+        for idspec, spec in enumerate(["T", "E", "B"]):
+            for ida, freqa in enumerate(freqs):
+                for idb, freqb in enumerate(freqs):
+                    if ida < idb:
+                        bf = beamf[freqa+'-'+freqb]
+                    else:
+                        bf = beamf[freqb+'-'+freqa]
+                    if self.csu.cf['pa']['freqdset'].startswith('DX12'):
+                        if int(freqa) >= 100 and int(freqb) >= 100:
+                            beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1]
+                        elif int(freqa) < 100 and int(freqb) < 100:
+                            b1 = np.sqrt(bf["LFI"][LFI_dict[freqa]].data.field(0))
+                            buff1 = np.concatenate((
+                                b1[:min(lmaxp1, len(b1))],
+                                np.array([np.NaN for n in range(max(0, lmaxp1-len(b1)))])))
+                            b2 = np.sqrt(bf["LFI"][LFI_dict[freqb]].data.field(0))
+                            buff2 = np.concatenate((
+                                b2[:min(lmaxp1, len(b2))],
+                                np.array([np.NaN for n in range(max(0, lmaxp1-len(b2)))])))
+                            beamf_array[idspec,ida,idb] = np.sqrt(buff1*buff2)
+                        else:
+                            if ida < idb:
+                                freqc = freqa
+                            else:
+                                freqc = freqb
+                            b = np.sqrt(bf["LFI"][LFI_dict[freqc]].data.field(0))
+                            buff = np.concatenate((
+                                b[:min(lmaxp1, len(b))],
+                                np.array([np.NaN for n in range(max(0, lmaxp1-len(b)))])))
+                            beamf_array[idspec,ida,idb] = np.sqrt(buff*bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1])
+                    elif cf['pa']['freqdset'].startswith('NPIPE'):
+                        ### now that all cross beamfunctions exist, and beamf
+                        ### files have the same structure, no difference between applying lfis and hfis anymore
+                        beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1]
+        return beamf_array
+        
 
 
     @log_on_start(INFO, "Saving to {path_name}")

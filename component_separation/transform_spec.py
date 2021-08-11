@@ -1,17 +1,22 @@
-import logging
-#%%
-
-from logging import DEBUG, ERROR, INFO
-from typing import Dict, List, Optional, Tuple
-import numpy as np
 import functools
+import logging
+from logging import DEBUG, ERROR, INFO
+from types import MappingProxyType
+from typing import Dict, List, Optional, Tuple
+
 import healpy as hp
+import numpy as np
 from logdecorator import log_on_end, log_on_error, log_on_start
 from scipy.signal import savgol_filter
+
 import component_separation.spherelib.python.spherelib.astro as slhpastro
+from component_separation.cs_util import Helperfunctions as hpf
+
+#%%
 
 
-def process_all(data, cf, freqcomb, speccomb, beamf, nside, spectrum_scale, smoothing_window, max_polynom):
+
+def process_all(data, freqcomb, beamf, nside, spectrum_scale, smoothing_window, max_polynom):
     """
     Root function. Executes all tranformations
     """
@@ -19,7 +24,7 @@ def process_all(data, cf, freqcomb, speccomb, beamf, nside, spectrum_scale, smoo
         data = apply_smoothing(data, smoothing_window=smoothing_window, max_polynom=max_polynom)
     data = apply_pixwin(data, freqcomb, nside)
     data = apply_scale(data, spectrum_scale)
-    data = apply_beamfunction(data, cf, freqcomb, speccomb, beamf)
+    data = apply_beamfunction(data, beamf, freqcomb)
     return data
 
 
@@ -84,7 +89,7 @@ def apply_smoothing(data, smoothing_window=5, max_polynom=2):
 
 @log_on_start(INFO, "Starting to apply Beamfunction")
 @log_on_end(DEBUG, "Beamfunction applied successfully: '{result}' ")
-def apply_beamfunction(data: np.array, cf, freqcomb, speccomb, beamf: Dict) -> Dict:
+def apply_beamfunction(data: np.array, beamf, freqcomb) -> Dict:
     """divides the spectrum derived from channel `ij` and provided via `df_(ij)`,
     by `beamf_i beamf_j` as described by the planck beamf .fits-file header.
 
@@ -97,49 +102,34 @@ def apply_beamfunction(data: np.array, cf, freqcomb, speccomb, beamf: Dict) -> D
         np.array: powerspectra including effect of Beam, with spectrum and frequency-combinations in the columns
 
     """
-    TEB_dict = {
-        "T": 0,
-        "E": 1,
-        "B": 2
-    }
-    LFI_dict = {
-        "030": 28,
-        "044": 29,
-        "070": 30
-    }
     lmaxp1 = data.shape[-1]
-
+    freqmapping = []
+    specmapping = []
     for fidx, freql in enumerate(data):
         freqc = freqcomb[fidx].split('-')
-        hdul = beamf[freqcomb[fidx]]
+        if freqc[0] not in freqmapping:
+            freqmapping+=[freqc[0]]
+        if freqc[1] not in freqmapping:
+            freqmapping+=[freqc[1]]
+        freqmapping = sorted(freqmapping)
+        fida = freqmapping.index(freqc[0])
+        fidb = freqmapping.index(freqc[1])
+        
+        specmapping = {
+                0:[0,0],
+                1:[1,1],
+                2:[2,2],
+                3:[0,1],
+                4:[0,2],
+                5:[1,2],
+                6:[1,0],
+                7:[2,0],
+                8:[2,1],
+            }
+        
         for sidx, specl in enumerate(freql):
-            specID = speccomb[sidx]
-            # TODO this cf dependency could be removed. beamf data should be more abstract and independent of cf, and astropy. howto: fix beamf datastructure
-            if cf['pa']['freqdset'].startswith('DX12'):
-                if int(freqc[0]) >= 100 and int(freqc[1]) >= 100:
-                    data[fidx, sidx] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmaxp1]
-                    data[fidx, sidx] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmaxp1]
-                elif int(freqc[0]) < 100 and int(freqc[1]) < 100:
-                    for freq in freqc:
-                        b = np.sqrt(hdul["LFI"][LFI_dict[freq]].data.field(0))
-                        buff = np.concatenate((
-                            b[:min(lmaxp1, len(b))],
-                            np.array([np.NaN for n in range(max(0, lmaxp1-len(b)))])))
-                        data[fidx, sidx] /= buff
-                else:
-                    b = np.sqrt(hdul["LFI"][LFI_dict[freqc[0]]].data.field(0))
-                    buff = np.concatenate((
-                        b[:min(lmaxp1, len(b))],
-                        np.array([np.NaN for n in range(max(0, lmaxp1-len(b)))])))
-                    data[fidx, sidx] /= buff
-                    data[fidx, sidx] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmaxp1]
+            sida, sidb = specmapping[sidx]
+            data[fidx, sidx] /= beamf[sida,fida,fidb]
+            data[fidx, sidx] /= beamf[sidb,fida,fidb]
 
-            elif cf['pa']['freqdset'].startswith('NPIPE'):
-                    ### now that all cross beamfunctions exist, and beamf
-                    ### files have the same structure, no difference between applying lfis and hfis anymore
-                    data[fidx, sidx] /= hdul["HFI"][1].data.field(TEB_dict[specID[0]])[:lmaxp1]
-                    data[fidx, sidx] /= hdul["HFI"][1].data.field(TEB_dict[specID[1]])[:lmaxp1]
-            else:
-                print("Error checking data for applying beamfunction to dataset. Dataset might not be supported. Exiting..")
-                sys.exit()
     return data
