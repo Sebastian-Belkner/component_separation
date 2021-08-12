@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 """
-run_powerspectrum.py: script for executing main functionality of component_separation
+app_misc.py: script for various functions
 """
 #TODO why is NPIPE_sim CMB map uncorrelated with NPIPE MV map? Both contain signal
 

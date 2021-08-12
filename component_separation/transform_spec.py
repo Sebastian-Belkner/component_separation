@@ -1,7 +1,5 @@
-import functools
 import logging
 from logging import DEBUG, ERROR, INFO
-from types import MappingProxyType
 from typing import Dict, List, Optional, Tuple
 
 import healpy as hp
@@ -9,11 +7,7 @@ import numpy as np
 from logdecorator import log_on_end, log_on_error, log_on_start
 from scipy.signal import savgol_filter
 
-import component_separation.spherelib.python.spherelib.astro as slhpastro
 from component_separation.cs_util import Helperfunctions as hpf
-
-#%%
-
 
 
 def process_all(data, freqcomb, beamf, nside, spectrum_scale, smoothing_window, max_polynom):
@@ -102,7 +96,6 @@ def apply_beamfunction(data: np.array, beamf, freqcomb) -> Dict:
         np.array: powerspectra including effect of Beam, with spectrum and frequency-combinations in the columns
 
     """
-    lmaxp1 = data.shape[-1]
     freqmapping = []
     specmapping = []
     for fidx, freql in enumerate(data):

@@ -7,22 +7,20 @@ Depends on all maps being generated to begin with. Use ``run_map.py``, if e.g. n
 __author__ = "S. Belkner"
 
 import copy
-
 import os
 import sys
-import component_separation.interface as cslib
 
 import healpy as hp
 import numpy as np
 
-from component_separation.io import IO
+import component_separation.interface as cslib
 import component_separation.io as csio
 import component_separation.powspec as pw
 import component_separation.transform_map as trsf_m
 import component_separation.transform_spec as trsf_s
-
 from component_separation.cs_util import Config
 from component_separation.cs_util import Helperfunctions as hpf
+from component_separation.io import IO
 
 csu = Config()
 io = IO(csu)
@@ -57,7 +55,6 @@ def run_map2spec(bool_with_noise):
     else:
         cslist = [csu]
         path_name_list = [(io.fh.spec_unsc_path_name, io.fh.spec_sc_path_name)]
-
     for cs, (path_unsc, path_sc) in zip(cslist, path_name_list):
         C_l_unsc = r_m2s(path_unsc, csu.overwrite_cache, cs)
         r_s2sc(path_sc, csu.overwrite_cache, cs, C_l_unsc)

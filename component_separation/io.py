@@ -476,7 +476,7 @@ class IO:
                             buff2 = np.concatenate((
                                 b2[:min(lmaxp1, len(b2))],
                                 np.array([np.NaN for n in range(max(0, lmaxp1-len(b2)))])))
-                            beamf_array[idspec,ida,idb] = np.sqrt(buff1*buff2)
+                            beamf_array[idspec,ida,idb] = buff1*buff2
                         else:
                             if ida < idb:
                                 freqc = freqa
@@ -486,7 +486,7 @@ class IO:
                             buff = np.concatenate((
                                 b[:min(lmaxp1, len(b))],
                                 np.array([np.NaN for n in range(max(0, lmaxp1-len(b)))])))
-                            beamf_array[idspec,ida,idb] = np.sqrt(buff*bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1])
+                            beamf_array[idspec,ida,idb] = buff*np.sqrt(bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1])
                     elif cf['pa']['freqdset'].startswith('NPIPE'):
                         ### now that all cross beamfunctions exist, and beamf
                         ### files have the same structure, no difference between applying lfis and hfis anymore

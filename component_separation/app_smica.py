@@ -72,17 +72,9 @@ def run_fit(path_name, overw):
     _Tscale = "K_CMB"#csu.Tscale
     C_ltot = io.load_powerspectra('full')
     cov_ltot = pw.build_covmatrices(C_ltot, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
-    cov_ltotEE = cov_ltot[1]
-    print(cov_ltotEE.shape)
 
     C_lN = io.load_powerspectra('noise')
     cov_lN = pw.build_covmatrices(C_lN, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
-    cov_lNEE = cov_lN[1]
-    for n in range(cov_lNEE.shape[0]):
-        for m in range(cov_lNEE.shape[1]):
-            if n != m:
-                cov_lNEE[n,m] = np.zeros(shape=cov_lNEE.shape[2])
-    print(cov_lNEE.shape)
 
     C_lS = io.load_powerspectra('signal')
     print(C_lS.shape)
@@ -92,16 +84,22 @@ def run_fit(path_name, overw):
         for specidx in range(C_lS.shape[1]):
             C_lS_shaped[freqcom,specidx,:] = C_lS[0,specidx]
     cov_lS = pw.build_covmatrices(C_lS_shaped, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
-    print(cov_lS.shape)
-    cov_lSEE = cov_lS[1]
-    print(cov_lSEE.shape)
+
 
 
     ## EE fitting
     ##
     ##
     ##
+    cov_ltotEE = cov_ltot[1]
+    print(cov_ltotEE.shape)
 
+    cov_lNEE = cov_lN[1]
+    print(cov_lNEE.shape)
+
+    print(cov_lS.shape)
+    cov_lSEE = cov_lS[1]
+    print(cov_lSEE.shape)
     #Fitting galactic emissivity only
     binname = "SMICA_lowell_bins"
     cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
@@ -119,14 +117,13 @@ def run_fit(path_name, overw):
         logger=None,
         qmax=len(nmodes),
         no_starting_point=False)
-    gal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
-    io.save_data(gal_mixmat, io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
+    EEgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
 
     #Fitting everything with fixed gal emis
     binname = "SMICA_highell_bins"
     cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
     nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), gal_mixmat)
+    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), EEgal_mixmat)
     smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
         cov_ltot_bnd,
@@ -140,19 +137,24 @@ def run_fit(path_name, overw):
         qmax=len(nmodes),
         no_starting_point=False)
 
-    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.fh.cmb_specsmica_sc_path_name)
-    io.save_data(smica_model.get_comp_by_name('gal').powspec(), io.fh.gal_specsmica_sc_path_name)
-    io.save_data(smica_model.get_theta(), io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(smica_model.covariance4D(), io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(smica_model.covariance(), io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
+    EEsmica_cmb = smica_model.get_comp_by_name('cmb').powspec()[0]
+    EEsmica_gal = np.array([smica_model.get_comp_by_name('gal').powspec()])
+    EEsmica_theta = smica_model.get_theta()
+    EEsmica_cov4D = np.array([smica_model.covariance4D()])
+    EEsmica_cov = smica_model.covariance()
+    EEsmica_hist = hist
+    io.save_data(EEsmica_cmb, io.fh.cmb_specsmica_sc_path_name)
+    io.save_data(EEsmica_gal, io.fh.gal_specsmica_sc_path_name)
+    io.save_data(EEsmica_theta, io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(EEsmica_cov4D, io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(EEsmica_cov, io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(EEsmica_hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(np.array([EEgal_mixmat]), io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
 
     smica_weights_tot = np.zeros(shape=(2,7,len(bins)))
     print(smica_weights_tot.shape)
     smica_weights_tot[0] = pw.cov2weight(np.array([smica_model.covariance()])) #EE
     # io.save_data(smica_weights_tot, path_name)
-
-
 
     ## BB fitting
     ##
@@ -162,10 +164,6 @@ def run_fit(path_name, overw):
     print(cov_ltotBB.shape)
 
     cov_lNBB = cov_lN[2]
-    for n in range(cov_lNBB.shape[0]):
-        for m in range(cov_lNBB.shape[1]):
-            if n != m:
-                cov_lNBB[n,m] = np.zeros(shape=cov_lNBB.shape[2])
     print(cov_lNBB.shape)
 
     cov_lSBB = cov_lS[2]
@@ -188,44 +186,44 @@ def run_fit(path_name, overw):
         logger=None,
         qmax=len(nmodes),
         no_starting_point=False)
-    gal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
-    io.save_data(gal_mixmat, io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
+    BBgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
 
     #Fitting everything with fixed gal emis
     binname = "SMICA_highell_bins"
     cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
-    # for n in range(cov_ltot_bnd.shape[0]):
-    #     cov_lN_bnd[n,:] = trsf_s.apply_smoothing(cov_lN_bnd[n,:])
-    #     for m in range(cov_ltot_bnd.shape[1]):
-    #         # if n != m:
-    #             cov_ltot_bnd[n,m,:] = trsf_s.apply_smoothing(cov_ltot_bnd[n,m,:])
     nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), gal_mixmat)
+    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), BBgal_mixmat)
     smica_model, hist = cslib.fit_model_to_cov(
         smica_model,
         cov_ltot_bnd,
         nmodes,
         maxiter=100,
         noise_fix=True,
-        noise_template=np.nan_to_num(cov_lN_bnd),
+        noise_template=cov_lN_bnd,
         afix=None, qmin=0,
         asyn=None,
         logger=None,
         qmax=len(nmodes),
         no_starting_point=False)
 
-    io.save_data(smica_model.get_comp_by_name('cmb').powspec(), io.fh.cmb_specsmica_sc_path_name)
-    # io.save_data(smica_model.get_comp_by_name('gal').powspec(), io.fh.gal_specsmica_sc_path_name)
-    # io.save_data(smica_model.get_theta(), io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
-    # io.save_data(smica_model.covariance4D(), io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
-    # io.save_data(smica_model.covariance(), io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
-    # io.save_data(hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
+    EEBBsmica_cmb = np.concatenate((EEsmica_cmb, smica_model.get_comp_by_name('cmb').powspec()[0]))
+    EEBBsmica_gal = np.concatenate((EEsmica_gal, [smica_model.get_comp_by_name('gal').powspec()]))
+    EEBBsmica_theta = np.concatenate((EEsmica_theta, smica_model.get_theta()))
+    EEBBsmica_cov4D = np.concatenate((EEsmica_cov4D, [smica_model.covariance4D()]))
+    EEBBsmica_cov = np.concatenate((EEsmica_cov, smica_model.covariance()))
+    EEBBsmica_hist = np.concatenate(([EEsmica_hist], [hist]))
+    EEBBgal_mixmat = np.concatenate(([EEgal_mixmat],[BBgal_mixmat]))
+    io.save_data(EEBBsmica_cmb, io.fh.cmb_specsmica_sc_path_name)
+    io.save_data(EEBBsmica_gal, io.fh.gal_specsmica_sc_path_name)
+    io.save_data(EEBBsmica_theta, io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(EEBBsmica_cov4D, io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(EEBBsmica_cov, io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(EEBBsmica_hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
+    io.save_data(EEBBgal_mixmat, io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
 
     smica_weights_tot[1] = pw.cov2weight(np.array([smica_model.covariance()])) #BB
     print(smica_weights_tot.shape)
     io.save_data(smica_weights_tot, path_name)
-
-    
 
 
 def run_propag():
@@ -267,13 +265,9 @@ def run_propag():
             W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W[1,it,:], bounds_error = False, fill_value='extrapolate')
 
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-            LHFI = "LFI" if int(det)<100 else "HFI"
-            if csu.cf['pa']['freqdset'].startswith('NPIPE'):
-                LHFI = "HFI"
-            
-            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(1)[:lmaxbin]), np.squeeze(W_Einterp(xnew)))
+            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[1,it,it,:lmaxbin]), np.squeeze(W_Einterp(xnew)))
             combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmaxbin])
-            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(2)[:lmaxbin]), np.squeeze(W_Binterp(xnew)))
+            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[1,it,it,:lmaxbin]), np.squeeze(W_Binterp(xnew)))
             combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmaxbin])
 
     CMB["TQU"]['out'] = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
@@ -291,22 +285,11 @@ def run_propag_complete():
     CMB = dict()
     CMB["TQU"] = dict()
     almT, almE, almB = dict(), dict(), dict()
-    lmaxbin = int(bins[-1][1]+1)
     lmax = csu.lmax
 
     W_smica = io.load_data(io.fh.weight_smica_path_name)
     W_mv = io.load_data(io.fh.weight_path_name)
-    W_total = np.zeros(shape=(*W_mv.shape[:-1], csu.lmax+1))
-
-    xnew = np.arange(0,lmaxbin+1,1)
-    for it, det in enumerate(csu.PLANCKMAPFREQ): #weights do not depend on freqfilter, but almE/B do
-        if det in csu.PLANCKMAPFREQ_f:
-            ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
-            W_Einterp = interpolate.interp1d(np.mean(bins, axis=1), W_smica[0,it,:], bounds_error = False, fill_value='extrapolate')
-            W_total[1,it] = np.concatenate((W_Einterp(xnew),W_mv[1,it,xnew.shape[0]:]))
-            W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W_smica[1,it,:], bounds_error = False, fill_value='extrapolate')
-            W_total[2,it] = np.concatenate((W_Binterp(xnew),W_mv[2,it,xnew.shape[0]:]))
-
+    W_total = hpf.interp_smica_mv_weights(W_smica, W_mv, bins, 4001)
 
     # full maps
     maps = io.load_plamap(csu.cf, field=(0,1,2), nside_out=csu.nside_out)
@@ -332,13 +315,10 @@ def run_propag_complete():
             print('freq: ', det)
             ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-            LHFI = "LFI" if int(det)<100 else "HFI"
-            if csu.cf['pa']['freqdset'].startswith('NPIPE'):
-                LHFI = "HFI"
-            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(1)[:lmax]), np.squeeze(W_total[1,it,:]))
+            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[1,it,it,:lmax]), np.squeeze(W_total[1,it,:]))
             combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmax])
 #             combalmE = hp.smoothalm(combalmE, fwhm = np.radians(5/60))
-            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[str(det)+'-'+str(det)][LHFI][1].data.field(2)[:lmax]), np.squeeze(W_total[2,it,:]))
+            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[1,it,it,:lmax]), np.squeeze(W_total[2,it,:]))
             combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmax])
 #             combalmB = hp.smoothalm(combalmB, fwhm = np.radians(5/60))
 
@@ -351,7 +331,7 @@ def run_propag_complete():
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_fit = True
+    bool_fit = False
     bool_propag = False
     bool_propag_complete = True
 
