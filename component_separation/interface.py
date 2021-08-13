@@ -30,14 +30,14 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     ### Noise part
     nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
-    noise.set_ampl(np.ones((nmap,1)), fixed="null")
+    noise.set_ampl(np.ones((nmap,1)), fixed=None)
     print(Q, N_cov_bn.shape)
     noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all") # where N is a (nmap, Q) array with noise spectra
 
     ### CMB part
     cmb = smica.Source1D(nmap, Q, name='cmb')
     acmb = np.ones((nmap,1)) # if cov in cmb unit
-    cmb.set_mixmat(acmb, fixed='null')
+    cmb.set_mixmat(acmb, fixed=None)
     cmbcq = C_lS_bnd[0,0,:]
     if B_fit:
         cmb.set_powspec(cmbcq*0, fixed='all') # B modes fit
@@ -48,19 +48,21 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     dim = 6
     if gal_mixmat is None:
         gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
-        gal.fix_mixmat("null")
+        gal.fix_mixmat('null')
     else:
-        print(gal_mixmat.shape)
         gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
         gal.set_mixmat(gal_mixmat, fixed='all')
+        gal.fix_powspec("null")
 
     model = smica.Model(complist=[cmb, gal, noise])
     return model
 
 
-def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_template=None, afix=None, qmin=0, asyn=None, logger=None, qmax=None, no_starting_point=False):
+def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_template=None, afix=None, asyn=None, qmax=None, no_starting_point=False, fixedmixing=True):
     """ Fit the model to empirical covariance.
     """
+
+    qmin=0
     cg_maxiter = 1
     cg_eps = 1e-20
     nmap = stats.shape[0]
@@ -68,7 +70,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
 
     # find a starting point
     acmb = model.get_comp_by_name("cmb").mixmat()
-    fixed = True
+    fixed = fixedmixing
     if fixed:
         afix = 1-cmb._mixmat.get_mask() #0:free 1:fixed
         cfix = 1-cmb._powspec.get_mask() #0:free 1:fixed
@@ -112,9 +114,7 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
         cmbfix = "null" if polar else cfix 
         cmb.fix_powspec(cmbfix)
         model.conjugate_gradient(stats, nmodes,maxiter=cg_maxiter, avextol=cg_eps)
-        if 0:#logger is not None:
-            np.set_printoptions(precision=5)
-            logger.info(str(cmb.mixmat()/acmb))
+
         # fit power spectra
         gal.fix_powspec("null")
         if mmG!=model.mismatch(stats, nmodes, exact=True):
@@ -140,15 +140,9 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_fix=False, noise_te
         if gain==0 and i>maxiter/2.0:
             break
         strtoprint = "iter= % 4i mismatch = %10.5f  gain= %7.5f " % (i, np.real(mm2), gain)
-        if logger is not None:
-            logger.info(strtoprint)
-        else:
-            print(strtoprint)
+        print(strtoprint)
         mm = mm2
         mmG = mm2G
-
-    cmb.fix_powspec(cfix)
-    gal.fix_powspec("null")
     return model, hist
 
 
@@ -159,5 +153,5 @@ def load_alms(component, id):
         cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=3)
         return cmb_tlm, cmb_elm, cmb_blm
     else:
-        print('unclear request of loading alms. Exiting..')
+        print('unclear request for loading alms. Exiting..')
         sys.exit()

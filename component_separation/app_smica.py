@@ -110,13 +110,12 @@ def run_fit(path_name, overw):
         cov_ltot_bnd,
         nmodes,
         maxiter=100,
-        noise_fix=True,
-        noise_template=cov_lN_bnd,
-        afix=None, qmin=0,
+        noise_template=None,#cov_lN_bnd,
+        afix=None,
         asyn=None,
-        logger=None,
         qmax=len(nmodes),
-        no_starting_point=False)
+        no_starting_point=False,
+        fixedmixing = True)
     EEgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
 
     #Fitting everything with fixed gal emis
@@ -129,13 +128,12 @@ def run_fit(path_name, overw):
         cov_ltot_bnd,
         nmodes,
         maxiter=100,
-        noise_fix=True,
-        noise_template=cov_lN_bnd,
-        afix=None, qmin=0,
+        noise_template=None,
+        afix=None,
         asyn=None,
-        logger=None,
         qmax=len(nmodes),
-        no_starting_point=False)
+        no_starting_point=False,
+        fixedmixing = True)
 
     EEsmica_cmb = smica_model.get_comp_by_name('cmb').powspec()[0]
     EEsmica_gal = np.array([smica_model.get_comp_by_name('gal').powspec()])
@@ -179,13 +177,12 @@ def run_fit(path_name, overw):
         cov_ltot_bnd,
         nmodes,
         maxiter=100,
-        noise_fix=True,
         noise_template=cov_lN_bnd,
-        afix=None, qmin=0,
+        afix=None,
         asyn=None,
-        logger=None,
         qmax=len(nmodes),
-        no_starting_point=False)
+        no_starting_point=False,
+        fixedmixing = True)
     BBgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
 
     #Fitting everything with fixed gal emis
@@ -198,13 +195,12 @@ def run_fit(path_name, overw):
         cov_ltot_bnd,
         nmodes,
         maxiter=100,
-        noise_fix=True,
         noise_template=cov_lN_bnd,
-        afix=None, qmin=0,
+        afix=None,
         asyn=None,
-        logger=None,
         qmax=len(nmodes),
-        no_starting_point=False)
+        no_starting_point=False,
+        fixedmixing = True)
 
     EEBBsmica_cmb = np.concatenate((EEsmica_cmb, smica_model.get_comp_by_name('cmb').powspec()[0]))
     EEBBsmica_gal = np.concatenate((EEsmica_gal, [smica_model.get_comp_by_name('gal').powspec()]))
@@ -315,10 +311,10 @@ def run_propag_complete():
             print('freq: ', det)
             ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-            combalmE += hp.almxfl(hp.almxfl(almE[det],1/beamf[1,it,it,:lmax]), np.squeeze(W_total[1,it,:]))
+            combalmE += hp.almxfl(hp.almxfl(almE[det],np.nan_to_num(1/beamf[1,it,it,:lmax])), np.squeeze(W_total[1,it,:]))
             combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmax])
 #             combalmE = hp.smoothalm(combalmE, fwhm = np.radians(5/60))
-            combalmB += hp.almxfl(hp.almxfl(almB[det],1/beamf[1,it,it,:lmax]), np.squeeze(W_total[2,it,:]))
+            combalmB += hp.almxfl(hp.almxfl(almB[det],np.nan_to_num(1/beamf[1,it,it,:lmax])), np.squeeze(W_total[2,it,:]))
             combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmax])
 #             combalmB = hp.smoothalm(combalmB, fwhm = np.radians(5/60))
 
@@ -331,9 +327,9 @@ def run_propag_complete():
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_fit = False
+    bool_fit = True
     bool_propag = False
-    bool_propag_complete = True
+    bool_propag_complete = False
 
     if bool_fit:
         run_fit(io.fh.weight_smica_path_name, csu.overwrite_cache)

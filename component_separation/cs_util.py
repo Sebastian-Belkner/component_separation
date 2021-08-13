@@ -231,8 +231,10 @@ class Helperfunctions:
         return np.nan_to_num(ret)
 
 
-    #TODO T currently not supported
-    @staticmethod
+    #TODO
+    # T currently not supported
+    # add smoothing for weights at high ell (especially important when crossing, e.g. npipe data with dx12 derived weights)
+    @staticmethod   
     def interp_smica_mv_weights(W_smica, W_mv, bins, lmaxp1):
         W_total = np.zeros(shape=(*W_mv.shape[:-1], lmaxp1))
         print(W_total.shape)

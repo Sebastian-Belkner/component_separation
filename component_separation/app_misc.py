@@ -34,8 +34,8 @@ def run_weight(path_name, overw):
     """
     C_ltot = io.load_powerspectra('full')
     cov = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
-    weights_tot = np.zeros(shape=(2,7,len(bins)))
-    weights_tot[1] = pw.cov2weight(cov, Tscale=csu.Tscale) #BB
+    weights_tot = np.zeros(shape=(2,7,csu.lmax))
+    weights_tot = pw.cov2weight(cov, Tscale=csu.Tscale)
     print(weights_tot.shape)
     io.save_data(weights_tot, path_name)
 
@@ -71,9 +71,9 @@ def run_tf(path_name, overwr):
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
-    bool_weight = False
-    bool_crosscov = True
-    bool_tf = True
+    bool_weight = True
+    bool_crosscov = False
+    bool_tf = False
 
     if bool_weight:
         run_weight(io.fh.weight_path_name, csu.overwrite_cache)
