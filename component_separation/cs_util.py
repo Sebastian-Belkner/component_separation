@@ -208,18 +208,18 @@ class Helperfunctions:
                 for k in range(bins.shape[0]):
                     ret[i,j,k] = np.nanmean(data[i,j,int(bins[k][0]):int(bins[k][1])+1])
         ret = np.nan_to_num(ret)
-        for i in range(ret.shape[0]):
-            for j in range(ret.shape[1]):
-                fill_left=False
-                for k in range(ret.shape[2]):
-                    if ret[i,j,k]<0:
-                        if k==0:
-                            fill_left = True
-                        elif k>0:
-                            ret[i,j,k] = ret[i,j,k-1]
-                    if ret[i,j,k]>0 and fill_left==True:
-                        fill_left = False
-                        ret[i,j,:k] = [ret[i,j,k] for _ in range(k)]   
+        # for i in range(ret.shape[0]):
+        #     for j in range(ret.shape[1]):
+        #         fill_left=False
+        #         for k in range(ret.shape[2]):
+        #             if ret[i,j,k]<0:
+        #                 if k==0:
+        #                     fill_left = True
+        #                 elif k>0:
+        #                     ret[i,j,k] = ret[i,j,k-1]
+        #             if ret[i,j,k]>0 and fill_left==True:
+        #                 fill_left = False
+        #                 ret[i,j,:k] = [ret[i,j,k] for _ in range(k)]   
         return ret
 
 

@@ -74,9 +74,9 @@ def run_alm2spec(path_name, overw):
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_map2spec = True
-    bool_alm2spec = False
-    bool_with_noise = True
+    bool_map2spec = False
+    bool_alm2spec = True
+    bool_with_noise = False
 
     if bool_map2spec:
         run_map2spec(bool_with_noise)

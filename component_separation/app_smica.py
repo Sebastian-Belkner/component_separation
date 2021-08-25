@@ -85,141 +85,129 @@ def run_fit(path_name, overw):
             C_lS_shaped[freqcom,specidx,:] = C_lS[0,specidx]
     cov_lS = pw.build_covmatrices(C_lS_shaped, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
 
+    if True:
+        ## EE fitting
+        ##
+        ##
+        ##
+        cov_ltotEE = cov_ltot[1]
+        print(cov_ltotEE.shape)
 
+        cov_lNEE = cov_lN[1]
+        print(cov_lNEE.shape)
 
-    ## EE fitting
-    ##
-    ##
-    ##
-    cov_ltotEE = cov_ltot[1]
-    print(cov_ltotEE.shape)
+        print(cov_lS.shape)
+        cov_lSEE = cov_lS[1]
+        print(cov_lSEE.shape)
+        #Fitting galactic emissivity only
+        binname = "SMICA_lowell_bins"
+        cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
+        nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
+        smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None)
+        smica_model, hist = cslib.fit_model_to_cov(
+            smica_model,
+            cov_ltot_bnd,
+            nmodes,
+            maxiter=50,
+            noise_template=None,#cov_lN_bnd,#
+            afix=None,
+            asyn=None)
+        EEgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
 
-    cov_lNEE = cov_lN[1]
-    print(cov_lNEE.shape)
+        #Fitting everything with fixed gal emis
+        binname = "SMICA_highell_bins"
+        cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
+        nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
+        smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), EEgal_mixmat)
+        smica_model, hist = cslib.fit_model_to_cov(
+            smica_model,
+            cov_ltot_bnd,
+            nmodes,
+            maxiter=50,
+            noise_template=None,#cov_lN_bnd,#
+            afix=None,
+            asyn=None)
 
-    print(cov_lS.shape)
-    cov_lSEE = cov_lS[1]
-    print(cov_lSEE.shape)
-    #Fitting galactic emissivity only
-    binname = "SMICA_lowell_bins"
-    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
-    nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None)
-    smica_model, hist = cslib.fit_model_to_cov(
-        smica_model,
-        cov_ltot_bnd,
-        nmodes,
-        maxiter=100,
-        noise_template=None,#cov_lN_bnd,
-        afix=None,
-        asyn=None,
-        qmax=len(nmodes),
-        no_starting_point=False,
-        fixedmixing = True)
-    EEgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
+        EEsmica_cmb = smica_model.get_comp_by_name('cmb').powspec()[0]
+        EEsmica_gal = np.array([smica_model.get_comp_by_name('gal').powspec()])
+        EEsmica_theta = smica_model.get_theta()
+        EEsmica_cov4D = np.array([smica_model.covariance4D()])
+        EEsmica_cov = smica_model.covariance()
+        EEsmica_hist = hist
+        io.save_data(EEsmica_cmb, io.fh.cmb_specsmica_sc_path_name)
+        io.save_data(EEsmica_gal, io.fh.gal_specsmica_sc_path_name)
+        io.save_data(EEsmica_theta, io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
+        io.save_data(EEsmica_cov4D, io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
+        io.save_data(EEsmica_cov, io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
+        io.save_data(EEsmica_hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
+        io.save_data(np.array([EEgal_mixmat]), io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
 
-    #Fitting everything with fixed gal emis
-    binname = "SMICA_highell_bins"
-    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
-    nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), EEgal_mixmat)
-    smica_model, hist = cslib.fit_model_to_cov(
-        smica_model,
-        cov_ltot_bnd,
-        nmodes,
-        maxiter=100,
-        noise_template=None,
-        afix=None,
-        asyn=None,
-        qmax=len(nmodes),
-        no_starting_point=False,
-        fixedmixing = True)
+        smica_weights_tot = np.zeros(shape=(2,7,len(bins)))
+        print(smica_weights_tot.shape)
+        smica_weights_tot[0] = pw.cov2weight(np.array([smica_model.covariance()])) #EE
+        # io.save_data(smica_weights_tot, path_name)
 
-    EEsmica_cmb = smica_model.get_comp_by_name('cmb').powspec()[0]
-    EEsmica_gal = np.array([smica_model.get_comp_by_name('gal').powspec()])
-    EEsmica_theta = smica_model.get_theta()
-    EEsmica_cov4D = np.array([smica_model.covariance4D()])
-    EEsmica_cov = smica_model.covariance()
-    EEsmica_hist = hist
-    io.save_data(EEsmica_cmb, io.fh.cmb_specsmica_sc_path_name)
-    io.save_data(EEsmica_gal, io.fh.gal_specsmica_sc_path_name)
-    io.save_data(EEsmica_theta, io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(EEsmica_cov4D, io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(EEsmica_cov, io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(EEsmica_hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(np.array([EEgal_mixmat]), io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
+    if True:
+        ## BB fitting
+        ##
+        ##
+        ##
+        cov_ltotBB = cov_ltot[2]
+        print(cov_ltotBB.shape)
 
-    smica_weights_tot = np.zeros(shape=(2,7,len(bins)))
-    print(smica_weights_tot.shape)
-    smica_weights_tot[0] = pw.cov2weight(np.array([smica_model.covariance()])) #EE
-    # io.save_data(smica_weights_tot, path_name)
+        cov_lNBB = cov_lN[2]
+        print(cov_lNBB.shape)
 
-    ## BB fitting
-    ##
-    ##
-    ##
-    cov_ltotBB = cov_ltot[2]
-    print(cov_ltotBB.shape)
+        cov_lSBB = cov_lS[2]
+        print(cov_lNBB.shape)
 
-    cov_lNBB = cov_lN[2]
-    print(cov_lNBB.shape)
+        binname = "SMICA_lowell_bins"
+        cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
+        nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
+        smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None, B_fit=True)
+        
+        smica_model, hist = cslib.fit_model_to_cov(
+            smica_model,
+            cov_ltot_bnd,
+            nmodes,
+            maxiter=30,
+            noise_template=None,#cov_lN_bnd,#
+            afix=None,
+            asyn=None)
+        BBgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
 
-    cov_lSBB = cov_lS[2]
-    print(cov_lNBB.shape)
+        #Fitting everything with fixed gal emis
+        binname = "SMICA_highell_bins"
+        cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
+        nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
+        smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), BBgal_mixmat, B_fit=True)
+        smica_model, hist = cslib.fit_model_to_cov(
+            smica_model,
+            cov_ltot_bnd,
+            nmodes,
+            maxiter=30,
+            noise_template=None,#cov_lN_bnd,#cov_lN_bnd,
+            afix=None,
+            asyn=None)
 
-    binname = "SMICA_lowell_bins"
-    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
-    nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None)
-    io.save_data(cov_ltot_bnd, '/global/cscratch1/sd/sebibel/stats.npy')
-    smica_model, hist = cslib.fit_model_to_cov(
-        smica_model,
-        cov_ltot_bnd,
-        nmodes,
-        maxiter=100,
-        noise_template=cov_lN_bnd,
-        afix=None,
-        asyn=None,
-        qmax=len(nmodes),
-        no_starting_point=False,
-        fixedmixing = True)
-    BBgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
+        EEBBsmica_cmb = np.concatenate((EEsmica_cmb, smica_model.get_comp_by_name('cmb').powspec()[0]))
+        EEBBsmica_gal = np.concatenate((EEsmica_gal, [smica_model.get_comp_by_name('gal').powspec()]))
+        EEBBsmica_theta = np.concatenate((EEsmica_theta, smica_model.get_theta()))
+        EEBBsmica_cov4D = np.concatenate((EEsmica_cov4D, [smica_model.covariance4D()]))
+        EEBBsmica_cov = np.concatenate((EEsmica_cov, smica_model.covariance()))
+        # EEBBsmica_hist = np.concatenate(([EEsmica_hist], [hist]))
+        EEBBgal_mixmat = np.concatenate(([EEgal_mixmat],[BBgal_mixmat]))
+        io.save_data(EEBBsmica_cmb, io.fh.cmb_specsmica_sc_path_name)
+        io.save_data(EEBBsmica_gal, io.fh.gal_specsmica_sc_path_name)
+        io.save_data(EEBBsmica_theta, io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
+        io.save_data(EEBBsmica_cov4D, io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
+        io.save_data(EEBBsmica_cov, io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
+        # io.save_data(EEBBsmica_hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
+        io.save_data(EEBBgal_mixmat, io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
 
-    #Fitting everything with fixed gal emis
-    binname = "SMICA_highell_bins"
-    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
-    nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-    smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), BBgal_mixmat)
-    smica_model, hist = cslib.fit_model_to_cov(
-        smica_model,
-        cov_ltot_bnd,
-        nmodes,
-        maxiter=100,
-        noise_template=cov_lN_bnd,
-        afix=None,
-        asyn=None,
-        qmax=len(nmodes),
-        no_starting_point=False,
-        fixedmixing = True)
-
-    EEBBsmica_cmb = np.concatenate((EEsmica_cmb, smica_model.get_comp_by_name('cmb').powspec()[0]))
-    EEBBsmica_gal = np.concatenate((EEsmica_gal, [smica_model.get_comp_by_name('gal').powspec()]))
-    EEBBsmica_theta = np.concatenate((EEsmica_theta, smica_model.get_theta()))
-    EEBBsmica_cov4D = np.concatenate((EEsmica_cov4D, [smica_model.covariance4D()]))
-    EEBBsmica_cov = np.concatenate((EEsmica_cov, smica_model.covariance()))
-    EEBBsmica_hist = np.concatenate(([EEsmica_hist], [hist]))
-    EEBBgal_mixmat = np.concatenate(([EEgal_mixmat],[BBgal_mixmat]))
-    io.save_data(EEBBsmica_cmb, io.fh.cmb_specsmica_sc_path_name)
-    io.save_data(EEBBsmica_gal, io.fh.gal_specsmica_sc_path_name)
-    io.save_data(EEBBsmica_theta, io.fh.out_specsmica_path+"theta_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(EEBBsmica_cov4D, io.fh.out_specsmica_path+"cov4D_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(EEBBsmica_cov, io.fh.out_specsmica_path+"cov_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(EEBBsmica_hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
-    io.save_data(EEBBgal_mixmat, io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
-
-    smica_weights_tot[1] = pw.cov2weight(np.array([smica_model.covariance()])) #BB
-    print(smica_weights_tot.shape)
-    io.save_data(smica_weights_tot, path_name)
+        smica_weights_tot[1] = pw.cov2weight(np.array([smica_model.covariance()])) #BB
+        print(smica_weights_tot.shape)
+        io.save_data(smica_weights_tot, path_name)
 
 
 def run_propag():
