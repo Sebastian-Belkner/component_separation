@@ -113,6 +113,25 @@ def create_mapsyn(spectrum: Dict[str, Dict], cf: Dict, freqcomb) -> List[Dict[st
     return np.array([])
 
 
+#TODO fix for any cov input. currently it assumes, that there are 3 LFIs.
+def cov2cov_smooth(cov, cutoff):
+    """
+    currently takes any LFI[0] X (LFI or HFI) crossspectra and applies a windowfunction, effectively setting it to zero.
+    This needs to be done as the freq 030 crosspowerspectra have unphysical behaviour for ell>900. This is also true for
+    other LFIs. BUT: if all are set to zero, we loose cmb-signal-power in EE, as there is still signal on that scale.
+
+    Thus we need to cherry pick which crossspectra can actually be set to zero without impacting the SMICA fit and MV weights..
+    """
+    for spec in range(cov.shape[0]):
+        for n in range(1):
+            for m in range(cov.shape[2]):
+                if n != m:
+                    cov[spec,n,m,cutoff:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
+                    cov[spec,m,n,cutoff:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
+
+    return cov
+
+
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
 def cov2weight(data: np.array, freqs=np.array([F.value for F in list(Planckf)[:-2]]), Tscale='K_CMB'):
@@ -196,7 +215,7 @@ def cov2weight(data: np.array, freqs=np.array([F.value for F in list(Planckf)[:-
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(data: np.array, Tscale, freqcomb, PLANCKMAPFREQ_f):
+def build_covmatrices(data: np.array, Tscale, freqcomb, PLANCKMAPFREQ_f, cutoff=None):
     """Calculates the covariance matrices from the data
 
     Args:
@@ -216,12 +235,14 @@ def build_covmatrices(data: np.array, Tscale, freqcomb, PLANCKMAPFREQ_f):
         return _i
     NFREQUENCIES = get_nfreq(data.shape[0])
     lmaxp1 = data.shape[-1]
+    if cutoff is None:
+        cutoff = lmaxp1
     def LFI_cutoff(fr):
         # KEEP. Cuts LFI channels for ell=700 as they cause numerical problems
         return {
-            30: 1000,
-            44: 1000,
-            70: 1000,
+            30: cutoff,
+            44: cutoff,
+            70: cutoff,
             100: lmaxp1,
             143: lmaxp1,
             217: lmaxp1,

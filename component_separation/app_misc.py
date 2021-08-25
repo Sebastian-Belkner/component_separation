@@ -19,6 +19,7 @@ import component_separation.io as csio
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.powspec as pw
 from component_separation.cs_util import Config
+import component_separation.transform_spec as trsf_s
 
 csu = Config()
 io = IO(csu)
@@ -33,7 +34,8 @@ def run_weight(path_name, overw):
     Needed for combining maps without SMICA.
     """
     C_ltot = io.load_powerspectra('full')
-    cov = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f, 1000)
+    cov = pw.cov2cov_smooth(cov, cutoff=800)
     weights_tot = np.zeros(shape=(2,7,csu.lmax))
     weights_tot = pw.cov2weight(cov, Tscale=csu.Tscale)
     print(weights_tot.shape)

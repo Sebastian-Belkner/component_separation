@@ -167,3 +167,6 @@ def load_alms(component, id):
 #  STDEV = sqrt(diag(CRB) / nq) results in nans (CRB negative)
 # model.conjugate_gradient()
 #   initial mismatch often nan for B-fit
+
+
+# For B-fit, if maxiter too high -> singular matrix after a while

@@ -72,9 +72,11 @@ def run_fit(path_name, overw):
     _Tscale = "K_CMB"#csu.Tscale
     C_ltot = io.load_powerspectra('full')
     cov_ltot = pw.build_covmatrices(C_ltot, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_ltot = pw.cov2cov_smooth(cov_ltot, cutoff=800)
 
     C_lN = io.load_powerspectra('noise')
     cov_lN = pw.build_covmatrices(C_lN, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_lN = pw.cov2cov_smooth(cov_lN, cutoff=800)
 
     C_lS = io.load_powerspectra('signal')
     print(C_lS.shape)
@@ -109,7 +111,7 @@ def run_fit(path_name, overw):
             cov_ltot_bnd,
             nmodes,
             maxiter=50,
-            noise_template=None,#cov_lN_bnd,#
+            noise_template=cov_lN_bnd,#None,#
             afix=None,
             asyn=None)
         EEgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
@@ -124,7 +126,7 @@ def run_fit(path_name, overw):
             cov_ltot_bnd,
             nmodes,
             maxiter=50,
-            noise_template=None,#cov_lN_bnd,#
+            noise_template=cov_lN_bnd,#None,#
             afix=None,
             asyn=None)
 
@@ -171,7 +173,7 @@ def run_fit(path_name, overw):
             cov_ltot_bnd,
             nmodes,
             maxiter=30,
-            noise_template=None,#cov_lN_bnd,#
+            noise_template=cov_lN_bnd,#None,#
             afix=None,
             asyn=None)
         BBgal_mixmat = smica_model.get_comp_by_name('gal').mixmat()
@@ -186,7 +188,7 @@ def run_fit(path_name, overw):
             cov_ltot_bnd,
             nmodes,
             maxiter=30,
-            noise_template=None,#cov_lN_bnd,#cov_lN_bnd,
+            noise_template=cov_lN_bnd,#None,
             afix=None,
             asyn=None)
 
