@@ -26,6 +26,7 @@ io = IO(csu)
 
 filename = io.fh.total_filename
 
+#TODO perhaps exclude LFIs for ell>1000, i.e. remove from covmatrix, instead of smoothing them..
 @csio.alert_cached
 def run_weight(path_name, overw):
     """
@@ -34,7 +35,7 @@ def run_weight(path_name, overw):
     Needed for combining maps without SMICA.
     """
     C_ltot = io.load_powerspectra('full')
-    cov = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f, 1000)
+    cov = pw.build_covmatrices(C_ltot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
     cov = pw.cov2cov_smooth(cov, cutoff=800)
     weights_tot = np.zeros(shape=(2,7,csu.lmax))
     weights_tot = pw.cov2weight(cov, Tscale=csu.Tscale)

@@ -172,7 +172,7 @@ def run_fit(path_name, overw):
             smica_model,
             cov_ltot_bnd,
             nmodes,
-            maxiter=30,
+            maxiter=50,
             noise_template=cov_lN_bnd,#None,#
             afix=None,
             asyn=None)
@@ -187,7 +187,7 @@ def run_fit(path_name, overw):
             smica_model,
             cov_ltot_bnd,
             nmodes,
-            maxiter=30,
+            maxiter=50,
             noise_template=cov_lN_bnd,#None,
             afix=None,
             asyn=None)
@@ -309,7 +309,7 @@ def run_propag_complete():
 #             combalmB = hp.smoothalm(combalmB, fwhm = np.radians(5/60))
 
     CMB["TQU"]['out'] = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
-    io.save_data(CMB["TQU"]['out'], io.fh.cmbmap_smica_path_name)
+    io.save_data(CMB["TQU"]['out'], io.fh.cmbmap_smica_path_name) #TODO rename to MVmap or similar
     smica_C_lmin_unsc = np.array(ps.map2cl_spin(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask['100'], lmax=lmax-1,
         lmax_mask=lmax*2))*1e12 #maps are different scale than processed powerspectra from this' package pipeline, thus *1e12
     io.save_data(smica_C_lmin_unsc, io.fh.clmin_smica_path_name)
@@ -319,7 +319,7 @@ if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
     bool_fit = True
     bool_propag = False
-    bool_propag_complete = False
+    bool_propag_complete = True
 
     if bool_fit:
         run_fit(io.fh.weight_smica_path_name, csu.overwrite_cache)

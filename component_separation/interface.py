@@ -38,7 +38,7 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     cmb.set_mixmat(acmb, fixed='all')
     cmbcq = C_lS_bnd[0,0,:]
     if B_fit:
-        cmb.set_powspec(cmbcq, fixed='null')#, fixed='all') # B modes fit
+        cmb.set_powspec(cmbcq, fixed='all')#, fixed='all') # B modes fit
     else:
         cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 

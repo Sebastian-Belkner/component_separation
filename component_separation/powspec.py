@@ -113,7 +113,7 @@ def create_mapsyn(spectrum: Dict[str, Dict], cf: Dict, freqcomb) -> List[Dict[st
     return np.array([])
 
 
-#TODO fix for any cov input. currently it assumes, that there are 3 LFIs.
+#TODO perhaps make smica fit with LFI and HFI up to ell = 1000.
 def cov2cov_smooth(cov, cutoff):
     """
     currently takes any LFI[0] X (LFI or HFI) crossspectra and applies a windowfunction, effectively setting it to zero.
@@ -128,6 +128,21 @@ def cov2cov_smooth(cov, cutoff):
                 if n != m:
                     cov[spec,n,m,cutoff:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
                     cov[spec,m,n,cutoff:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
+
+
+    for spec in range(cov.shape[0]):
+        n=1
+        for m in range(cov.shape[2]):
+            if m>n:
+                cov[spec,n,m,1500:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
+                cov[spec,m,n,1500:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
+
+    for spec in range(cov.shape[0]):
+        n=2
+        for m in range(cov.shape[2]):
+            if m>n:
+                cov[spec,n,m,1500:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
+                cov[spec,m,n,1500:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
 
     return cov
 

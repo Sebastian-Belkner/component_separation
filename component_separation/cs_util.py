@@ -208,6 +208,10 @@ class Helperfunctions:
                 for k in range(bins.shape[0]):
                     ret[i,j,k] = np.nanmean(data[i,j,int(bins[k][0]):int(bins[k][1])+1])
         ret = np.nan_to_num(ret)
+        """
+        The following is a 'negative-value' to nearest neighbor interpolation,
+        but it breaks the B-fit pipeline for SMICA.
+        """
         # for i in range(ret.shape[0]):
         #     for j in range(ret.shape[1]):
         #         fill_left=False
@@ -237,7 +241,6 @@ class Helperfunctions:
     @staticmethod   
     def interp_smica_mv_weights(W_smica, W_mv, bins, lmaxp1):
         W_total = np.zeros(shape=(*W_mv.shape[:-1], lmaxp1))
-        print(W_total.shape)
         xnew = np.arange(0,bins[-1][1]+1,1)
         for it in range(W_total.shape[1]): #weights do not depend on freqfilter, but almE/B do
             W_Einterp = interpolate.interp1d(np.mean(bins, axis=1), W_smica[0,it,:], bounds_error = False, fill_value='extrapolate')
