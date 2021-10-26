@@ -2,7 +2,6 @@
 """
 app_misc.py: script for various functions
 """
-#TODO why is NPIPE_sim CMB map uncorrelated with NPIPE MV map? Both contain signal
 
 __author__ = "S. Belkner"
 

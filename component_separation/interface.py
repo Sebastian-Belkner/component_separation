@@ -29,8 +29,8 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     ### Noise part
     nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
-    noise.set_ampl(np.ones((nmap,1)), fixed='null')
-    noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all") # where N is a (nmap, Q) array with noise spectra
+    noise.set_ampl(np.ones((nmap,1)), fixed='all') #For DX12 this may be fixed
+    noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all")
 
     ### CMB part
     cmb = smica.Source1D(nmap, Q, name='cmb')
@@ -38,13 +38,13 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     cmb.set_mixmat(acmb, fixed='all')
     cmbcq = C_lS_bnd[0,0,:]
     if B_fit:
-        cmb.set_powspec(cmbcq, fixed='all')#, fixed='all') # B modes fit
+        cmb.set_powspec(cmbcq, fixed='all')
     else:
         cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 
     ### Galactic foreground part
-    dim = 6
-    gal = smica.SourceND(nmap, Q, dim, name='gal') # dim=6
+    dim = 3 #6 is highest possible
+    gal = smica.SourceND(nmap, Q, dim, name='gal')
     if gal_mixmat is None:
         gal.fix_mixmat('null')
     else:
@@ -55,9 +55,11 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     return model
 
 
-def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_template=None, afix=None, asyn=None, no_starting_point=False):
+def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_template=None, afix=None, no_starting_point=False):
     """ Fit the model to empirical covariance.
     """
+    def is_mixmat_fixed(model):
+        return np.sum(model.get_comp_by_name("gal")._mixmat.get_mask())==0
     qmin=0
     cg_maxiter = 1
     cg_eps = 1e-20
@@ -71,66 +73,60 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_template=None, afix
 
     cmbcq = np.squeeze(model.get_comp_by_name("cmb").powspec())
     polar = True if acmb.shape[1]==2 else False
-
     print("starting point chosen.")
 
-    if True: # TODO; did i interpret this right?  if not is_mixmat_fixed(model)
-        if not no_starting_point:
-            model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=len(nmodes))
-            cmb.set_mixmat(acmb, fixed=afix)
+    if not is_mixmat_fixed(model) and not no_starting_point:
+        model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=len(nmodes))
+    print("ortho_subspace done.")
 
-    print('starting quasi newton')
     model.quasi_newton(stats, nmodes)
-    print('starting set_powspec')
-    cmb.set_powspec (cmbcq, fixed=cfix)
-    print('starting close_form')
+    print('quasi_newton done.')
+
+    # cmb.set_powspec(cmbcq, fixed=cfix)
+    # print('CMB powspec set 1/2')
+
     model.close_form(stats)
-    print('starting set_powspec 2')
-    cmb.set_powspec (cmbcq, fixed=cfix)
-    mm = model.mismatch(stats, nmodes, exact=True)
-    mmG = model.mismatch(stats, nmodes, exact=True)
-    print(mm, mmG)
+    print('close_form done.')
+
+    # cmb.set_powspec(cmbcq, fixed=cfix)
+    # print('CMB powspec set 2/2')
+
+    mm_i = model.mismatch(stats, nmodes, exact=True)
+    print('model.mismatch calculated: {}'.format(mm_i))
 
     # start CG/close form
+    cmbfix = "null" if polar else cfix 
     hist = np.array([[np.nan, np.nan] for n in range(maxiter)])
     for i in range(maxiter):
-        # fit mixing matrix
-        gal.fix_powspec("all")
-        cmbfix = "null" if polar else cfix 
+        gal.fix_powspec("null")
         cmb.fix_powspec(cmbfix)
-        # io.save_data(stats, '/global/cscratch1/sd/sebibel/stats.npy')
+
         model.conjugate_gradient(stats, nmodes,maxiter=cg_maxiter, avextol=cg_eps)
 
-        # fit power spectra
-        gal.fix_powspec("null")
-        if mmG!=model.mismatch(stats, nmodes, exact=True):
+        # gal.fix_powspec("null")
+        if mm_i!=model.mismatch(stats, nmodes, exact=True):
             cmbfix = cfix if polar else "all" 
             cmb.fix_powspec(cmbfix)
         if i==int(maxiter/2): # fit also noise at some point
             Nt = noise.powspec()
-            noise = smica.NoiseDiag(nmap, len(nmodes), name='noise')
-            model = smica.Model([cmb, gal, noise])
-            if noise_template is not None:
-                noise.set_powspec(Nt, fixed=noise_template)
-            else:
-                noise.set_powspec(Nt)
-            cmb.set_powspec(cmbcq)
+            # noise = smica.NoiseDiag(nmap, len(nmodes), name='noise')
+            # noise = smica.NoiseAmpl(nmap, len(nmodes), name='noise')
+            # noise.set_ampl(np.ones((nmap,1)), fixed='all') #For DX12 this may be fixed
+            # model = smica.Model([cmb, gal, noise])
+            noise.set_powspec(Nt, fixed=noise_template)
+            # cmb.set_powspec(cmbcq)
+
         model.close_form(stats)
 
         # compute new mismatch 
-        mm2 = model.mismatch(stats, nmodes, exact=True)
-        mm2G = model.mismatch(stats, nmodes)
-        gain = np.real(mmG-mm2G)
+        mm_f = model.mismatch(stats, nmodes, exact=True)
+        gain = mm_i-mm_f
         if gain==0 and i>maxiter/2.0:
             break
-        print("iter= % 4i mismatch = %10.5f  gain= %7.5f " % (i, np.real(mm2), gain))
-        mm = mm2
-        mmG = mm2G
-
-        hist[i,0] = np.real(mm2)
+        print("iter= %4i mismatch = %10.5f  gain= %7.5f " % (i, mm_f, gain))
+        hist[i,0] = mm_f
         hist[i,1] = gain
-    cmb.fix_powspec(cfix)
-    gal.fix_powspec("null")
+        mm_i = mm_f
 
     return model, hist
 
@@ -144,18 +140,6 @@ def load_alms(component, id):
     else:
         print('unclear request for loading alms. Exiting..')
         sys.exit()
-
-
-# build_model
-#   do we set B powspec to zero, even when we expect BB-lensing signal? cmb.set_powspec(cmbcq*0, fixed='all')
-#   why dont we use cmb.set_powspec(cmbcq, fixed='null') with cmbcq being the B-signal
-
-# fit_model_to_cov():
-    # what is async? When does one want to use the routine after the 'if async':
-    # what does is_mixmat_fixed(model) do?
-    # why noise fitting only for a single step? if i==maxiter/2 and not noise_fix: # fit also noise at some point
-    # what is a noise template and when to use it? how is that different to the Noise-component we already feed SMICA with? (without the template, neither E nor B fit works)
-
 
 # Only way to get B-fit to run is when
     # noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all")  fixed =all

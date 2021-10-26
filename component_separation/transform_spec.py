@@ -12,7 +12,7 @@ from component_separation.cs_util import Helperfunctions as hpf
 
 def process_all(data, freqcomb, beamf, nside, spectrum_scale, smoothing_window, max_polynom):
     """
-    Root function. Executes all tranformations
+    Root function. Executes all transformations
     """
     if smoothing_window > 0 or max_polynom > 0:
         data = apply_smoothing(data, smoothing_window=smoothing_window, max_polynom=max_polynom)

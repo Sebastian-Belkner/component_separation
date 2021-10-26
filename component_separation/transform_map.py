@@ -119,7 +119,7 @@ def replace_undefnan(data):
 def remove_brightsaturate(data):
     ret = np.zeros_like(data)
     for n in range(data.shape[0]):
-        ret[n,:] = np.where(np.abs(data[n,:])>np.mean(data[n,:])+20*np.std(data[n,:]), 0.0, data[n,:])
+        ret[n,:] = np.where(np.abs(data[n,:])>np.mean(data[n,:])+10*np.std(data[n,:]), 0.0, data[n,:])
     return ret
 
 

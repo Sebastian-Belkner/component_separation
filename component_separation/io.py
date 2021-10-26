@@ -3,9 +3,6 @@ io.py: Filehandling functions
 
 """
 
-
-# '/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%idx
-
 import functools
 import json
 import os
@@ -26,127 +23,6 @@ from component_separation.cs_util import Config
 from component_separation.cs_util import Planckf, Planckr, Plancks
 
 
-class Filehandling:
-    def __init__(self, cfmch, cfpa, nside_out, sim_id):
-
-        self.out_misc_path = cfmch['outdir_misc_ap']
-        iff_make_dir(self.out_misc_path)
-
-        self.map_cmb_sc_path_name = self.out_misc_path + "map_cmb_in_nside_{}_sim_id_{}.npy".format(
-            nside_out[1],
-            sim_id)
-        if "Spectrum_scale" in cfpa:
-            self.total_filename = self.make_filenamestring(cfpa, sim_id)
-            self.total_filename_raw = self.make_filenamestring(cfpa, sim_id, 'raw')
-
-            self.out_map_path = cfmch['outdir_map_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_map_path)
-            self.map_sc_filename = "MAP" + self.total_filename
-            self.map_sc_path_name = self.out_map_path + self.map_sc_filename
-
-            self.out_mapsyn_path = cfmch['outdir_map_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_mapsyn_path)
-            self.mapsyn_sc_filename = "MAPSYN" + self.total_filename
-            self.mapsyn_sc_path_name = self.out_mapsyn_path + self.mapsyn_sc_filename
-
-            self.out_specsyn_path = cfmch['outdir_spectrum_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_specsyn_path)
-            self.specsyn_sc_filename = "SPECSYN" + self.total_filename
-            self.specsyn_sc_path_name = self.out_specsyn_path + self.specsyn_sc_filename
-
-            self.out_spec_path = cfmch['outdir_spectrum_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_spec_path)
-
-            self.spec_unsc_filename = "SPEC-RAW_" + self.total_filename_raw
-            self.spec_unsc_path_name = self.out_spec_path + self.spec_unsc_filename
-
-            self.cmb_unsc_filename = "CMB-RAW_" + self.total_filename_raw
-            self.cmb_unsc_path_name = self.out_spec_path + self.cmb_unsc_filename
-
-            self.spec_sc_filename = "SPEC" + self.total_filename
-            self.spec_sc_path_name = self.out_spec_path + self.spec_sc_filename
-
-            self.out_specsmica_path = cfmch['outdir_smica_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_specsmica_path)
-            self.specsmica_sc_filename = "SPECSMICA" + "_" + cfpa['binname'] + self.total_filename
-            self.specsmica_sc_path_name = self.out_specsmica_path + self.specsmica_sc_filename
-            self.weight_smica_path_name = cfmch['outdir_smica_ap'] + "SMICAWEIG_" + cfpa["Tscale"] + "_" + cfpa['binname'] + self.total_filename
-
-            self.cmbmap_smica_path_name = cfmch['outdir_smica_ap'] + "smicaminvarmap_{}".format(cfpa['binname']) + "_" + self.total_filename
-            self.clmin_smica_path_name = cfmch['outdir_smica_ap'] + "smicaclmin_{}".format(cfpa['binname']) + "_" + self.total_filename
-            self.cmb_specsmica_sc_path_name = self.out_specsmica_path + "CMB_" + self.specsmica_sc_filename
-            self.gal_specsmica_sc_path_name = self.out_specsmica_path + "GAL_" + self.specsmica_sc_filename
-
-            self.weight_path = cfmch['outdir_weight_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.weight_path)
-            self.weight_path_name = self.weight_path + "WEIG_" + cfpa["Tscale"] + "_" + self.total_filename
-
-            self.signal_sc_filename = "C_lS_in_sim_id_{}.npy".format(sim_id)
-            self.signal_sc_path_name = self.out_misc_path + self.signal_sc_filename
-            #TODO the following part needs reviewin
-
-            cfmch_copy = copy.deepcopy(cfmch)
-            cfpa_copy = copy.deepcopy(cfpa)
-
-            ### the following lines are only needed for run_smica part of the code
-            buff = cfpa['freqdset']
-            if "diff" in buff or 'cmb' in buff:
-                pass
-            else:
-                cfpa_copy['freqdset'] = buff+'_diff'
-            self.noise_filename = self.make_filenamestring(cfpa_copy, sim_id)
-            self.noise_filename_raw = self.make_filenamestring(cfpa_copy, sim_id, 'raw')
-            self.noise_path = cfmch_copy['outdir_spectrum_ap'] + cfpa_copy["freqdset"] + "/"
-
-            iff_make_dir(self.noise_path)
-            self.noise_unsc_path_name = self.noise_path + 'SPEC-RAW_' + self.noise_filename_raw
-            self.noise_sc_path_name = self.noise_path + "SPEC" + self.noise_filename
-
-            cfpa_copy['freqdset'] = buff
-    
-
-        
-    def make_filenamestring(self, cfpa_local, sim_id, desc='scaled'):
-        """Helper function for generating unique filenames given te current configuration
-
-        Args:
-            cf (Dict): Configuration file - in general conf.json from root directory
-
-        Returns:
-            str: unique filename which may be used for spectra, weights, maps, etc..
-        """
-
-        spectrum_scale = cfpa_local["Spectrum_scale"]
-        mskset = cfpa_local['mskset'] # smica or lens
-        freqdset = cfpa_local['freqdset'] # DX12 or NERSC
-        lmax = cfpa_local["lmax"]
-        lmax_mask = cfpa_local["lmax_mask"]
-
-        smoothing_window = cfpa_local["smoothing_window"]
-        max_polynom = cfpa_local["max_polynom"]
-
-        if desc == 'raw':
-            return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(
-                sim_id = sim_id,
-                spectrum_scale = spectrum_scale,
-                freqdset = freqdset,
-                mskset = mskset,
-                lmax = lmax,
-                lmax_mask = lmax_mask,
-                split = "Full" if cfpa_local["freqdatsplit"] == "" else cfpa_local["freqdatsplit"])
-        else:
-            return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{split}.npy'.format(
-                sim_id = sim_id,
-                spectrum_scale = spectrum_scale,
-                freqdset = freqdset,
-                mskset = mskset,
-                lmax = lmax,
-                lmax_mask = lmax_mask,
-                split = "Full" if cfpa_local["freqdatsplit"] == "" else cfpa_local["freqdatsplit"],
-                smoothing_window = smoothing_window,
-                max_polynom = max_polynom)
-
-
 class IO:
     def __init__(self, csu):
         ##TODO improve path management
@@ -155,20 +31,37 @@ class IO:
 
 
     def load_powerspectra(self, dset, processed = True):
-        if processed:
-            if dset == 'noise':
-                path_name = self.fh.noise_sc_path_name
-            elif dset == 'full':
-                path_name = self.fh.spec_sc_path_name
-            elif dset == 'signal':
-                path_name = self.fh.signal_sc_path_name
-        else:
-            if dset == 'noise':
-                path_name = self.fh.noise_unsc_path_name
-            elif dset == 'full':
-                path_name = self.fh.spec_unsc_path_name
-            elif dset == 'signal':
-                path_name = self.fh.signal_unsc_path_name
+        if self.csu.spectrum_type == 'Chonetal':
+            if processed:
+                if dset == 'noise':
+                    path_name = self.fh.noise_sc_path_name
+                elif dset == 'full':
+                    path_name = self.fh.spec_sc_path_name
+                elif dset == 'signal':
+                    path_name = self.fh.signal_sc_path_name
+            else:
+                if dset == 'noise':
+                    path_name = self.fh.noise_unsc_path_name
+                elif dset == 'full':
+                    path_name = self.fh.spec_unsc_path_name
+                elif dset == 'signal':
+                    path_name = self.fh.signal_unsc_path_name
+        elif self.csu.spectrum_type == 'pseudo':
+            if processed:
+                if dset == 'noise':
+                    path_name = self.fh.psnoise_sc_path_name
+                elif dset == 'full':
+                    path_name = self.fh.psspec_sc_path_name
+                elif dset == 'signal':
+                    path_name = self.fh.signal_sc_path_name
+            else:
+                if dset == 'noise':
+                    path_name = self.fh.psnoise_unsc_path_name
+                elif dset == 'full':
+                    path_name = self.fh.psspec_unsc_path_name
+                elif dset == 'signal':
+                    path_name = self.fh.signal_unsc_path_name
+
         C_l = self.load_data(path_name=path_name)
         if C_l is None:
             print("couldn't find spectrum with given specifications at {}.".format(path_name))
@@ -190,7 +83,6 @@ class IO:
             }
 
 
-    
     def load_data(self, path_name: str) -> Dict[str, Dict]:
         if os.path.isfile(path_name):
             data = np.load(path_name, allow_pickle=True)
@@ -501,7 +393,17 @@ class IO:
         if os.path.exists(path_name):
             os.remove(path_name)
         np.save(path_name, data)
-        print('Data saved to {}'.format(path_name))
+        print('io.py: Data saved to {}'.format(path_name))
+
+    #TODO implement
+    def save_fits(data):
+        hdu = fits.PrimaryHDU(data)
+        hdul = fits.HDUList([hdu])
+        hdul.writeto('/global/cscratch1/sd/sebibel/smica/smicaminvarmap_SMICA_highell_bins_0200_C_l_NPIPE_lens_4000_6000_0_0_Full.fits')
+
+        from astropy.table import Table
+        t = Table(data.T, names=('I', 'Q', 'U'))
+        t.write('/global/cscratch1/sd/sebibel/smica/smicaminvarmap_SMICA_highell_bins_0200_C_l_NPIPE_lens_4000_6000_0_0_Full.fits', format='fits')
 
 
     @log_on_start(INFO, "Saving to {path_name}")
@@ -520,7 +422,136 @@ class IO:
         hp.write_map(path_name, data, overwrite=True)
         print("saved map to {}".format(path_name))
     
+
+class Filehandling:
+    def __init__(self, cfmch, cfpa, nside_out, sim_id):
+
+        self.out_misc_path = cfmch['outdir_misc_ap']
+        iff_make_dir(self.out_misc_path)
+
+        self.map_cmb_sc_path_name = self.out_misc_path + "map_cmb_in_nside_{}_sim_id_{}.npy".format(
+            nside_out[1],
+            sim_id)
+        if "Spectrum_scale" in cfpa:
+            self.total_filename = self.make_filenamestring(cfpa, sim_id)
+            self.total_filename_raw = self.make_filenamestring(cfpa, sim_id, 'raw')
+
+            self.out_map_path = cfmch['outdir_map_ap'] + cfpa["freqdset"] + "/"
+            iff_make_dir(self.out_map_path)
+            self.map_sc_filename = "MAP" + self.total_filename
+            self.map_sc_path_name = self.out_map_path + self.map_sc_filename
+
+            self.out_mapsyn_path = cfmch['outdir_map_ap'] + cfpa["freqdset"] + "/"
+            iff_make_dir(self.out_mapsyn_path)
+            self.mapsyn_sc_filename = "MAPSYN" + self.total_filename
+            self.mapsyn_sc_path_name = self.out_mapsyn_path + self.mapsyn_sc_filename
+
+            self.out_specsyn_path = cfmch['outdir_spectrum_ap'] + cfpa["freqdset"] + "/"
+            iff_make_dir(self.out_specsyn_path)
+            self.specsyn_sc_filename = "SPECSYN" + self.total_filename
+            self.specsyn_sc_path_name = self.out_specsyn_path + self.specsyn_sc_filename
+
+            self.out_spec_path = cfmch['outdir_spectrum_ap'] + cfpa["freqdset"] + "/"
+            iff_make_dir(self.out_spec_path)
+
+            self.spec_unsc_filename = "SPEC-RAW_" + self.total_filename_raw
+            self.spec_unsc_path_name = self.out_spec_path + self.spec_unsc_filename
+
+            self.psspec_unsc_filename = "PSSPEC-RAW_" + self.total_filename_raw
+            self.psspec_unsc_path_name = self.out_spec_path + self.psspec_unsc_filename
+
+            self.cmb_unsc_filename = "CMB-RAW_" + self.total_filename_raw
+            self.cmb_unsc_path_name = self.out_spec_path + self.cmb_unsc_filename
+
+            self.spec_sc_filename = "SPEC" + self.total_filename
+            self.spec_sc_path_name = self.out_spec_path + self.spec_sc_filename
+
+            self.psspec_sc_filename = "PSSPEC" + self.total_filename
+            self.psspec_sc_path_name = self.out_spec_path + self.psspec_sc_filename
+
+            self.out_specsmica_path = cfmch['outdir_smica_ap'] + cfpa["freqdset"] + "/"
+            iff_make_dir(self.out_specsmica_path)
+            self.specsmica_sc_filename = "SPECSMICA" + "_" + cfpa['binname'] + self.total_filename
+            self.specsmica_sc_path_name = self.out_specsmica_path + self.specsmica_sc_filename
+            self.weight_smica_path_name = cfmch['outdir_smica_ap'] + "SMICAWEIG_" + cfpa["Tscale"] + "_" + cfpa['binname'] + self.total_filename
+
+            self.cmbmap_smica_path_name = cfmch['outdir_smica_ap'] + "smicaminvarmap_{}".format(cfpa['binname']) + "_" + self.total_filename
+            self.clmin_smica_path_name = cfmch['outdir_smica_ap'] + "smicaclmin_{}".format(cfpa['binname']) + "_" + self.total_filename
+            self.cmb_specsmica_sc_path_name = self.out_specsmica_path + "CMB_" + self.specsmica_sc_filename
+            self.gal_specsmica_sc_path_name = self.out_specsmica_path + "GAL_" + self.specsmica_sc_filename
+
+            self.weight_path = cfmch['outdir_weight_ap'] + cfpa["freqdset"] + "/"
+            iff_make_dir(self.weight_path)
+            self.weight_path_name = self.weight_path + "WEIG_" + cfpa["Tscale"] + "_" + self.total_filename
+
+            self.signal_sc_filename = "C_lS_in_sim_id_{}.npy".format(sim_id)
+            self.signal_sc_path_name = self.out_misc_path + self.signal_sc_filename
+            #TODO the following part needs reviewin
+
+            cfmch_copy = copy.deepcopy(cfmch)
+            cfpa_copy = copy.deepcopy(cfpa)
+
+            ### the following lines are only needed for run_smica part of the code
+            buff = cfpa['freqdset']
+            if "diff" in buff or 'cmb' in buff:
+                pass
+            else:
+                cfpa_copy['freqdset'] = buff+'_diff'
+            self.noise_filename = self.make_filenamestring(cfpa_copy, sim_id)
+            self.noise_filename_raw = self.make_filenamestring(cfpa_copy, sim_id, 'raw')
+            self.noise_path = cfmch_copy['outdir_spectrum_ap'] + cfpa_copy["freqdset"] + "/"
+
+            iff_make_dir(self.noise_path)
+            self.noise_unsc_path_name = self.noise_path + 'SPEC-RAW_' + self.noise_filename_raw
+            self.noise_sc_path_name = self.noise_path + "SPEC" + self.noise_filename
+
+            self.psnoise_unsc_path_name = self.noise_path + 'PSSPEC-RAW_' + self.noise_filename_raw
+            self.psnoise_sc_path_name = self.noise_path + "PSSPEC" + self.noise_filename
+
+            cfpa_copy['freqdset'] = buff
     
+
+    def make_filenamestring(self, cfpa_local, sim_id, desc='scaled'):
+        """Helper function for generating unique filenames given te current configuration
+
+        Args:
+            cf (Dict): Configuration file - in general conf.json from root directory
+
+        Returns:
+            str: unique filename which may be used for spectra, weights, maps, etc..
+        """
+
+        spectrum_scale = cfpa_local["Spectrum_scale"]
+        mskset = cfpa_local['mskset'] # smica or lens
+        freqdset = cfpa_local['freqdset'] # DX12 or NERSC
+        lmax = cfpa_local["lmax"]
+        lmax_mask = cfpa_local["lmax_mask"]
+
+        smoothing_window = cfpa_local["smoothing_window"]
+        max_polynom = cfpa_local["max_polynom"]
+
+        if desc == 'raw':
+            return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(
+                sim_id = sim_id,
+                spectrum_scale = spectrum_scale,
+                freqdset = freqdset,
+                mskset = mskset,
+                lmax = lmax,
+                lmax_mask = lmax_mask,
+                split = "Full" if cfpa_local["freqdatsplit"] == "" else cfpa_local["freqdatsplit"])
+        else:
+            return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{split}.npy'.format(
+                sim_id = sim_id,
+                spectrum_scale = spectrum_scale,
+                freqdset = freqdset,
+                mskset = mskset,
+                lmax = lmax,
+                lmax_mask = lmax_mask,
+                split = "Full" if cfpa_local["freqdatsplit"] == "" else cfpa_local["freqdatsplit"],
+                smoothing_window = smoothing_window,
+                max_polynom = max_polynom)
+
+
 def iff_make_dir(outpath_name):
     if os.path.exists(outpath_name):
         pass

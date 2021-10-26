@@ -21,19 +21,21 @@ import component_separation.transform_spec as trsf_s
 from component_separation.cs_util import Config
 from component_separation.cs_util import Helperfunctions as hpf
 from component_separation.io import IO
+import component_separation.generator_powerspec as gen_pow
+from component_separation.cs_util import Filename_gen as fn_gen
 
 csu = Config()
 io = IO(csu)
 
 #TODO this structure doesnt serve the need anymore. simplify
-def run_map2spec(bool_with_noise):
+def run_map2cls(bool_with_noise):
     @csio.alert_cached
     def r_m2s(path_unsc, overw, cs):        
         cf_loc = cs.cf
         maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=cs.nside_out)
         maps = trsf_m.process_all(maps)
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
-        C_l_unsc = pw.tqupowerspec(maps, tmask, pmask, cf_loc['pa']["lmax"], cf_loc['pa']["lmax_mask"], cs.nside_out, cs.freqcomb)
+        C_l_unsc = pw.map2cls(maps, tmask, pmask, cf_loc['pa']["lmax"], cf_loc['pa']["lmax_mask"], cs.nside_out, cs.freqcomb)
         io.save_data(C_l_unsc, path_unsc)
         return C_l_unsc
 
@@ -60,27 +62,112 @@ def run_map2spec(bool_with_noise):
         r_s2sc(path_sc, csu.overwrite_cache, cs, C_l_unsc)
 
 
+#TODO this structure doesnt serve the need anymore. simplify
+def run_map2pcls(bool_with_noise):
+    @csio.alert_cached
+    def r_m2ps(path_unsc, overw, cs):        
+        cf_loc = cs.cf
+        maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=cs.nside_out)
+        maps = trsf_m.process_all(maps)
+        tmask, pmask, pmask = io.load_one_mask_forallfreq()
+        C_l_unsc = gen_pow.map2pcls(maps, tmask, pmask, cs.nside_out, cs.freqcomb)
+        io.save_data(C_l_unsc, path_unsc)
+        return C_l_unsc
+
+    @csio.alert_cached
+    def r_ps2psc(path_sc, overw, cs, C_l_unsc):
+        beamf = io.load_beamf(cs.freqcomb)
+        C_l = trsf_s.process_all(C_l_unsc, cs.freqcomb, beamf, cs.nside_out, cs.cf['pa']["Spectrum_scale"], cs.cf['pa']['smoothing_window'], cs.cf['pa']['max_polynom'])
+        io.save_data(C_l, path_sc)
+        print('Saved to {}'.format(path_sc))
+
+    if bool_with_noise:
+        cf_n = copy.deepcopy(csu.cf)
+        cf_n['pa']['freqdset'] = csu.cf['pa']['freqdset']+"_diff"
+        csu_n = Config(cf_n)
+        cslist = [csu, csu_n]
+        path_name_list = [
+            (io.fh.psspec_unsc_path_name, io.fh.psspec_sc_path_name),
+            (io.fh.psnoise_unsc_path_name, io.fh.psnoise_sc_path_name)
+        ]
+    else:
+        cslist = [csu]
+        path_name_list = [(io.fh.psspec_unsc_path_name, io.fh.psspec_sc_path_name)]
+    
+    for cs, (path_unsc, path_sc) in zip(cslist, path_name_list):
+        C_l_unsc = r_m2ps(path_unsc, csu.overwrite_cache, cs)
+        r_ps2psc(path_sc, csu.overwrite_cache, cs, C_l_unsc)
+
+        
+def run_map2cls_new(info_component, info_combination, powerspectrum_type):
+    """
+    Map can either consist of,
+    noise, foreground, signal, non-separated == info_component
+    Map can either be,
+    combined, perfreq == info_combination
+    """
+
+    if info_component == 'signal':
+        assert 0, "To be implemented"
+    elif info_component == 'noise':
+        cf_n = copy.deepcopy(csu.cf)
+        cf_n['pa']['freqdset'] = csu.cf['pa']['freqdset']+"_diff"
+        csu_n = Config(cf_n)
+        cf_loc = csu_n.cf
+    elif info_component == 'foreground':
+        assert 0, "To be implemented"
+    elif info_component == 'non-separated':
+        cf_loc = csu.cf
+
+    if info_combination == 'combined':
+        assert 0, "To be implemented"
+    elif info_combination == 'perfreq':
+        cf_loc = csu.cf
+        
+    outpath_pow_usc_name = fn_gen.get_name('powerspectrum', info_component, info_combination, powerspectrum_type, 'unscaled')
+    outpath_pow_sc_name = fn_gen.get_name('powerspectrum', info_component, info_combination, powerspectrum_type, 'scaled')
+        
+    maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=csu.nside_out)
+    tmask, pmask, pmask = io.load_one_mask_forallfreq()
+    
+    maps = trsf_m.process_all(maps)
+    Cl_usc = gen_pow.map2cls(maps, 'pseudo', tmask, pmask)
+    io.save_data(Cl_usc, outpath_pow_usc_name)
+    
+    beamf = io.load_beamf(csu.freqcomb)
+    Cl_sc = trsf_s.process_all(Cl_usc, csu.freqcomb, beamf, csu.nside_out, csu.cf['pa']["Spectrum_scale"], csu.cf['pa']['smoothing_window'], cs.cf['pa']['max_polynom'])
+    io.save_data(Cl_sc, outpath_pow_sc_name)
+        
+
 @csio.alert_cached
-def run_alm2spec(path_name, overw):
-    #TODO to process spectrum, need to know the beamfunction? is it 5arcmin?
-    # beamf = {'12345-12345': hp.gauss_beam()}
-    # C_lS_unsc = trsf_s.apply_beamf(C_lS_unsc, cf, ['12345-12345'], speccomb, beamf)
-    # io.alert_cached(io.signal_sc_path_name)
+def run_alm2cls(path_name, overw):
     cmb_tlm, cmb_elm, cmb_blm = cslib.load_alms('cmb', csu.sim_id)
-    C_lS_unsc = np.array([hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:csu.cf['pa']['lmax']+1]])
-    C_lS = trsf_s.apply_scale(C_lS_unsc, csu.cf['pa']["Spectrum_scale"])
-    io.save_data(C_lS, path_name)
+    ClS_usc = np.array([hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:csu.cf['pa']['lmax']+1]])
+    ClS = trsf_s.apply_scale(ClS_usc, csu.cf['pa']["Spectrum_scale"])
+    io.save_data(ClS, path_name)
 
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_map2spec = True
+    bool_map2spec = False
+    bool_map2psspec = True
     bool_alm2spec = False
-    bool_with_noise = False
+    bool_with_noise = True
+
+    bool_map2psspec_new = False
+
+   
 
     if bool_map2spec:
-        run_map2spec(bool_with_noise)
+        run_map2cls(bool_with_noise)
+
+    if bool_map2psspec:
+        run_map2pcls(bool_with_noise)
+    
+    if bool_map2psspec_new:
+        run_map2cls_new('freq')
+        if bool_with_noise:
+            run_map2cls_new('noise')
 
     if bool_alm2spec:
-        run_alm2spec(io.fh.signal_sc_path_name, csu.overwrite_cache)
-
+        run_alm2cls(csu.overwrite_cache)

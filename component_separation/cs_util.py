@@ -1,5 +1,3 @@
-#provides some constants and file formatters
-
 from enum import Enum
 import json
 import itertools
@@ -7,10 +5,13 @@ import numpy as np
 import logging
 import logging.handlers
 import platform
+import os.path as path
 import os
 import component_separation
 import functools
+import warnings
 from scipy import interpolate
+import component_separation.io as io
 
 class Config():
     # LOGFILE = 'data/tmp/logging/messages.log'
@@ -49,12 +50,16 @@ class Config():
 
         self.CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
                              "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
+        self.CB_color_cycle_lighter = ["#68ACCE", "#AC4657", "#ADAC57", "#005713", "#130268", "#8A2479", 
+                        "#248A79", "#797913", "#680235", "#460000", "#4679AC", "#686868"]
         self.freqdset = self.cf['pa']["freqdset"]
         self.freqfilter = self.cf['pa']["freqfilter"]
+        self.spectrum_type = self.cf['pa']['spectrum_type']
         if 'lmax' in self.cf['pa'].keys():
             self.lmax = self.cf['pa']["lmax"]
         self.overwrite_cache = self.cf['pa']['overwrite_cache']
-        
+        self.mskset = self.cf['pa']['mskset']
+        self.simdata = self.cf['pa']['simdata']      
         
 
         uname = platform.uname()
@@ -79,6 +84,225 @@ class Config():
         logger.setLevel(loglevel)
         logging.StreamHandler(sys.stdout)
 
+
+class Filename_gen:
+    """Generator to consistenly create filenames,
+        1. from configuration file
+        2. upon runtime
+    One may want to differentiate between,
+        simulation, realdata (NPIPE / DX12)
+        powerspec, map, alms,
+        powspectype (pseudo, chonetal)
+        ...
+
+    Create filename hierarchically,
+        1. choose useful hierarical directory structure
+        2. for each config file setting, generate unique level0 name
+        3. for all files generated upon runtime, generate unique level1 name
+
+    The goal is to,
+     1. set up directories
+     2. generate hierarch. filename
+     2. pass info to cachechecker
+    """
+    def __init__(self, csu_loc):
+        self.csu_loc = csu_loc
+
+
+    def _get_miscdir(self, sim_id=None):
+        assert type(sim_id) == int or sim_id is None
+
+        ap = path.join(self.cf_loc[self.csu_loc.mch]['outdir_ap'], 'compsep')
+        io.iff_make_dir(ap)
+
+        ap = path.join(ap, self.csu_loc.freqdset)  
+        io.iff_make_dir(ap)
+
+        ap = path.join(ap, self.csu_loc.mskset+'mask')  
+        io.iff_make_dir(ap)
+
+        if self.csu_loc.simdata:
+            ap = path.join(ap, 'sim{}'.format(str(sim_id)))
+            io.iff_make_dir(ap)
+
+        return ap
+
+
+    def _get_dir(self, info_component, sim_id=None):
+        assert info_component in ["noise", "foreground", "signal", "non-sep"]
+        assert type(sim_id) == int or sim_id is None
+
+        """dir structure:
+            compsep/
+                --syn/
+                    sim_id/dataset/mask/
+                        --map/
+                        --spec/
+                        --smicaseparated/
+                            --map/
+                                syn_synid_dset_msk_smica_map__ + filename
+                            --spec/
+                                syn_synid_dset_msk_smica_spec__ + filename
+                --dataset/mask/
+                        --map/
+                            dset_msk_map__ + filename
+                        --spec/
+                    --smicaseparated/
+                        --map/
+                        --spec/
+        """
+        ap = path.join(self.cf_loc[self.csu_loc.mch]['outdir_ap'], 'compsep')
+        io.iff_make_dir(ap)
+
+        ap = path.join(ap, self.csu_loc.freqdset)  
+        io.iff_make_dir(ap)
+
+        ap = path.join(ap, self.csu_loc.mskset+'mask')  
+        io.iff_make_dir(ap)
+
+        if self.csu_loc.simdata:
+            ap = path.join(ap, 'sim{}'.format(str(sim_id)))
+            io.iff_make_dir(ap)
+
+        if info_component != 'non-sep':
+            ap = path.join(ap, 'smicasep-{}'.format(info_component))
+            io.iff_make_dir(ap)
+
+        ap_map = path.join(ap, 'map')
+        io.iff_make_dir(ap_map)
+        ap_spec = path.join(ap, 'spec')
+        io.iff_make_dir(ap_spec)
+
+        ap_misc = path.join(ap, 'misc')
+        io.iff_make_dir(ap_misc)
+        return ap_map, ap_spec, ap_misc
+
+
+    def _get_specfilename(self, info_component, info_combination, represent, sim_id=None, prefix=None):
+        assert info_component in ["noise", "foreground", "signal", "non-sep"]
+        assert info_combination in ["combined", "perfreq"]
+        assert represent in ["Cl", "Dl"]
+        assert type(sim_id) == int or sim_id is None
+        """
+        Filename: 
+            <lmax>
+                <lmaxmask_chonetal>
+                pseudo
+            <smicacom>_<binname>_<lmax>
+                    <lmaxmask_chonetal>
+                    pseudo
+        """
+        if prefix is None:
+            retval = ''
+            retval = ''.join([retval, represent])
+        else:
+            retval = prefix.replace('/', '_')
+            retval = '_'.join([retval, represent])
+        
+        if info_component != 'non-sep':
+            retval = '_'.join([retval, self.csu_loc.binname])
+
+        retval = '_'.join([retval, info_combination])
+
+        retval = '_'.join([retval, str(self.csu_loc.nside_out[1])])
+
+        retval = '_'.join([retval, str(self.csu_loc.lmax)])
+
+        if self.csu_loc.spectrum_type == 'Chonetal':
+            retval='_'.join([retval, str(self.csu_loc.lmax_mask)])
+            retval='_'.join([retval, "Chonetal"])
+        elif self.csu_loc.spectrum_type == "pseudo":
+            retval='_'.join([retval, "pseudo"])
+
+        if self.csu_loc.simdata and sim_id is not None:
+            retval = '_'.join([retval, str(sim_id)])
+
+        return '.'.join([retval, "npy"])
+
+
+    def _get_mapfilename(self, info_component, info_combination, represent, sim_id=None, prefix=None):
+        assert info_component in ["noise", "foreground", "signal", "non-sep"]
+        assert info_combination in ["combined", "perfreq"]
+        assert represent in ["Cl", "Dl"]
+        assert type(sim_id) == int or sim_id is None
+        """
+        Filename: 
+            <lmax>
+            <smicacom>_<binname>_<lmax>
+                    <lmaxmask_chonetal>
+        """
+        assert 0, 'To be implemented'
+        if prefix is None:
+            retval = ''
+            retval = ''.join([retval, represent])
+        else:
+            retval = prefix.replace('/', '_')
+            retval = '_'.join([retval, represent])
+        
+        if info_component != 'non-sep':
+            retval = '_'.join([retval, self.csu_loc.binname])
+
+        retval = '_'.join([retval, info_combination])
+
+        retval = '_'.join([retval, str(self.csu_loc.nside_out[1])])
+
+        if self.csu_loc.spectrum_type == 'Chonetal':
+            retval='_'.join([retval, str(self.csu_loc.lmax_mask)])
+            retval='_'.join([retval, "Chonetal"])
+        elif self.csu_loc.spectrum_type == "pseudo":
+            retval='_'.join([retval, "pseudo"])
+
+        if self.csu.simdata and sim_id is not None:
+            retval = '_'.join([retval, str(sim_id)])
+
+        return '.'.join([retval, "npy"])
+
+
+    def get_spectrum(self, info_component, info_combination, represent, sim_id=None, prefix=None):
+        assert info_component in ["noise", "foreground", "signal", "non-sep"]
+        assert info_combination in ["combined", "perfreq"]
+        assert represent in ["Cl", "Dl"]
+        assert type(sim_id) == int or sim_id is None
+
+        dir_map_loc, dir_spec_loc, dir_misc_loc = self._get_dir(info_component, sim_id)
+        if prefix is None:
+            pass
+        else:
+            prefix = dir_spec_loc
+        filename_loc = self._get_specfilename(info_component, info_combination, represent, sim_id, prefix=prefix)
+
+        return path.join(dir_spec_loc, filename_loc)
+
+
+    def get_map(self, info_component, info_combination, represent, sim_id=None, prefix=None):
+        assert 0, 'To be implemented'
+        assert info_component in ["noise", "foreground", "signal", "non-sep"]
+        assert info_combination in ["combined", "perfreq"]
+        assert represent in ["Cl", "Dl"]
+        assert type(sim_id) == int or sim_id is None
+
+        dir_map_loc, dir_spec_loc, dir_misc_loc = self._get_dir(info_component, sim_id)
+        if prefix is None:
+            pass
+        else:
+            prefix = dir_map_loc
+        filename_loc = self._get_mapfilename(info_component, info_combination, represent, sim_id, prefix=prefix)
+
+        return path.join(dir_map_loc, filename_loc)
+
+
+    def get_misc(self, desc, sim_id=None, prefix=None):
+        assert 0, 'To be implemented'
+        assert type(sim_id) == int or sim_id is None
+
+        dir_map_loc, dir_spec_loc, dir_misc_loc = self._get_miscdir(sim_id)
+        if prefix is None:
+            pass
+        else:
+            prefix = dir_misc_loc
+        filename_loc = self._get_miscfilename(desc, sim_id, prefix=prefix)
+
+        return path.join(dir_misc_loc, filename_loc)
 
 class Constants:
 
@@ -195,7 +419,6 @@ class Planckr(Enum):
     LFI = "LFI"
     HFI = "HFI"
 
-
 class Helperfunctions:
 
     llp1e12 = lambda x: x*(x+1)*1e12/(2*np.pi)
@@ -235,9 +458,9 @@ class Helperfunctions:
         return np.nan_to_num(ret)
 
 
-    #TODO
-    # T currently not supported
-    # add smoothing for weights at high ell (especially important when crossing, e.g. npipe data with dx12 derived weights)
+    ### TODO
+    ## T currently not supported
+    ## add smoothing for weights at high ell (especially important when crossing, e.g. npipe data with dx12 derived weights)
     @staticmethod   
     def interp_smica_mv_weights(W_smica, W_mv, bins, lmaxp1):
         W_total = np.zeros(shape=(*W_mv.shape[:-1], lmaxp1))

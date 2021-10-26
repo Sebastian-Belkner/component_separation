@@ -16,8 +16,8 @@ in your command line.
 
     .. code-block:: python
 
-        >>> tqumap = get_data('test/', freqfilter=freqfilter) # doctest: +SKIP 
-        >>> spectrum = powerspectrum(tqumap, lmax, lmax_mask, freqfilter, specfilter)
+        >>> iqumap = get_data('test/', freqfilter=freqfilter) # doctest: +SKIP 
+        >>> spectrum = powerspectrum(iqumap, lmax, lmax_mask, freqfilter, specfilter)
         >>> df = create_df(spectrum, freqfilter, specfilter)
         >>> df_sc = apply_scale(df, specfilter)
         >>> df_scbf = apply_beamfunction(df_sc, lmax, specfilter)
@@ -61,41 +61,6 @@ The following constants be needed because functions are called with globals()
 # lmax_mask = 80
 
 
-@log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
-@log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
-def tqupowerspec(tqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int, nside_out, freqcomb) -> Dict[str, Dict]:
-    """Calculate powerspectrum using MSC.pospace and TQUmaps
-    Args:
-        tqumap List[Dict[str, Dict]]: Planck maps (data and masks) and some header information
-        lmax (int): Maximum multipol of data to be considered
-        lmax_mask (int): Maximum multipol of mask to be considered. Hint: take >3*lmax
-        freqfilter (List[str]): Frequency channels which are to be ignored
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
-
-    Returns:
-        Dict[str, Dict]: Powerspectra as provided from MSC.pospace
-    """
-    def _ud_grade(data, FREQ):
-        if int(FREQ)<100:
-            return hp.pixelfunc.ud_grade(data, nside_out=nside_out[0])
-        else:
-            return hp.pixelfunc.ud_grade(data, nside_out=nside_out[1])
-
-    retval = np.array([
-        ps.map2cls(
-            tqumap=tqumap[FREQC.split("-")[0]],
-            tmask=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
-            pmask=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
-            lmax=lmax,
-            lmax_mask=lmax_mask,
-            tqumap2=tqumap[FREQC.split("-")[1]],
-            tmask2=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[1]),
-            pmask2=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[1])
-        ) for FREQC in freqcomb 
-    ])
-    return retval
-
-
 def create_mapsyn(spectrum: Dict[str, Dict], cf: Dict, freqcomb) -> List[Dict[str, Dict]]:
     synmap = dict()
     for freqc in freqcomb:
@@ -129,7 +94,6 @@ def cov2cov_smooth(cov, cutoff):
                     cov[spec,n,m,cutoff:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
                     cov[spec,m,n,cutoff:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
 
-
     for spec in range(cov.shape[0]):
         n=1
         for m in range(cov.shape[2]):
@@ -143,7 +107,6 @@ def cov2cov_smooth(cov, cutoff):
             if m>n:
                 cov[spec,n,m,1500:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
                 cov[spec,m,n,1500:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
-
     return cov
 
 
