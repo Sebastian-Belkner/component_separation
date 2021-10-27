@@ -2,8 +2,8 @@ import healpy as hp
 import numpy as np
 
 from component_separation.cs_util import Config
-from component_separation.cs_util import Helperfunctions as hpf
 from component_separation.io import IO
+import component_separation.MSC.MSC.pospace as ps
 
 from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
@@ -12,71 +12,62 @@ from typing import Dict, List, Optional, Tuple
 csu = Config()
 io = IO(csu)
 
-    
+
+@log_on_start(INFO, "Starting to calculate powerspectra.")
+@log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
 def map2cls(maps, powerspectrum_type, tmask, pmask):
+    """
+    Root function. Forwards request to correct powerspectrum calculator
+    """
+    assert powerspectrum_type in ['Chonetal', 'pseudo']
+
     if powerspectrum_type == 'Chonetal':
-        Cl_usc = map2cls(maps, tmask, pmask, csu.nside_out, csu.freqcomb)
+        Cl_usc = _map2cls(maps, tmask, pmask)
     elif powerspectrum_type == 'pseudo':
-        Cl_usc = map2pcls(maps, tmask, pmask, csu.nside_out, csu.freqcomb)
+        Cl_usc = _map2pcls(maps, tmask, pmask)
     return Cl_usc
 
 
-@log_on_start(INFO, "Starting to calculate powerspectra up to lmax={lmax} and lmax_mask={lmax_mask}")
+@log_on_start(INFO, "Starting to calculate Chonetal powerspectra.")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
-def map2cls(iqumap, tmask: List, pmask: List, lmax: int, lmax_mask: int, nside_out, freqcomb) -> Dict[str, Dict]:
+def _map2cls(iqumap, tmask: List, pmask: List) -> np.array:
     """Calculate powerspectrum using MSC.pospace and iqumaps
     Args:
         iqumap List[Dict[str, Dict]]: Planck maps (data and masks) and some header information
-        lmax (int): Maximum multipol of data to be considered
-        lmax_mask (int): Maximum multipol of mask to be considered. Hint: take >3*lmax
-        freqfilter (List[str]): Frequency channels which are to be ignored
-        specfilter (List[str]): Bispectra which are to be ignored, e.g. ["TT"]
+        tmask :
+        pmask :
 
     Returns:
-        Dict[str, Dict]: Powerspectra as provided from MSC.pospace
+        np.array: Powerspectra as provided from MSC.pospace
     """
-    def _ud_grade(data, FREQ):
-        if int(FREQ)<100:
-            return hp.pixelfunc.ud_grade(data, nside_out=nside_out[0])
-        else:
-            return hp.pixelfunc.ud_grade(data, nside_out=nside_out[1])
-
     retval = np.array([
         ps.map2cls(
-            iqumap=iqumap[FREQC.split("-")[0]],
+            tqumap=iqumap[FREQC.split("-")[0]],
             tmask=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
             pmask=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[0]),
-            lmax=lmax,
-            lmax_mask=lmax_mask,
-            iqumap2=iqumap[FREQC.split("-")[1]],
+            lmax=csu.lmax,
+            lmax_mask=csu.lmax_mask,
+            tqumap2=iqumap[FREQC.split("-")[1]],
             tmask2=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[1]),
             pmask2=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[1])
-        ) for FREQC in freqcomb 
+        ) for FREQC in csu.freqcomb 
     ])
     return retval
 
 
-@log_on_start(INFO, "Starting to calculate powerspectra")
+@log_on_start(INFO, "Starting to calculate pseudo-powerspectra")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
-def map2pcls(iqumap, tmask: List, pmask: List, nside_out, freqcomb) -> np.array:
+def _map2pcls(iqumap, tmask: List, pmask: List) -> np.array:
     """Calculate powerspectrum using healpy and iqumaps
     Args:
         iqumap Dict[List]: Planck maps
         tmask :
         pmask :
-        nside_out :
-        freqcomb :
 
     Returns:
         np.array: Powerspectra as provided from hp.anafast
     """
-    def _ud_grade(data, FREQ):
-        if int(FREQ)<100:
-            return hp.pixelfunc.ud_grade(data, nside_out=nside_out[0])
-        else:
-            return hp.pixelfunc.ud_grade(data, nside_out=nside_out[1])
-
-    def ma_map_IQU(FREQC, splitID):
+    def _maIQU(FREQC, splitID):
         freq1 = FREQC.split("-")[splitID]
         freq2 = FREQC.split("-")[int(not(splitID))]
         if (int(freq1) < 100 and int(freq2) >= 100) or (int(freq1) >= 100 and int(freq2) < 100): #if LFI-HFI, force Nside to nside_out[0]
@@ -91,9 +82,16 @@ def map2pcls(iqumap, tmask: List, pmask: List, nside_out, freqcomb) -> np.array:
 
     retval = np.array([
         hp.anafast(
-            map1=ma_map_IQU(FREQC, 0),
-            map2=ma_map_IQU(FREQC, 1),
+            map1=_maIQU(FREQC, 0),
+            map2=_maIQU(FREQC, 1),
             lmax=4000
-        ) for FREQC in freqcomb 
+        ) for FREQC in csu.freqcomb 
     ])
     return retval
+
+
+def _ud_grade(data, FREQ):
+    if int(FREQ)<100:
+        return hp.pixelfunc.ud_grade(data, nside_out=csu.nside_out[0])
+    else:
+        return hp.pixelfunc.ud_grade(data, nside_out=csu.nside_out[1])

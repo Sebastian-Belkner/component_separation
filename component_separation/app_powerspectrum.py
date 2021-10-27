@@ -1,27 +1,24 @@
 """
 run_powerspectrum.py: script for generating powerspectra from maps.
 Depends on all maps being generated to begin with. Use ``run_map.py``, if e.g. noisemaps are missing.
-
 """
 
 __author__ = "S. Belkner"
 
 import copy
-import os
-import sys
 
 import healpy as hp
 import numpy as np
 
 import component_separation.interface as cslib
-import component_separation.io as csio
-import component_separation.powspec as pw
-import component_separation.transform_map as trsf_m
-import component_separation.transform_spec as trsf_s
+import component_separation.cachechecker as cc
+
+import component_separation.powerspectrum as pospec
+import component_separation.map as mp
+
 from component_separation.cs_util import Config
-from component_separation.cs_util import Helperfunctions as hpf
 from component_separation.io import IO
-import component_separation.generator_powerspec as gen_pow
+import component_separation.transformer as trsf
 from component_separation.cs_util import Filename_gen as fn_gen
 
 csu = Config()
@@ -29,20 +26,20 @@ io = IO(csu)
 
 #TODO this structure doesnt serve the need anymore. simplify
 def run_map2cls(bool_with_noise):
-    @csio.alert_cached
+    @cc.alert_cached
     def r_m2s(path_unsc, overw, cs):        
         cf_loc = cs.cf
         maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=cs.nside_out)
-        maps = trsf_m.process_all(maps)
+        maps = mp.process_all(maps)
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
-        C_l_unsc = pw.map2cls(maps, tmask, pmask, cf_loc['pa']["lmax"], cf_loc['pa']["lmax_mask"], cs.nside_out, cs.freqcomb)
+        C_l_unsc = trsf.map2cls(maps, 'Chonetal', tmask, pmask)
         io.save_data(C_l_unsc, path_unsc)
         return C_l_unsc
 
-    @csio.alert_cached
+    @cc.alert_cached
     def r_s2sc(path_sc, overw, cs, C_l_unsc):
         beamf = io.load_beamf(cs.freqcomb)
-        C_l = trsf_s.process_all(C_l_unsc, cs.freqcomb, beamf, cs.nside_out, cs.cf['pa']["Spectrum_scale"], cs.cf['pa']['smoothing_window'], cs.cf['pa']['max_polynom'])
+        C_l = pospec.process_all(C_l_unsc, cs.freqcomb, beamf, cs.nside_out, cs.cf['pa']["Spectrum_scale"])
         io.save_data(C_l, path_sc)
 
     if bool_with_noise:
@@ -64,20 +61,20 @@ def run_map2cls(bool_with_noise):
 
 #TODO this structure doesnt serve the need anymore. simplify
 def run_map2pcls(bool_with_noise):
-    @csio.alert_cached
+    @cc.alert_cached
     def r_m2ps(path_unsc, overw, cs):        
         cf_loc = cs.cf
         maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=cs.nside_out)
-        maps = trsf_m.process_all(maps)
+        maps = mp.process_all(maps)
         tmask, pmask, pmask = io.load_one_mask_forallfreq()
-        C_l_unsc = gen_pow.map2pcls(maps, tmask, pmask, cs.nside_out, cs.freqcomb)
+        C_l_unsc = trsf.map2pcls(maps, tmask, pmask)
         io.save_data(C_l_unsc, path_unsc)
         return C_l_unsc
 
-    @csio.alert_cached
+    @cc.alert_cached
     def r_ps2psc(path_sc, overw, cs, C_l_unsc):
         beamf = io.load_beamf(cs.freqcomb)
-        C_l = trsf_s.process_all(C_l_unsc, cs.freqcomb, beamf, cs.nside_out, cs.cf['pa']["Spectrum_scale"], cs.cf['pa']['smoothing_window'], cs.cf['pa']['max_polynom'])
+        C_l = pospec.process_all(C_l_unsc, cs.freqcomb, beamf, cs.nside_out, cs.cf['pa']["Spectrum_scale"])
         io.save_data(C_l, path_sc)
         print('Saved to {}'.format(path_sc))
 
@@ -106,7 +103,6 @@ def run_map2cls_new(info_component, info_combination, powerspectrum_type):
     Map can either be,
     combined, perfreq == info_combination
     """
-
     if info_component == 'signal':
         assert 0, "To be implemented"
     elif info_component == 'noise':
@@ -130,32 +126,33 @@ def run_map2cls_new(info_component, info_combination, powerspectrum_type):
     maps = io.load_plamap(cf_loc, field=(0,1,2), nside_out=csu.nside_out)
     tmask, pmask, pmask = io.load_one_mask_forallfreq()
     
-    maps = trsf_m.process_all(maps)
-    Cl_usc = gen_pow.map2cls(maps, 'pseudo', tmask, pmask)
+    maps = mp.process_all(maps)
+    Cl_usc = trsf.map2cls(maps, 'pseudo', tmask, pmask)
     io.save_data(Cl_usc, outpath_pow_usc_name)
     
     beamf = io.load_beamf(csu.freqcomb)
-    Cl_sc = trsf_s.process_all(Cl_usc, csu.freqcomb, beamf, csu.nside_out, csu.cf['pa']["Spectrum_scale"], csu.cf['pa']['smoothing_window'], cs.cf['pa']['max_polynom'])
+    Cl_sc = pospec.process_all(Cl_usc, csu.freqcomb, beamf, csu.nside_out, csu.cf['pa']["Spectrum_scale"])
     io.save_data(Cl_sc, outpath_pow_sc_name)
         
 
-@csio.alert_cached
+@cc.alert_cached
 def run_alm2cls(path_name, overw):
     cmb_tlm, cmb_elm, cmb_blm = cslib.load_alms('cmb', csu.sim_id)
     ClS_usc = np.array([hp.alm2cl([cmb_tlm, cmb_elm, cmb_blm])[:,:csu.cf['pa']['lmax']+1]])
-    ClS = trsf_s.apply_scale(ClS_usc, csu.cf['pa']["Spectrum_scale"])
+    ClS = pospec.apply_scale(ClS_usc, csu.cf['pa']["Spectrum_scale"])
     io.save_data(ClS, path_name)
 
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_map2spec = False
-    bool_map2psspec = True
     bool_alm2spec = False
-    bool_with_noise = True
+
+    bool_map2spec = True
+    bool_map2psspec = False
 
     bool_map2psspec_new = False
-
+    
+    bool_with_noise = True
    
 
     if bool_map2spec:

@@ -425,7 +425,6 @@ class IO:
 
 class Filehandling:
     def __init__(self, cfmch, cfpa, nside_out, sim_id):
-
         self.out_misc_path = cfmch['outdir_misc_ap']
         iff_make_dir(self.out_misc_path)
 
@@ -557,17 +556,3 @@ def iff_make_dir(outpath_name):
         pass
     else:
         os.makedirs(outpath_name)
-
-def alert_cached(func):
-    def wrapped(*args):
-        if os.path.isfile(args[0]):
-            print('Output file {} already exists. Overwrite settings are set to {}'.format(args[0], args[1]))
-            if args[1]:
-                print('Overwriting cache')
-            else:
-                print('Exiting..')
-                sys.exit()
-        return func(*args)
-    return wrapped
-
-

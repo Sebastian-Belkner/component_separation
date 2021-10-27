@@ -57,6 +57,8 @@ class Config():
         self.spectrum_type = self.cf['pa']['spectrum_type']
         if 'lmax' in self.cf['pa'].keys():
             self.lmax = self.cf['pa']["lmax"]
+        if 'lmax' in self.cf['pa'].keys():
+            self.lmax_mask = self.cf['pa']["lmax"]
         self.overwrite_cache = self.cf['pa']['overwrite_cache']
         self.mskset = self.cf['pa']['mskset']
         self.simdata = self.cf['pa']['simdata']      
@@ -105,8 +107,34 @@ class Filename_gen:
      2. generate hierarch. filename
      2. pass info to cachechecker
     """
-    def __init__(self, csu_loc):
+    def __init__(self, csu_loc, dir_structure=None, fn_structure=None, sim_id=None):
+        """To add a new attribute,
+            1. add it to dir/fn_structure
+            2a. add an instance test (here in the __init__)
+            2b. or add a runtime test (perhaps in get_spectrum())
+        """
+
+        #TODO implement dir_structure and fn_structure
         self.csu_loc = csu_loc
+
+        dir_structure = "{dataset}/{mask}/{simXX}/{smicasepCOMP}/{spec}"
+        fn_structure = "{represent}_{binname}_{info_component}_{info_comb}_{lmax}_{lmax_mask}_{spectrum_type}_{nside}_{simXX}"
+
+        #test if attributes should be in for this instance
+        if self.csu_loc['freqdset'] in ['DX12', 'NPIPE']:
+            dir_structure.replace("{dataset}", self.csu_loc['freqdset'])
+
+        if self.csu_loc['mskset'] in ['smica', 'lens']:
+            dir_structure.replace("{mask}", self.csu_loc['mskset'])
+        
+        if self.csu_loc['simdata'] == True:
+            assert type(sim_id), int
+            dir_structure.replace("{simXX}", "sim{}".format(sim_id))
+        else:
+            dir_structure.replace("_{simXX}", "")
+
+        # there might be attributes left which can only be decided upon runtime
+        self.dir_name = dir_structure
 
 
     def _get_miscdir(self, sim_id=None):
@@ -129,6 +157,12 @@ class Filename_gen:
 
 
     def _get_dir(self, info_component, sim_id=None):
+        #TODO the algorithm could be further improved as follows:
+        # 1. collect all attributes which are supposed to be included as dir (in this way, its very transparent for future change)
+        # 2. test which of the attributes match the current request, remove if needed
+        # 3. loop over remaining attributes, link with '/'
+
+        # currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
         assert info_component in ["noise", "foreground", "signal", "non-sep"]
         assert type(sim_id) == int or sim_id is None
 
@@ -151,7 +185,7 @@ class Filename_gen:
                         --map/
                         --spec/
         """
-        ap = path.join(self.cf_loc[self.csu_loc.mch]['outdir_ap'], 'compsep')
+        ap = path.join(self.csu_loc.cf[self.csu_loc.mch]['outdir_ap'], 'compsep')
         io.iff_make_dir(ap)
 
         ap = path.join(ap, self.csu_loc.freqdset)  
@@ -179,6 +213,12 @@ class Filename_gen:
 
 
     def _get_specfilename(self, info_component, info_combination, represent, sim_id=None, prefix=None):
+        #TODO the algorithm could be further improved as follows:
+        # 1. collect all attributes which are supposed to be included as filenameattribute (in this way, its very transparent for future change)
+        # 2. test which of the attributes match the current request, remove if needed
+        # 3. loop over remaining attributes, link with '/'
+
+        # currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
         assert info_component in ["noise", "foreground", "signal", "non-sep"]
         assert info_combination in ["combined", "perfreq"]
         assert represent in ["Cl", "Dl"]
@@ -221,17 +261,19 @@ class Filename_gen:
 
 
     def _get_mapfilename(self, info_component, info_combination, represent, sim_id=None, prefix=None):
+        assert 0, 'To be implemented'
         assert info_component in ["noise", "foreground", "signal", "non-sep"]
         assert info_combination in ["combined", "perfreq"]
         assert represent in ["Cl", "Dl"]
         assert type(sim_id) == int or sim_id is None
+
         """
         Filename: 
             <lmax>
             <smicacom>_<binname>_<lmax>
                     <lmaxmask_chonetal>
         """
-        assert 0, 'To be implemented'
+
         if prefix is None:
             retval = ''
             retval = ''.join([retval, represent])
@@ -303,6 +345,7 @@ class Filename_gen:
         filename_loc = self._get_miscfilename(desc, sim_id, prefix=prefix)
 
         return path.join(dir_misc_loc, filename_loc)
+
 
 class Constants:
 
@@ -418,6 +461,7 @@ class Plancks(Enum):
 class Planckr(Enum):
     LFI = "LFI"
     HFI = "HFI"
+
 
 class Helperfunctions:
 

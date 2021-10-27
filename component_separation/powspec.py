@@ -61,55 +61,6 @@ The following constants be needed because functions are called with globals()
 # lmax_mask = 80
 
 
-def create_mapsyn(spectrum: Dict[str, Dict], cf: Dict, freqcomb) -> List[Dict[str, Dict]]:
-    synmap = dict()
-    for freqc in freqcomb:
-        synmap.update({
-            freqc: hp.synfast(
-                cls = [
-                    spectrum[freqc]["TT"],
-                    spectrum[freqc]["EE"],
-                    spectrum[freqc]["BB"],
-                    spectrum[freqc]["TE"]],
-                nside = cf.nside[0] if int(freqc.split("-")[0])<100 else cf.nside[1],
-                new=True)})
-
-    #TODO return only numpy
-    return np.array([])
-
-
-#TODO perhaps make smica fit with LFI and HFI up to ell = 1000.
-def cov2cov_smooth(cov, cutoff):
-    """
-    currently takes any LFI[0] X (LFI or HFI) crossspectra and applies a windowfunction, effectively setting it to zero.
-    This needs to be done as the freq 030 crosspowerspectra have unphysical behaviour for ell>900. This is also true for
-    other LFIs. BUT: if all are set to zero, we loose cmb-signal-power in EE, as there is still signal on that scale.
-
-    Thus we need to cherry pick which crossspectra can actually be set to zero without impacting the SMICA fit and MV weights..
-    """
-    for spec in range(cov.shape[0]):
-        for n in range(1):
-            for m in range(cov.shape[2]):
-                if n != m:
-                    cov[spec,n,m,cutoff:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
-                    cov[spec,m,n,cutoff:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
-
-    for spec in range(cov.shape[0]):
-        n=1
-        for m in range(cov.shape[2]):
-            if m>n:
-                cov[spec,n,m,1500:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
-                cov[spec,m,n,1500:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
-
-    for spec in range(cov.shape[0]):
-        n=2
-        for m in range(cov.shape[2]):
-            if m>n:
-                cov[spec,n,m,1500:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
-                cov[spec,m,n,1500:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
-    return cov
-
-
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
 def cov2weight(data: np.array, freqs=np.array([F.value for F in list(Planckf)[:-2]]), Tscale='K_CMB'):
@@ -301,43 +252,11 @@ def invert_covmatrices(cov: np.array):
     return ret
 
 
-@log_on_start(INFO, "Starting to calculate channel weights with covariances {cov}")
-@log_on_end(DEBUG, "channel weights calculated successfully: '{result}' ")
-def calculate_weights(cov: np.array, freqs, Tscale: str = r"K_CMB") -> np.array:
-    """Calculates weightings of the respective Frequency channels
-    Args:
-        cov (Dict): The inverted covariance matrices of Dimension [lmax,Nspec,Nspec]
-
-    Returns:
-        np.array: The weightings of the respective Frequency channels
-    """
-
-    elaw = np.array([trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in freqs])
-    weight_arr = np.zeros(shape=(np.take(cov.shape, [0,1,-1])))
-    for spec in range(weight_arr.shape[0]):
-        for l in range(cov.shape[-1]):
-            weight_arr[spec,:,l] = np.array([
-                    (cov[spec,:,:,l] @ elaw) / (elaw.T @ cov[spec,:,:,l] @ elaw)])
-    return weight_arr
-
-
 def map2alm_spin(maps, pmask, spin, lmax):
     return ps.map2alm_spin([maps[1] * pmask, maps[2] * pmask], spin,
                                 lmax=lmax)
 
 
 def map2alm(maps, tmask, lmax):
-    return ps.map2alm([maps[0] * tmask, maps[2] * pmask],
+    return ps.map2alm([maps[0] * tmask, maps[2] * tmask],
                                 lmax=lmax)
-
-
-def alms2almsxweight(alms, weights):
-    return None
-
-
-def alms2cls(alms_w):
-    return None
-
-
-if __name__ == '__main__':
-    import doctest

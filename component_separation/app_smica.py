@@ -12,23 +12,20 @@ To let SMICA run sucessfully, we have adapted the following:
 __author__ = "S. Belkner"
 
 import os
-
-
-import numpy as np
 from typing import Dict, List, Optional, Tuple
-import healpy as hp
-import sys
-import component_separation.MSC.MSC.pospace as ps
-import smica
 
-from component_separation.io import IO
-import component_separation.powspec as pw
+import healpy as hp
+import numpy as np
+
+import component_separation.covariance as cv
 import component_separation.interface as cslib
-import component_separation.transform_map as trsf_m
-import component_separation.transform_spec as trsf_s
+import component_separation.map as mp
+import component_separation.MSC.MSC.pospace as ps
+import component_separation.transformer as trsf
 from component_separation.cs_util import Config
 from component_separation.cs_util import Constants as const
 from component_separation.cs_util import Helperfunctions as hpf
+from component_separation.io import IO
 
 os.environ["OMP_NUM_THREADS"] = "32"
 csu = Config()
@@ -59,8 +56,8 @@ def run_fit(path_name, overw):
 
     def calc_nmodes(bins, mask):
         nmode = np.ones((bins.shape[0]))
-        for idx,q in enumerate(bins):
-            rg = np.arange(q[0],q[1]+1) #rg = np.arange(bins[q,0],bins[q,1]+1) correct interpretation?
+        for idx, q in enumerate(bins):
+            rg = np.arange(q[0],q[1]+1)
             nmode[idx] = np.sum(2*rg+1, axis=0)
             fsky = np.mean(mask**2)
             nmode *= fsky
@@ -69,12 +66,12 @@ def run_fit(path_name, overw):
 
     _Tscale = "K_CMB"#csu.Tscale
     C_ltot = io.load_powerspectra('full')
-    cov_ltot = pw.build_covmatrices(C_ltot, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
-    cov_ltot = pw.cov2cov_smooth(cov_ltot, cutoff=800)
+    cov_ltot = cv.build_covmatrices(C_ltot, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_ltot = cv.cov2cov_smooth(cov_ltot, cutoff=800)
 
     C_lN = io.load_powerspectra('noise')
-    cov_lN = pw.build_covmatrices(C_lN, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
-    cov_lN = pw.cov2cov_smooth(cov_lN, cutoff=800)
+    cov_lN = cv.build_covmatrices(C_lN, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_lN = cv.cov2cov_smooth(cov_lN, cutoff=800)
 
     C_lS = io.load_powerspectra('signal')
     # Fakes the same shape so pw.build_covmatrices() may be used
@@ -82,7 +79,7 @@ def run_fit(path_name, overw):
     for freqcom in range(C_lS_shaped.shape[0]):
         for specidx in range(C_lS.shape[1]):
             C_lS_shaped[freqcom,specidx,:] = C_lS[0,specidx]
-    cov_lS = pw.build_covmatrices(C_lS_shaped, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    cov_lS = cv.build_covmatrices(C_lS_shaped, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f)
 
     if True:
         ## EE fitting
@@ -137,7 +134,7 @@ def run_fit(path_name, overw):
         
         bins = getattr(const, binname)
         smica_weights_tot = np.zeros(shape=(2,7,len(bins)))
-        smica_weights_tot[0] = pw.cov2weight(np.array([smica_model.covariance()])) #EE
+        smica_weights_tot[0] = cv.cov2weight(np.array([smica_model.covariance()])) #EE
         # io.save_data(smica_weights_tot, path_name)
 
         print(20*"===")
@@ -206,7 +203,7 @@ def run_fit(path_name, overw):
             # io.save_data(EEBBsmica_hist, io.fh.out_specsmica_path+"hist_{}".format(binname) + "_" + io.fh.total_filename)
             io.save_data(EEBBgal_mixmat, io.fh.out_specsmica_path+"gal_mixmat_{}".format(binname) + "_" + io.fh.total_filename)
 
-            smica_weights_tot[1] = pw.cov2weight(np.array([smica_model.covariance()])) #BB
+            smica_weights_tot[1] = cv.cov2weight(np.array([smica_model.covariance()])) #BB
             io.save_data(smica_weights_tot, path_name)
 
 
@@ -236,13 +233,13 @@ def run_propag():
 
     # full maps
     maps = io.load_plamap(csu.cf, field=(0,1,2), nside_out=csu.nside_out)
-    maps = trsf_m.process_all(maps)
+    maps = mp.process_all(maps)
     beamf = io.load_beamf(freqcomb=csu.freqcomb)
 
     for freq in csu.PLANCKMAPFREQ_f:
         print('freq: ', freq)
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
-        alms = pw.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, lmax-1) # full sky QU->EB
+        alms = cv.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, lmax-1) # full sky QU->EB
         # almT[det] = alms[0]
         almE[freq] = alms[0]
         almB[freq] = alms[1]
@@ -312,13 +309,13 @@ def run_propag_ext():
     maps = load_maps()
     beamf = load_beamf()
 
-    maps = trsf_m.process_all(maps)
+    maps = mp.process_all(maps)
 
 
     for freq in csu.PLANCKMAPFREQ_f:
         print('freq: ', freq)
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
-        alms = pw.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, lmax-1) # full sky QU->EB
+        alms = trsf.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, lmax-1) # full sky QU->EB
         # almT[det] = alms[0]
         almE[freq] = alms[0]
         almB[freq] = alms[1]

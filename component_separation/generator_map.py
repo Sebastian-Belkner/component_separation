@@ -3,7 +3,7 @@ import numpy as np
 
     
 def alm_s2map(tlm, elm, blm, nsi):
-    return hp.alm2map([cmb_tlm, cmb_elm, cmb_blm], nsi)
+    return hp.alm2map([tlm, elm, blm], nsi)
 
 
 def create_difference_map(data_hm1, data_hm2):
@@ -14,3 +14,20 @@ def create_difference_map(data_hm1, data_hm2):
         return ret
     ret_data = _difference(data_hm1, data_hm2)
     return ret_data
+
+
+def create_mapsyn(spectrum, cf, freqcomb):
+    synmap = dict()
+    for freqc in freqcomb:
+        synmap.update({
+            freqc: hp.synfast(
+                cls = [
+                    spectrum[freqc]["TT"],
+                    spectrum[freqc]["EE"],
+                    spectrum[freqc]["BB"],
+                    spectrum[freqc]["TE"]],
+                nside = cf.nside[0] if int(freqc.split("-")[0])<100 else cf.nside[1],
+                new=True)})
+
+    #TODO return only numpy
+    return np.array([])

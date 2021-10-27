@@ -4,14 +4,18 @@ from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 import warnings
 import numpy as np
-import functools
 import healpy as hp
 from logdecorator import log_on_end, log_on_error, log_on_start
 from component_separation.cs_util import Helperfunctions as hpf
 import component_separation.spherelib.python.spherelib.astro as slhpastro
 
 
+@log_on_start(INFO, "Starting to process maps")
+@log_on_end(DEBUG, "Maps processed successfully: '{result}' ")
 def process_all(data):
+    """
+    Root function. Executes all transformations
+    """
     for freq, val in data.items():
         data[freq] = replace_undefnan(data[freq])
         data[freq] = subtract_mean(data[freq])
@@ -20,6 +24,8 @@ def process_all(data):
     return data
 
 
+@log_on_start(INFO, "Starting to remove unseen pixels")
+@log_on_end(DEBUG, "Unseen pixels removed successfully: '{result}' ")
 def remove_unseen(tqumap: List[Dict]) -> List[Dict]:
     """Replaces UNSEEN pixels in the polarisation maps (Q, U) with 0.0. This is a quickfix for healpy `_sphtools.pyx`,
     as it throws errors when processing maps with UNSEEN pixels. reason being, one statement is ambigious: `if np.array([True, True])`.
@@ -79,6 +85,8 @@ def remove_unseen(tqumap: List[Dict]) -> List[Dict]:
     return tqumap
 
 
+@log_on_start(INFO, "Starting to convert temperature scale")
+@log_on_end(DEBUG, "Tempscale converted successfully: '{result}' ")
 def tcmb2trj(data: List[Dict], fr, to) -> List[Dict]:
     """Converts maps (which are presumably in K_CMB) to K_RJ scale.
 
@@ -95,6 +103,8 @@ def tcmb2trj(data: List[Dict], fr, to) -> List[Dict]:
     return data
 
 
+@log_on_start(INFO, "Starting to calculate conversion factor")
+@log_on_end(DEBUG, "Converison factor calculated successfully: '{result}' ")
 def tcmb2trj_sc(freq, fr, to) -> List[Dict]:
     """Converts maps (which are presumably in K_CMB) to K_RJ scale.
 
@@ -108,6 +118,8 @@ def tcmb2trj_sc(freq, fr, to) -> List[Dict]:
     return factor
 
 
+@log_on_start(INFO, "Starting to replace undef/nan values")
+@log_on_end(DEBUG, "Undef/nan values replaced successfully: '{result}' ")
 def replace_undefnan(data):
     treshold = 1e20
     buff = np.where(data==np.nan, 0.0, data)
@@ -116,6 +128,8 @@ def replace_undefnan(data):
     return buff
 
 
+@log_on_start(INFO, "Starting to remove Bright/saturated pixels")
+@log_on_end(DEBUG, "Bright/saturated pixels removed successfully: '{result}' ")
 def remove_brightsaturate(data):
     ret = np.zeros_like(data)
     for n in range(data.shape[0]):
@@ -123,10 +137,14 @@ def remove_brightsaturate(data):
     return ret
 
 
+@log_on_start(INFO, "Starting to subtract mean")
+@log_on_end(DEBUG, "Mean subtracted successfully: '{result}' ")
 def subtract_mean(data):
     return (data.T-np.mean(data, axis=1)).T
 
 
+@log_on_start(INFO, "Starting to remove monopole and dipole")
+@log_on_end(DEBUG, "Monopole and dipole removed successfully: '{result}' ")
 def remove_dipole(data):
     """Healpy description suggests that this function removes both, the monopole and dipole
 
