@@ -12,13 +12,13 @@ To let SMICA run sucessfully, we have adapted the following:
 __author__ = "S. Belkner"
 
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict
 
 import healpy as hp
 import numpy as np
 
 import component_separation.covariance as cv
-import component_separation.interface as cslib
+import component_separation.smica_interface as smint
 import component_separation.map as mp
 import component_separation.MSC.MSC.pospace as ps
 import component_separation.transformer as trsf
@@ -93,8 +93,8 @@ def run_fit(path_name, overw):
         binname = "SMICA_lowell_bins"
         cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
         nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-        smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None)
-        smica_model, hist = cslib.fit_model_to_cov(
+        smica_model = smint.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None)
+        smica_model, hist = smint.fit_model_to_cov(
             smica_model,
             cov_ltot_bnd,
             nmodes,
@@ -108,8 +108,8 @@ def run_fit(path_name, overw):
         binname = "SMICA_highell_bins"
         cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotEE, cov_lNEE, cov_lSEE)
         nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-        smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), EEgal_mixmat)#)
-        smica_model, hist = cslib.fit_model_to_cov(
+        smica_model = smint.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), EEgal_mixmat)#)
+        smica_model, hist = smint.fit_model_to_cov(
             smica_model,
             cov_ltot_bnd,
             nmodes,
@@ -156,10 +156,10 @@ def run_fit(path_name, overw):
         binname = "SMICA_lowell_bins"
         cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
         nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-        smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None, B_fit=True)
+        smica_model = smint.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), None, B_fit=True)
         cov_ltot_bnd[cov_ltot_bnd<0] = 0.0 #Reminder: this would not work for TE!
         print("SMICA model built for SMICA_lowell_bins")
-        smica_model, hist = cslib.fit_model_to_cov(
+        smica_model, hist = smint.fit_model_to_cov(
             smica_model,
             cov_ltot_bnd,
             nmodes,
@@ -175,9 +175,9 @@ def run_fit(path_name, overw):
         cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(binname, cov_ltotBB, cov_lNBB, cov_lSBB)
         cov_ltot_bnd[cov_ltot_bnd<0] = 0.0 #Reminder: this would not work for TE!
         nmodes = calc_nmodes(getattr(const, binname), pmask['100']) #any mask will do, only fsky needed
-        smica_model = cslib.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), BBgal_mixmat, B_fit=True)
+        smica_model = smint.build_smica_model(len(nmodes), np.nan_to_num(cov_lN_bnd), np.nan_to_num(C_lS_bnd), BBgal_mixmat, B_fit=True)
         print("SMICA model built for SMICA_highell_bins")
-        smica_model, hist = cslib.fit_model_to_cov(
+        smica_model, hist = smint.fit_model_to_cov(
             smica_model,
             cov_ltot_bnd,
             nmodes,
@@ -265,6 +265,7 @@ def run_propag():
         lmax_mask=lmax*2))*1e12 #maps are different scale than processed powerspectra from this' package pipeline, thus *1e12
     io.save_data(smica_C_lmin_unsc, io.fh.clmin_smica_path_name)
 
+
 def run_propag_ext():
     """
     Follows the SMICA propagation code to combine maps with set of weights.
@@ -311,7 +312,6 @@ def run_propag_ext():
 
     maps = mp.process_all(maps)
 
-
     for freq in csu.PLANCKMAPFREQ_f:
         print('freq: ', freq)
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
@@ -340,6 +340,7 @@ def run_propag_ext():
     smica_C_lmin_unsc = np.array(ps.map2cl_spin(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask['100'], lmax=lmax-1,
         lmax_mask=lmax*2))*1e12 #maps are different scale than processed powerspectra from this' package pipeline, thus *1e12
     io.save_data(smica_C_lmin_unsc, io.fh.clmin_smica_path_name)
+
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)

@@ -12,7 +12,6 @@ import numpy as np
 
 from component_separation.io import IO
 import component_separation.cachechecker as cc
-import component_separation.interface as cslib
 from component_separation.cs_util import Config
 
 import component_separation.transformer as trsf
@@ -28,7 +27,7 @@ def run_cmbalm2map(pathname, overwr):
     Derives map directly from alm data of pure CMB.
     """
     nsi = csu.nside_out[1]
-    cmb_tlm, cmb_elm, cmb_blm = cslib.load_alms('cmb', csu.sim_id)
+    cmb_tlm, cmb_elm, cmb_blm = io.load_alms('cmb', csu.sim_id)
     CMB = trsf.alm_s2map(cmb_tlm, cmb_elm, cmb_blm, nsi)
     io.save_data(CMB, pathname)
 

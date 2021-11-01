@@ -7,7 +7,6 @@ import functools
 import json
 import os
 import copy
-import platform
 import sys
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
@@ -18,16 +17,10 @@ import pandas as pd
 from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
 
-import component_separation
-from component_separation.cs_util import Config
-from component_separation.cs_util import Planckf, Planckr, Plancks
-
-
 class IO:
-    def __init__(self, csu):
-        ##TODO improve path management
-        self.fh = Filehandling(csu.cf[csu.mch], csu.cf['pa'], csu.nside_out, csu.sim_id)
+    def __init__(self, csu, fn=None):
         self.csu = csu
+        self.fn = fn
 
 
     def load_powerspectra(self, dset, processed = True):
@@ -96,7 +89,7 @@ class IO:
             return None
 
 
-    def load_plamap(self, cf_local, field, nside_out=None):
+    def load_plamap(self, cf_loc, field, nside_out=None):
         """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
         Map data in `PATH/map/`.
         Args:
@@ -106,24 +99,21 @@ class IO:
         Returns:
             List[Dict]: Planck maps (data and masks) and some header information
 
-        Doctest:
-        >>> get_data(cf: Dict, mch: str) 
-        NotSureWhatToExpect
         """
 
-        freqdset = cf_local["pa"]['freqdset'] # NPIPE or DX12
-        freqfilter = cf_local["pa"]["freqfilter"]
-        nside_desc = cf_local["pa"]["nside_desc_map"]
+        freqdset = cf_loc["pa"]['freqdset'] # NPIPE or DX12
+        freqfilter = cf_loc["pa"]["freqfilter"]
+        nside_desc = cf_loc["pa"]["nside_desc_map"]
         mch = self.csu.mch
 
-        abs_path = cf_local[self.csu.mch][freqdset]['ap']
-        freq_filename = cf_local[self.csu.mch][freqdset]['filename']
+        abs_path = cf_loc[mch][freqdset]['ap']
+        freq_filename = cf_loc[mch][freqdset]['filename']
         mappath = {
             FREQ:'{abs_path}{freq_filename}'
                 .format(
                     abs_path = abs_path\
                         .replace("{sim_id}", self.csu.sim_id)\
-                        .replace("{split}", cf_local['pa']['freqdatsplit'] if "split" in cf_local[mch][freqdset] else ""),
+                        .replace("{split}", cf_loc['pa']['freqdatsplit'] if "split" in cf_loc[mch][freqdset] else ""),
                     freq_filename = freq_filename
                         .replace("{freq}", FREQ)
                         .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
@@ -132,7 +122,7 @@ class IO:
                         .replace("{even/half1}", "evenring" if int(FREQ)>=100 else "ringhalf-1")
                         .replace("{odd/half2}", "oddring" if int(FREQ)>=100 else "ringhalf-2")
                         .replace("{sim_id}", self.csu.sim_id)\
-                        .replace("{split}", cf_local['pa']['freqdatsplit'] if "split" in cf_local[mch][freqdset] else "")
+                        .replace("{split}", cf_loc['pa']['freqdatsplit'] if "split" in cf_loc[mch][freqdset] else "")
                     )
                 for FREQ in self.csu.PLANCKMAPFREQ
                 if FREQ not in freqfilter}
@@ -144,6 +134,34 @@ class IO:
         }
         print("loaded {}".format(mappath))
         return maps
+
+
+    def load_pla(self, pathname, field, ud_grade=(None, None)):
+        """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
+        Map data in `PATH/map/`.
+        Args:
+            pathname (str): complete name to the file
+            field (tuple): data fields to be read
+            ud_grade (tuple): First element is None or True, second element is the freq-split where either ud_grade nside is applied
+            
+        Returns:
+            List[Dict]: Planck maps (data and masks) and some header information
+
+        """
+        if ud_grade[0] is None:
+            return hp.read_map(
+                pathname,
+                field=field,
+                dtype=np.float64,
+                nest=False)
+        else:
+            return hp.ud_grade(
+                hp.read_map(
+                    pathname,
+                    field=field,
+                    dtype=np.float64,
+                    nest=False),
+                nside_out=self.csu.nside_out[0] if int(ud_grade[1])<100 else self.csu.nside_out[1])
 
 
     def load_mask_per_freq(dg_to=1024):
@@ -180,6 +198,7 @@ class IO:
 
 
     def load_one_mask_forallfreq(self, nside_out=None):
+
         def _multi(a, b):
             return a*b
         def read_single(mask_path, mask_filename):
@@ -190,7 +209,7 @@ class IO:
                     mask_filename = mask_filename), dtype=np.bool)
         if nside_out == None:
             nside_out = self.csu.nside_out
-        maskset = self.csu.cf['pa']['mskset']
+        maskset = self.csu.mskset
         if maskset == None:
             tmask = np.ones(shape=hp.nside2npix(nside_out[1]))
             pmask = np.ones(shape=hp.nside2npix(nside_out[1]))
@@ -214,17 +233,47 @@ class IO:
                 tmask = hp.ud_grade(tmask, nside_out=nside_out[1])
                 pmask = hp.ud_grade(pmask, nside_out=nside_out[1])
         tdict = {FREQ: tmask
-                    for FREQ in self.csu.PLANCKMAPFREQ_f
-                    }
+            for FREQ in self.csu.PLANCKMAPFREQ_f
+            }
         pdict = {FREQ: pmask
-                for FREQ in self.csu.PLANCKMAPFREQ_f
-                }
+            for FREQ in self.csu.PLANCKMAPFREQ_f
+            }
+
         return tdict, pdict, pdict
 
 
-    def load_truthspectrum(abs_path=""):
+    def load_mask(self, mask_fn, stack=True):
+
+        if stack != True:
+            assert 0, 'Not yet implemented'
+
+        def _multi(a, b):
+            return a*b
+
+        masks_file = [
+            hp.read_map(fn, dtype=np.bool)
+            for fn in mask_fn]
+        masks_file = functools.reduce(
+            _multi,
+            [a for a in masks_file])
+
+        return masks_file
+
+
+    def load_alms(component, id):
+        if component == 'cmb':
+            cmb_tlm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=1)
+            cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=2)
+            cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=3)
+            return cmb_tlm, cmb_elm, cmb_blm
+        else:
+            print('unclear request for loading alms. Exiting..')
+            sys.exit()
+
+
+    def load_truthspectrum(self, abs_path=""):
         return pd.read_csv(
-            abs_path+cf[mch]['powspec_truthfile'],
+            abs_path+self.csu.powspec_truthfile,
             header=0,
             sep='    ',
             index_col=0)
@@ -247,7 +296,7 @@ class IO:
 
     @log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb}")
     @log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
-    def load_beamf(self, freqcomb: List) -> Dict:
+    def load_beamf_old(self, freqcomb: List) -> Dict:
         """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
         Args:
@@ -262,7 +311,6 @@ class IO:
         cf = self.csu.cf
         mch = self.csu.mch
         split = self.csu.cf['pa']['split']
-        splitvariation = self.csu.cf['pa']['splitvariation']
         if self.csu.cf['pa']['freqdset'].startswith('DX12'):
             dset = 'DX12'
         elif self.csu.cf['pa']['freqdset'].startswith('NPIPE'):
@@ -384,8 +432,142 @@ class IO:
                         ### files have the same structure, no difference between applying lfis and hfis anymore
                         beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1]
         return beamf_array
-        
 
+
+    @log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb}")
+    @log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
+    def load_beamf(self, beamf_info, freqcomb: List) -> Dict:
+        """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
+
+        Args:
+            cf (Dict): Configuration as coming from conf.json
+            mch (str): ID of the machine the code is executed. Depending on the ID, a different set of configurations is used.
+            freqcomb (List): Frequency channels which are to be ignored
+
+        Returns:
+            np.array: Planck beamfunctions with dimension (Nspec, nfreq, nfreq, lmaxp1)
+        """
+
+        #TODO this belongs to fn_gen and should be passed to this function rather than being calculated here.
+        # Then beamf_info can be removed from the function parameters
+        def _get_beamffn():
+            beamf = dict()
+            if self.csu.freqdset.startswith('DX12'):
+                for freqc in freqcomb:
+                    freqs = freqc.split('-')
+                    if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+                        beamf.update({
+                            freqc: {
+                                "HFI": fits.open(
+                                    "{bf_path}{bf_filename}"
+                                    .format(
+                                        bf_path = beamf_info["HFI"]['ap'].replace("{split}", self.csu.freqdatsplit),
+                                        bf_filename = beamf_info["HFI"]['filename']
+                                            .replace("{freq1}", freqs[0])
+                                            .replace("{freq2}", freqs[1])
+                                    ))
+                                }
+                            })
+                    elif int(freqs[0]) < 100 and int(freqs[1]) >= 100:
+                        beamf.update({
+                            freqc: {
+                                "HFI": fits.open(
+                                    "{bf_path}{bf_filename}"
+                                    .format(
+                                        bf_path = beamf_info["HFI"]['ap'].replace("{split}", self.csu.freqdatsplit),
+                                        bf_filename = beamf_info["HFI"]['filename']
+                                            .replace("{freq1}", freqs[1])
+                                            .replace("{freq2}", freqs[1])
+                                ))
+                            }
+                        })
+                        beamf[freqc].update({
+                            "LFI": fits.open(
+                                    "{bf_path}{bf_filename}"
+                                    .format(
+                                        bf_path = beamf_info["LFI"]['ap'].replace("{split}", self.csu.freqdatsplit),
+                                        bf_filename = beamf_info["LFI"]['filename']
+                                ))
+                        })
+                    elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
+                        beamf.update({
+                            freqc: {
+                                "LFI": fits.open(
+                                    "{bf_path}{bf_filename}"
+                                    .format(
+                                        bf_path = beamf_info["LFI"]['ap'].replace("{split}", self.csu.freqdatsplit),
+                                        bf_filename = beamf_info["LFI"]['filename']
+                                ))
+                            }})
+            elif self.csu.freqdset.startswith('NPIPE'):
+                for freqc in freqcomb:
+                    freqs = freqc.split('-')
+                    beamf.update({
+                        freqc: {
+                            "HFI": fits.open(
+                                "{bf_path}{bf_filename}"
+                                .format(
+                                    bf_path = beamf_info["HFI"]['ap'].replace("{split}", self.csu.freqdatsplit),
+                                    bf_filename = beamf_info['filename']
+                                        .replace("{freq1}", freqs[0])
+                                        .replace("{freq2}", freqs[1])
+                                ))
+                            }
+                        })
+            return beamf
+
+        beamf = _get_beamffn()
+
+        TEB_dict = {
+            "T": 0,
+            "E": 1,
+            "B": 2
+        }
+        LFI_dict = {
+            "030": 28,
+            "044": 29,
+            "070": 30
+        }
+        freqs = self.csu.PLANCKMAPFREQ_f
+        lmaxp1 = self.csu.lmax+1
+        beamf_array = np.zeros(shape=(3, len(freqs), len(freqs), lmaxp1))
+        
+        for idspec, spec in enumerate(["T", "E", "B"]):
+            for ida, freqa in enumerate(freqs):
+                for idb, freqb in enumerate(freqs):
+                    if ida < idb:
+                        bf = beamf[freqa+'-'+freqb]
+                    else:
+                        bf = beamf[freqb+'-'+freqa]
+                    if self.csu.freqdset.startswith('DX12'):
+                        if int(freqa) >= 100 and int(freqb) >= 100:
+                            beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1]
+                        elif int(freqa) < 100 and int(freqb) < 100:
+                            b1 = np.sqrt(bf["LFI"][LFI_dict[freqa]].data.field(0))
+                            buff1 = np.concatenate((
+                                b1[:min(lmaxp1, len(b1))],
+                                np.array([np.NaN for n in range(max(0, lmaxp1-len(b1)))])))
+                            b2 = np.sqrt(bf["LFI"][LFI_dict[freqb]].data.field(0))
+                            buff2 = np.concatenate((
+                                b2[:min(lmaxp1, len(b2))],
+                                np.array([np.NaN for n in range(max(0, lmaxp1-len(b2)))])))
+                            beamf_array[idspec,ida,idb] = buff1*buff2
+                        else:
+                            if ida < idb:
+                                freqc = freqa
+                            else:
+                                freqc = freqb
+                            b = np.sqrt(bf["LFI"][LFI_dict[freqc]].data.field(0))
+                            buff = np.concatenate((
+                                b[:min(lmaxp1, len(b))],
+                                np.array([np.NaN for n in range(max(0, lmaxp1-len(b)))])))
+                            beamf_array[idspec,ida,idb] = buff*np.sqrt(bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1])
+                    elif self.csu.freqdset.startswith('NPIPE'):
+                        ### now that all cross beamfunctions exist, and beamf
+                        ### files have the same structure, no difference between applying lfis and hfis anymore
+                        beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1]
+        return beamf_array
+        
 
     @log_on_start(INFO, "Saving to {path_name}")
     @log_on_end(DEBUG, "Data saved successfully to {path_name}")
@@ -394,16 +576,6 @@ class IO:
             os.remove(path_name)
         np.save(path_name, data)
         print('io.py: Data saved to {}'.format(path_name))
-
-    #TODO implement
-    def save_fits(data):
-        hdu = fits.PrimaryHDU(data)
-        hdul = fits.HDUList([hdu])
-        hdul.writeto('/global/cscratch1/sd/sebibel/smica/smicaminvarmap_SMICA_highell_bins_0200_C_l_NPIPE_lens_4000_6000_0_0_Full.fits')
-
-        from astropy.table import Table
-        t = Table(data.T, names=('I', 'Q', 'U'))
-        t.write('/global/cscratch1/sd/sebibel/smica/smicaminvarmap_SMICA_highell_bins_0200_C_l_NPIPE_lens_4000_6000_0_0_Full.fits', format='fits')
 
 
     @log_on_start(INFO, "Saving to {path_name}")
@@ -421,138 +593,3 @@ class IO:
     def save_map(self, data, path_name: str):
         hp.write_map(path_name, data, overwrite=True)
         print("saved map to {}".format(path_name))
-    
-
-class Filehandling:
-    def __init__(self, cfmch, cfpa, nside_out, sim_id):
-        self.out_misc_path = cfmch['outdir_misc_ap']
-        iff_make_dir(self.out_misc_path)
-
-        self.map_cmb_sc_path_name = self.out_misc_path + "map_cmb_in_nside_{}_sim_id_{}.npy".format(
-            nside_out[1],
-            sim_id)
-        if "Spectrum_scale" in cfpa:
-            self.total_filename = self.make_filenamestring(cfpa, sim_id)
-            self.total_filename_raw = self.make_filenamestring(cfpa, sim_id, 'raw')
-
-            self.out_map_path = cfmch['outdir_map_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_map_path)
-            self.map_sc_filename = "MAP" + self.total_filename
-            self.map_sc_path_name = self.out_map_path + self.map_sc_filename
-
-            self.out_mapsyn_path = cfmch['outdir_map_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_mapsyn_path)
-            self.mapsyn_sc_filename = "MAPSYN" + self.total_filename
-            self.mapsyn_sc_path_name = self.out_mapsyn_path + self.mapsyn_sc_filename
-
-            self.out_specsyn_path = cfmch['outdir_spectrum_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_specsyn_path)
-            self.specsyn_sc_filename = "SPECSYN" + self.total_filename
-            self.specsyn_sc_path_name = self.out_specsyn_path + self.specsyn_sc_filename
-
-            self.out_spec_path = cfmch['outdir_spectrum_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_spec_path)
-
-            self.spec_unsc_filename = "SPEC-RAW_" + self.total_filename_raw
-            self.spec_unsc_path_name = self.out_spec_path + self.spec_unsc_filename
-
-            self.psspec_unsc_filename = "PSSPEC-RAW_" + self.total_filename_raw
-            self.psspec_unsc_path_name = self.out_spec_path + self.psspec_unsc_filename
-
-            self.cmb_unsc_filename = "CMB-RAW_" + self.total_filename_raw
-            self.cmb_unsc_path_name = self.out_spec_path + self.cmb_unsc_filename
-
-            self.spec_sc_filename = "SPEC" + self.total_filename
-            self.spec_sc_path_name = self.out_spec_path + self.spec_sc_filename
-
-            self.psspec_sc_filename = "PSSPEC" + self.total_filename
-            self.psspec_sc_path_name = self.out_spec_path + self.psspec_sc_filename
-
-            self.out_specsmica_path = cfmch['outdir_smica_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.out_specsmica_path)
-            self.specsmica_sc_filename = "SPECSMICA" + "_" + cfpa['binname'] + self.total_filename
-            self.specsmica_sc_path_name = self.out_specsmica_path + self.specsmica_sc_filename
-            self.weight_smica_path_name = cfmch['outdir_smica_ap'] + "SMICAWEIG_" + cfpa["Tscale"] + "_" + cfpa['binname'] + self.total_filename
-
-            self.cmbmap_smica_path_name = cfmch['outdir_smica_ap'] + "smicaminvarmap_{}".format(cfpa['binname']) + "_" + self.total_filename
-            self.clmin_smica_path_name = cfmch['outdir_smica_ap'] + "smicaclmin_{}".format(cfpa['binname']) + "_" + self.total_filename
-            self.cmb_specsmica_sc_path_name = self.out_specsmica_path + "CMB_" + self.specsmica_sc_filename
-            self.gal_specsmica_sc_path_name = self.out_specsmica_path + "GAL_" + self.specsmica_sc_filename
-
-            self.weight_path = cfmch['outdir_weight_ap'] + cfpa["freqdset"] + "/"
-            iff_make_dir(self.weight_path)
-            self.weight_path_name = self.weight_path + "WEIG_" + cfpa["Tscale"] + "_" + self.total_filename
-
-            self.signal_sc_filename = "C_lS_in_sim_id_{}.npy".format(sim_id)
-            self.signal_sc_path_name = self.out_misc_path + self.signal_sc_filename
-            #TODO the following part needs reviewin
-
-            cfmch_copy = copy.deepcopy(cfmch)
-            cfpa_copy = copy.deepcopy(cfpa)
-
-            ### the following lines are only needed for run_smica part of the code
-            buff = cfpa['freqdset']
-            if "diff" in buff or 'cmb' in buff:
-                pass
-            else:
-                cfpa_copy['freqdset'] = buff+'_diff'
-            self.noise_filename = self.make_filenamestring(cfpa_copy, sim_id)
-            self.noise_filename_raw = self.make_filenamestring(cfpa_copy, sim_id, 'raw')
-            self.noise_path = cfmch_copy['outdir_spectrum_ap'] + cfpa_copy["freqdset"] + "/"
-
-            iff_make_dir(self.noise_path)
-            self.noise_unsc_path_name = self.noise_path + 'SPEC-RAW_' + self.noise_filename_raw
-            self.noise_sc_path_name = self.noise_path + "SPEC" + self.noise_filename
-
-            self.psnoise_unsc_path_name = self.noise_path + 'PSSPEC-RAW_' + self.noise_filename_raw
-            self.psnoise_sc_path_name = self.noise_path + "PSSPEC" + self.noise_filename
-
-            cfpa_copy['freqdset'] = buff
-    
-
-    def make_filenamestring(self, cfpa_local, sim_id, desc='scaled'):
-        """Helper function for generating unique filenames given te current configuration
-
-        Args:
-            cf (Dict): Configuration file - in general conf.json from root directory
-
-        Returns:
-            str: unique filename which may be used for spectra, weights, maps, etc..
-        """
-
-        spectrum_scale = cfpa_local["Spectrum_scale"]
-        mskset = cfpa_local['mskset'] # smica or lens
-        freqdset = cfpa_local['freqdset'] # DX12 or NERSC
-        lmax = cfpa_local["lmax"]
-        lmax_mask = cfpa_local["lmax_mask"]
-
-        smoothing_window = cfpa_local["smoothing_window"]
-        max_polynom = cfpa_local["max_polynom"]
-
-        if desc == 'raw':
-            return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{split}.npy'.format(
-                sim_id = sim_id,
-                spectrum_scale = spectrum_scale,
-                freqdset = freqdset,
-                mskset = mskset,
-                lmax = lmax,
-                lmax_mask = lmax_mask,
-                split = "Full" if cfpa_local["freqdatsplit"] == "" else cfpa_local["freqdatsplit"])
-        else:
-            return '{sim_id}_{spectrum_scale}_{freqdset}_{mskset}_{lmax}_{lmax_mask}_{smoothing_window}_{max_polynom}_{split}.npy'.format(
-                sim_id = sim_id,
-                spectrum_scale = spectrum_scale,
-                freqdset = freqdset,
-                mskset = mskset,
-                lmax = lmax,
-                lmax_mask = lmax_mask,
-                split = "Full" if cfpa_local["freqdatsplit"] == "" else cfpa_local["freqdatsplit"],
-                smoothing_window = smoothing_window,
-                max_polynom = max_polynom)
-
-
-def iff_make_dir(outpath_name):
-    if os.path.exists(outpath_name):
-        pass
-    else:
-        os.makedirs(outpath_name)

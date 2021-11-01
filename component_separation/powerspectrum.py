@@ -3,7 +3,6 @@ import numpy as np
 
 from component_separation.cs_util import Config
 from component_separation.io import IO
-import component_separation.MSC.MSC.pospace as ps
 
 from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
@@ -49,7 +48,7 @@ def cov2cov_smooth(cov, cutoff):
 @log_on_end(DEBUG, "Spectrum processed successfully: '{result}' ")
 def process_all(data, freqcomb, beamf, nside, spectrum_scale):
     """
-    Root function. Executes all transformations
+    Root function. Executes general processing for everydays usage 
     """
     data = apply_pixwin(data, freqcomb, nside)
     data = apply_scale(data, spectrum_scale)

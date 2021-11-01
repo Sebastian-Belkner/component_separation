@@ -1,4 +1,3 @@
-from enum import Enum
 import json
 import itertools
 import numpy as np
@@ -11,58 +10,19 @@ import component_separation
 import functools
 import warnings
 from scipy import interpolate
-import component_separation.io as io
+from component_separation.cachechecker import Asserter as ass
+import component_separation.cachechecker as cc
+from component_separation.config_planck import Planckf, Planckr, Plancks, Params
 
-class Config():
-    # LOGFILE = 'data/tmp/logging/messages.log'
-    # logger = logging.getLogger("")
-    # handler = logging.handlers.RotatingFileHandler(
-    #         LOGFILE, maxBytes=(1048576*5), backupCount=0
-    # )
-    # formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    # handler.setFormatter(formatter)
-    # logger.addHandler(handler)
-
-    def __init__(self, cf=None):
-        if cf is None:
-            with open(os.path.dirname(component_separation.__file__)+'/config_ps.json', "r") as f:
-                self.cf = json.load(f)
-        else:
-            self.cf = cf
-        self.PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-        self.PLANCKSPECTRUM = [p.value for p in list(Plancks)]
-        self.freqcomb =  ["{}-{}".format(FREQ,FREQ2)
-            for FREQ, FREQ2  in itertools.product(self.PLANCKMAPFREQ,self.PLANCKMAPFREQ)
-                if FREQ not in self.cf['pa']["freqfilter"] and
-                (FREQ2 not in self.cf['pa']["freqfilter"]) and (int(FREQ2)>=int(FREQ))]
-        
-        
-        self.PLANCKMAPFREQ_f = [FREQ for FREQ in self.PLANCKMAPFREQ
-            if FREQ not in self.cf['pa']["freqfilter"]]
-        if 'specfilter' in self.cf['pa'].keys():
-            self.PLANCKSPECTRUM_f = [SPEC for SPEC in self.PLANCKSPECTRUM
-                if SPEC not in self.cf['pa']["specfilter"]]
-            self.speccomb  = [spec for spec in self.PLANCKSPECTRUM if spec not in self.cf['pa']["specfilter"]]
-            self.specfilter = self.cf['pa']["specfilter"]
-            self.Tscale = self.cf['pa']["Tscale"]
-            self.binname = self.cf['pa']['binname']
-            self.bins = getattr(Constants, self.binname)
-
-        self.CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
-                             "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
-        self.CB_color_cycle_lighter = ["#68ACCE", "#AC4657", "#ADAC57", "#005713", "#130268", "#8A2479", 
-                        "#248A79", "#797913", "#680235", "#460000", "#4679AC", "#686868"]
-        self.freqdset = self.cf['pa']["freqdset"]
-        self.freqfilter = self.cf['pa']["freqfilter"]
-        self.spectrum_type = self.cf['pa']['spectrum_type']
-        if 'lmax' in self.cf['pa'].keys():
-            self.lmax = self.cf['pa']["lmax"]
-        if 'lmax' in self.cf['pa'].keys():
-            self.lmax_mask = self.cf['pa']["lmax"]
-        self.overwrite_cache = self.cf['pa']['overwrite_cache']
-        self.mskset = self.cf['pa']['mskset']
-        self.simdata = self.cf['pa']['simdata']      
-        
+class Config(Params):
+    def __init__(self):
+        """
+        Load Configuartion file and store as parameters, but do not expose config file.
+        """
+        # TODO configuration could depend on what is currently done
+            # 1. map generation
+            # 2. powerspectrum generation
+            # 3. component separation
 
         uname = platform.uname()
         if uname.node == "DESKTOP-KMIGUPV":
@@ -70,21 +30,15 @@ class Config():
         else:
             self.mch = "NERSC"
 
-        if "sim_id" in self.cf[self.mch][self.freqdset]:
-            self.sim_id = self.cf[self.mch][self.freqdset]["sim_id"]
-        else:
-            self.sim_id = "0200"
-        self.nside_out = self.cf['pa']['nside_out'] if self.cf['pa']['nside_out'] is not None else self.cf['pa']['nside_desc_map']
-
+        self.CB_color_cycle = ["#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
+        "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
+        self.CB_color_cycle_lighter = ["#68ACCE", "#AC4657", "#ADAC57", "#005713", "#130268", "#8A2479", 
+        "#248A79", "#797913", "#680235", "#460000", "#4679AC", "#686868"]
 
         print(40*"$")
         print("Run with the following settings:")
-        print(self.cf['pa'])
+        print(Params.__dict__)
         print(40*"$")
-
-    def set_logger(loglevel=logging.INFO):
-        logger.setLevel(loglevel)
-        logging.StreamHandler(sys.stdout)
 
 
 class Filename_gen:
@@ -107,51 +61,75 @@ class Filename_gen:
      2. generate hierarch. filename
      2. pass info to cachechecker
     """
+
     def __init__(self, csu_loc, dir_structure=None, fn_structure=None, sim_id=None):
         """To add a new attribute,
             1. add it to dir/fn_structure
             2a. add an instance test (here in the __init__)
             2b. or add a runtime test (perhaps in get_spectrum())
         """
-
         #TODO implement dir_structure and fn_structure
+
         self.csu_loc = csu_loc
+        from component_separation.cachechecker import Asserter as ass
+        self.ass = ass
 
-        dir_structure = "{dataset}/{mask}/{simXX}/{smicasepCOMP}/{spec}"
-        fn_structure = "{represent}_{binname}_{info_component}_{info_comb}_{lmax}_{lmax_mask}_{spectrum_type}_{nside}_{simXX}"
-
-        #test if attributes should be in for this instance
-        if self.csu_loc['freqdset'] in ['DX12', 'NPIPE']:
-            dir_structure.replace("{dataset}", self.csu_loc['freqdset'])
-
-        if self.csu_loc['mskset'] in ['smica', 'lens']:
-            dir_structure.replace("{mask}", self.csu_loc['mskset'])
+        if csu_loc.mch == 'NERSC':
+            if csu_loc.freqdset == "NPIPE":
+                from component_separation.config_planck import NPIPE as dset_fn
+                self.dset_fn = dset_fn
+            elif csu_loc.freqdset == "DX12":
+                from component_separation.config_planck import DX12 as dset_fn
+                self.dset_fn = dset_fn
+            else:
+                assert 0, "to be implemented: {}".format(csu_loc.freqdset)
         
-        if self.csu_loc['simdata'] == True:
-            assert type(sim_id), int
-            dir_structure.replace("{simXX}", "sim{}".format(sim_id))
-        else:
-            dir_structure.replace("_{simXX}", "")
+        if csu_loc.mskset == "smica":
+            from component_separation.config_planck import Smica_Mask as mask
+            self.mask = mask
+        elif csu_loc.mskset == "lens":
+            from component_separation.config_planck import Lens_Mask as mask
+            self.mask = mask
+
+        if csu_loc.freqdset.startswith("NPIPE"):
+            from component_separation.config_planck import BeamfNPIPE as beamf
+            self.beamf = beamf
+        if csu_loc.freqdset.startswith("DX12"):
+            from component_separation.config_planck import BeamfDX12 as beamf
+            self.beamf = beamf
+
+        # dir_structure = "{dataset}/{mask}/{simXX}/{spec}"
+        # fn_structure = "Cl_{info_component}_{info_comb}_{lmax}_{lmax_mask}_{spectrum_type}_{nside}_{simXX}"
+        #test if attributes should be in for this instance
+        # if self.csu_loc['freqdset'] in ['DX12', 'NPIPE']:
+        #     dir_structure.replace("{dataset}", self.csu_loc['freqdset'])
+
+        # if self.csu_loc['mskset'] in ['smica', 'lens']:
+        #     dir_structure.replace("{mask}", self.csu_loc['mskset'])
+        
+        # if self.csu_loc['simdata'] == True:
+        #     assert type(sim_id), int
+        #     dir_structure.replace("{simXX}", "sim{}".format(sim_id))
+        # else:
+        #     dir_structure.replace("_{simXX}", "")
 
         # there might be attributes left which can only be decided upon runtime
-        self.dir_name = dir_structure
+        # self.dir_name = dir_structure
+
 
 
     def _get_miscdir(self, sim_id=None):
         assert type(sim_id) == int or sim_id is None
 
-        ap = path.join(self.cf_loc[self.csu_loc.mch]['outdir_ap'], 'compsep')
-        io.iff_make_dir(ap)
-
-        ap = path.join(ap, self.csu_loc.freqdset)  
-        io.iff_make_dir(ap)
+        ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
+        cc.iff_make_dir(ap)
 
         ap = path.join(ap, self.csu_loc.mskset+'mask')  
-        io.iff_make_dir(ap)
+        cc.iff_make_dir(ap)
 
         if self.csu_loc.simdata:
             ap = path.join(ap, 'sim{}'.format(str(sim_id)))
-            io.iff_make_dir(ap)
+            cc.iff_make_dir(ap)
 
         return ap
 
@@ -163,7 +141,290 @@ class Filename_gen:
         # 3. loop over remaining attributes, link with '/'
 
         # currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
+        assert info_component in self.ass.info_component
+        assert type(sim_id) == int or sim_id is None
+
+        """dir structure:
+            compsep/
+                --syn/
+                    sim_id/dataset/mask/
+                        --map/
+                        --spec/
+                --dataset/mask/
+                        --map/
+                            dset_msk_map__ + filename
+                        --spec/
+        """
+
+        ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
+        cc.iff_make_dir(ap)
+
+        ap = path.join(ap, self.csu_loc.mskset+'mask')  
+        cc.iff_make_dir(ap)
+
+        if self.csu_loc.simdata:
+            ap = path.join(ap, 'sim{}'.format(str(sim_id)))
+            cc.iff_make_dir(ap)
+
+        ap = path.join(ap, info_component)
+        cc.iff_make_dir(ap)
+
+        ap_map = path.join(ap, 'map')
+        cc.iff_make_dir(ap_map)
+        ap_spec = path.join(ap, 'spec')
+        cc.iff_make_dir(ap_spec)
+
+        ap_misc = path.join(ap, 'misc')
+        cc.iff_make_dir(ap_misc)
+
+        return ap_map, ap_spec, ap_misc
+
+
+    def _get_specfilename(self, info_component, info_combination, sim_id=None, prefix=None):
+        #TODO the algorithm could be further improved as follows:
+        # 1. collect all attributes which are supposed to be included as filenameattribute (in this way, its very transparent for future change)
+        # 2. test which of the attributes match the current request, remove if needed
+        # 3. loop over remaining attributes, link with '/'
+
+        # currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
+        assert info_component in self.ass.info_component
+        assert info_combination in self.ass.info_combination
+        assert type(sim_id) == int or sim_id is None
+        """
+        Filename: 
+            <lmax>
+                <lmaxmask_chonetal>
+                pseudo
+            <smicacom>_<binname>_<lmax>
+                    <lmaxmask_chonetal>
+                    pseudo
+        """
+        if prefix is None:
+            retval = 'Cl'
+        else:
+            retval = prefix.replace('/', '_')
+
+        retval = '_'.join([retval, info_combination])
+
+        retval = '_'.join([retval, str(self.csu_loc.nside_out[1])])
+
+        retval = '_'.join([retval, str(self.csu_loc.lmax)])
+
+        if self.csu_loc.spectrum_type == 'JC':
+            retval='_'.join([retval, str(self.csu_loc.lmax_mask)])
+            retval='_'.join([retval, "JC"])
+        elif self.csu_loc.spectrum_type == "pseudo":
+            retval='_'.join([retval, "pseudo"])
+
+        if self.csu_loc.simdata and sim_id is not None:
+            retval = '_'.join([retval, str(sim_id)])
+
+        return '.'.join([retval, "npy"])
+
+
+    def _get_mapfilename(self, info_component, info_combination, sim_id=None, prefix=None):
+        assert 0, 'To be implemented'
         assert info_component in ["noise", "foreground", "signal", "non-sep"]
+        assert info_combination in ["combined", "perfreq"]
+        assert type(sim_id) == int or sim_id is None
+
+        """
+        Filename: 
+            <lmax>
+            <smicacom>_<binname>_<lmax>
+                    <lmaxmask_chonetal>
+        """
+
+        if prefix is None:
+            retval = 'Map'
+        else:
+            retval = prefix.replace('/', '_')
+
+        retval = '_'.join([retval, info_combination])
+
+        retval = '_'.join([retval, str(self.csu_loc.nside_out[1])])
+
+        if self.csu_loc.spectrum_type == 'JC':
+            retval='_'.join([retval, str(self.csu_loc.lmax_mask)])
+            retval='_'.join([retval, "JC"])
+        elif self.csu_loc.spectrum_type == "pseudo":
+            retval='_'.join([retval, "pseudo"])
+
+        if self.csu.simdata and sim_id is not None:
+            retval = '_'.join([retval, str(sim_id)])
+
+        return '.'.join([retval, "npy"])
+
+
+    def _get_plafilename(self, FREQ, sim_id=None):
+        freqdset = self.csu_loc.freqdset
+        nside_desc = self.csu_loc.nside_desc_map
+        mch = self.csu_loc.mch
+
+        abs_path = self.csu_loc.cf[mch][freqdset]['ap']
+        freq_filename = self.csu_loc.cf[mch][freqdset]['filename']
+
+        return '{abs_path}{freq_filename}'\
+            .format(
+                abs_path = abs_path\
+                    .replace("{sim_id}", sim_id)\
+                    .replace("{split}", self.csu_loc.freqdatsplit),
+                freq_filename = freq_filename
+                    .replace("{freq}", FREQ)
+                    .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
+                    .replace("{nside}", str(nside_desc[0]) if int(FREQ)<100 else str(nside_desc[1]))
+                    .replace("{00/1}", "00" if int(FREQ)<100 else "01")
+                    .replace("{even/half1}", "evenring" if int(FREQ)>=100 else "ringhalf-1")
+                    .replace("{odd/half2}", "oddring" if int(FREQ)>=100 else "ringhalf-2")
+                    .replace("{sim_id}", sim_id)\
+                    .replace("{split}", self.csu_loc.freqdatsplit)
+            )
+
+
+    def get_spectrum(self, info_component, info_combination="non-separated", sim_id=None, prefix=None):
+        assert info_component in self.ass.info_component, info_component
+        assert info_combination in self.ass.info_combination
+        assert type(sim_id) == int or sim_id is None
+
+        dir_map_loc, dir_spec_loc, dir_misc_loc = self._get_dir(info_component, sim_id)
+        if prefix is None:
+            pass
+        else:
+            prefix = dir_spec_loc
+        filename_loc = self._get_specfilename(info_component, info_combination, sim_id, prefix=prefix)
+
+        return path.join(dir_spec_loc, filename_loc)
+    
+
+    def get_pla(self, freq, info_component, sim_id=None):
+        assert freq in self.ass.PLANCKMAPFREQS, freq
+        assert info_component in self.ass.info_component, info_component
+        assert type(sim_id) == int or sim_id is None
+
+        if info_component == ass.info_component[0]:  # Noise
+            dir_plamap_loc = self.dset_fn._get_noisedir()
+            if dir_plamap_loc == "INTERNAL":
+                dir_plamap_loc, _, _ = self._get_dir(info_component)
+            fn_loc = self.dset_fn._get_noisefn()
+        if info_component == ass.info_component[3]:  # PLA data
+            dir_plamap_loc = self.dset_fn._get_pladir()
+            fn_loc = self.dset_fn._get_plafn()
+        dir_plamap_loc = dir_plamap_loc\
+            .replace("{sim_id}", str(sim_id))\
+            .replace("{split}", self.csu_loc.freqdatsplit)
+
+        fn_loc = fn_loc\
+            .replace("{sim_id}", str(sim_id))\
+            .replace("{split}", self.csu_loc.freqdatsplit)\
+            .replace("{freq}", freq)\
+            .replace("{LorH}", Planckr.LFI.value if int(freq)<100 else Planckr.HFI.value)\
+            .replace("{nside}", str(self.csu_loc.nside_desc_map[0]) if int(freq)<100 else str(self.csu_loc.nside_desc_map[1]))\
+            .replace("{00/1}", "00" if int(freq)<100 else "01")
+                    
+        return path.join(dir_plamap_loc, fn_loc)
+        
+
+    def get_map(self, info_component, info_combination, sim_id=None, prefix=None):
+        assert 0, 'To be implemented'
+        assert info_component in self.ass.info_component, info_component
+        assert info_combination in self.ass.info_combination
+        assert type(sim_id) == int or sim_id is None
+
+        dir_map_loc, dir_spec_loc, dir_misc_loc = self._get_dir(info_component, sim_id)
+        if prefix is None:
+            pass
+        else:
+            prefix = dir_map_loc
+        filename_loc = self._get_mapfilename(info_component, info_combination, sim_id, prefix=prefix)
+
+        return path.join(dir_map_loc, filename_loc)
+
+
+    def get_mask(self, TorP):
+
+        return [path.join(self.mask.get_dir(), fn) 
+            for fn in self.mask.get_fn(TorP)]
+
+
+    def get_misc(self, desc, sim_id=None, prefix=None):
+        assert 0, 'To be implemented'
+        assert type(sim_id) == int or sim_id is None
+
+        dir_map_loc, dir_spec_loc, dir_misc_loc = self._get_miscdir(sim_id)
+        if prefix is None:
+            pass
+        else:
+            prefix = dir_misc_loc
+        filename_loc = self._get_miscfilename(desc, sim_id, prefix=prefix)
+
+        return path.join(dir_misc_loc, filename_loc)
+
+
+    def get_beamf(self):
+        return self.beamf.beamf
+
+class Filename_gen_SMICA:
+    """Generator to consistenly create filenames,
+        1. from configuration file
+        2. upon runtime
+    One may want to differentiate between,
+        simulation, realdata (NPIPE / DX12)
+        powerspec, map, alms,
+        powspectype (pseudo, chonetal)
+        ...
+
+    Create filename hierarchically,
+        1. choose useful hierarical directory structure
+        2. for each config file setting, generate unique level0 name
+        3. for all files generated upon runtime, generate unique level1 name
+
+    The goal is to,
+     1. set up directories
+     2. generate hierarch. filename
+     2. pass info to cachechecker
+    """
+
+    def __init__(self, csu_loc, dir_structure=None, fn_structure=None, sim_id=None):
+        """To add a new attribute,
+            1. add it to dir/fn_structure
+            2a. add an instance test (here in the __init__)
+            2b. or add a runtime test (perhaps in get_spectrum())
+        """
+        #TODO implement dir_structure and fn_structure
+
+        self.csu_loc = csu_loc
+        from component_separation.cachechecker import Asserter_smica as ass
+        self.ass = ass
+
+        dir_structure = "{dataset}/{mask}/{simXX}/{smicasepCOMP}/{spec}"
+        fn_structure = "Cl_{binname}_{info_component}_{info_comb}_{lmax}_{lmax_mask}_{spectrum_type}_{nside}_{simXX}"
+
+
+    def _get_miscdir(self, sim_id=None):
+        assert type(sim_id) == int or sim_id is None
+
+        ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
+        cc.iff_make_dir(ap)
+
+        ap = path.join(ap, self.csu_loc.mskset+'mask')  
+        cc.iff_make_dir(ap)
+
+        if self.csu_loc.simdata:
+            ap = path.join(ap, 'sim{}'.format(str(sim_id)))
+            cc.iff_make_dir(ap)
+
+        return ap
+
+
+    def _get_dir(self, info_component, info_combination, sim_id=None):
+        #TODO the algorithm could be further improved as follows:
+        # 1. collect all attributes which are supposed to be included as dir (in this way, its very transparent for future change)
+        # 2. test which of the attributes match the current request, remove if needed
+        # 3. loop over remaining attributes, link with '/'
+
+        # currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
+        assert info_component in self.ass.info_component
+        assert info_combination in self.ass.info_combination
         assert type(sim_id) == int or sim_id is None
 
         """dir structure:
@@ -185,43 +446,42 @@ class Filename_gen:
                         --map/
                         --spec/
         """
-        ap = path.join(self.csu_loc.cf[self.csu_loc.mch]['outdir_ap'], 'compsep')
-        io.iff_make_dir(ap)
 
-        ap = path.join(ap, self.csu_loc.freqdset)  
-        io.iff_make_dir(ap)
+        ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
+        cc.iff_make_dir(ap)
 
         ap = path.join(ap, self.csu_loc.mskset+'mask')  
-        io.iff_make_dir(ap)
+        cc.iff_make_dir(ap)
 
         if self.csu_loc.simdata:
             ap = path.join(ap, 'sim{}'.format(str(sim_id)))
-            io.iff_make_dir(ap)
+            cc.iff_make_dir(ap)
 
-        if info_component != 'non-sep':
-            ap = path.join(ap, 'smicasep-{}'.format(info_component))
-            io.iff_make_dir(ap)
+        if info_combination == 'separated':
+            ap_misc = path.join(ap, 'misc')
+            cc.iff_make_dir(ap_misc)
+            ap_spec = path.join(ap, 'smicasep-{}'.format(info_component))
+            cc.iff_make_dir(ap_spec)
+            return ap_spec, ap_misc
 
-        ap_map = path.join(ap, 'map')
-        io.iff_make_dir(ap_map)
         ap_spec = path.join(ap, 'spec')
-        io.iff_make_dir(ap_spec)
+        cc.iff_make_dir(ap_spec)
 
         ap_misc = path.join(ap, 'misc')
-        io.iff_make_dir(ap_misc)
-        return ap_map, ap_spec, ap_misc
+        cc.iff_make_dir(ap_misc)
+
+        return ap_spec, ap_misc
 
 
-    def _get_specfilename(self, info_component, info_combination, represent, sim_id=None, prefix=None):
+    def _get_specfilename(self, info_component, info_combination, sim_id=None, prefix=None):
         #TODO the algorithm could be further improved as follows:
         # 1. collect all attributes which are supposed to be included as filenameattribute (in this way, its very transparent for future change)
         # 2. test which of the attributes match the current request, remove if needed
         # 3. loop over remaining attributes, link with '/'
 
         # currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
-        assert info_component in ["noise", "foreground", "signal", "non-sep"]
-        assert info_combination in ["combined", "perfreq"]
-        assert represent in ["Cl", "Dl"]
+        assert info_component in self.ass.info_component
+        assert info_combination in self.ass.info_combination
         assert type(sim_id) == int or sim_id is None
         """
         Filename: 
@@ -233,13 +493,11 @@ class Filename_gen:
                     pseudo
         """
         if prefix is None:
-            retval = ''
-            retval = ''.join([retval, represent])
+            retval = 'Cl'
         else:
             retval = prefix.replace('/', '_')
-            retval = '_'.join([retval, represent])
         
-        if info_component != 'non-sep':
+        if info_component != 'total':
             retval = '_'.join([retval, self.csu_loc.binname])
 
         retval = '_'.join([retval, info_combination])
@@ -248,9 +506,9 @@ class Filename_gen:
 
         retval = '_'.join([retval, str(self.csu_loc.lmax)])
 
-        if self.csu_loc.spectrum_type == 'Chonetal':
+        if self.csu_loc.spectrum_type == 'JC':
             retval='_'.join([retval, str(self.csu_loc.lmax_mask)])
-            retval='_'.join([retval, "Chonetal"])
+            retval='_'.join([retval, "JC"])
         elif self.csu_loc.spectrum_type == "pseudo":
             retval='_'.join([retval, "pseudo"])
 
@@ -260,77 +518,19 @@ class Filename_gen:
         return '.'.join([retval, "npy"])
 
 
-    def _get_mapfilename(self, info_component, info_combination, represent, sim_id=None, prefix=None):
-        assert 0, 'To be implemented'
-        assert info_component in ["noise", "foreground", "signal", "non-sep"]
-        assert info_combination in ["combined", "perfreq"]
-        assert represent in ["Cl", "Dl"]
+    def get_spectrum(self, info_component, info_combination, sim_id=None, prefix=None):
+        assert info_component in self.ass.info_component, info_component
+        assert info_combination in self.ass.info_combination, info_combination
         assert type(sim_id) == int or sim_id is None
 
-        """
-        Filename: 
-            <lmax>
-            <smicacom>_<binname>_<lmax>
-                    <lmaxmask_chonetal>
-        """
-
-        if prefix is None:
-            retval = ''
-            retval = ''.join([retval, represent])
-        else:
-            retval = prefix.replace('/', '_')
-            retval = '_'.join([retval, represent])
-        
-        if info_component != 'non-sep':
-            retval = '_'.join([retval, self.csu_loc.binname])
-
-        retval = '_'.join([retval, info_combination])
-
-        retval = '_'.join([retval, str(self.csu_loc.nside_out[1])])
-
-        if self.csu_loc.spectrum_type == 'Chonetal':
-            retval='_'.join([retval, str(self.csu_loc.lmax_mask)])
-            retval='_'.join([retval, "Chonetal"])
-        elif self.csu_loc.spectrum_type == "pseudo":
-            retval='_'.join([retval, "pseudo"])
-
-        if self.csu.simdata and sim_id is not None:
-            retval = '_'.join([retval, str(sim_id)])
-
-        return '.'.join([retval, "npy"])
-
-
-    def get_spectrum(self, info_component, info_combination, represent, sim_id=None, prefix=None):
-        assert info_component in ["noise", "foreground", "signal", "non-sep"]
-        assert info_combination in ["combined", "perfreq"]
-        assert represent in ["Cl", "Dl"]
-        assert type(sim_id) == int or sim_id is None
-
-        dir_map_loc, dir_spec_loc, dir_misc_loc = self._get_dir(info_component, sim_id)
+        dir_spec_loc, dir_misc_loc = self._get_dir(info_component, info_combination, sim_id)
         if prefix is None:
             pass
         else:
             prefix = dir_spec_loc
-        filename_loc = self._get_specfilename(info_component, info_combination, represent, sim_id, prefix=prefix)
+        filename_loc = self._get_specfilename(info_component, info_combination, sim_id, prefix=prefix)
 
         return path.join(dir_spec_loc, filename_loc)
-
-
-    def get_map(self, info_component, info_combination, represent, sim_id=None, prefix=None):
-        assert 0, 'To be implemented'
-        assert info_component in ["noise", "foreground", "signal", "non-sep"]
-        assert info_combination in ["combined", "perfreq"]
-        assert represent in ["Cl", "Dl"]
-        assert type(sim_id) == int or sim_id is None
-
-        dir_map_loc, dir_spec_loc, dir_misc_loc = self._get_dir(info_component, sim_id)
-        if prefix is None:
-            pass
-        else:
-            prefix = dir_map_loc
-        filename_loc = self._get_mapfilename(info_component, info_combination, represent, sim_id, prefix=prefix)
-
-        return path.join(dir_map_loc, filename_loc)
 
 
     def get_misc(self, desc, sim_id=None, prefix=None):
@@ -347,7 +547,7 @@ class Filename_gen:
         return path.join(dir_misc_loc, filename_loc)
 
 
-class Constants:
+class Smica_bins:
 
     SMICA_lowell_bins = np.array([
     [5.000000000000000000e+00, 9.000000000000000000e+00],
@@ -401,7 +601,6 @@ class Constants:
     [9.500000000000000000e+02, 9.990000000000000000e+02]
     ], dtype=int)
 
-    
     linear_equisized_bins_100 = np.array([[   0,   99],
        [ 100,  199],
        [ 200,  299],
@@ -433,42 +632,12 @@ class Constants:
        [2800, 2899]])
 
 
-class Planckf(Enum):
-    LFI_1 = '030'
-    LFI_2 = '044'
-    LFI_3 = '070'
-    HFI_1 = '100'
-    HFI_2 = '143'
-    HFI_3 = '217'
-    HFI_4 = '353'
-    HFI_5 = '545'
-    HFI_6 = '857'
-
-    
-class Plancks(Enum):
-    # the order must be the same as the order of pospace function returns
-    TT = "TT"#00
-    EE = "EE"#11
-    BB = "BB"#22
-    TE = "TE"#01
-    TB = "TB"#02
-    EB = "EB"#12
-    ET = "ET"#10
-    BT = "BT"#20
-    BE = "BE"#21
-
-
-class Planckr(Enum):
-    LFI = "LFI"
-    HFI = "HFI"
-
-
 class Helperfunctions:
 
     llp1e12 = lambda x: x*(x+1)*1e12/(2*np.pi)
 
     @staticmethod
-    def bin_it(data, bins=Constants.SMICA_lowell_bins):
+    def bin_it(data, bins=Smica_bins.SMICA_lowell_bins):
         ret = np.ones((*data.shape[:-1], len(bins)))
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
@@ -576,11 +745,11 @@ class Helperfunctions:
         as deprecated. It will result in a warning being emitted
         when the function is used."""
         @functools.wraps(func)
-        def new_func(*args, **kwargs):
+        def wrapped(*args, **kwargs):
             warnings.simplefilter('always', DeprecationWarning)  # turn off filter
             warnings.warn("Call to deprecated function {}.".format(func.__name__),
                         category=DeprecationWarning,
                         stacklevel=2)
             warnings.simplefilter('default', DeprecationWarning)  # reset filter
             return func(*args, **kwargs)
-        return new_func
+        return wrapped

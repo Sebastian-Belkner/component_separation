@@ -1,35 +1,17 @@
 #!/usr/local/bin/python
 """
-synmaps.py: script for generating masks. Not yet used but eventually needed
+masking.py: script for generating masks. Not yet used but eventually needed
 """
 import json
 import logging
 import logging.handlers
 import os
-import platform
 import sys
 import numpy as np
 from logging import CRITICAL, DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
 import component_separation.io as io
-import component_separation.MSC.MSC.pospace as ps
-import component_separation.powspec as pw
-from component_separation.cs_util import Planckf, Plancks
-import component_separation.preprocess as prep
-import component_separation
-compath = os.path.dirname(component_separation.__file__)[:-21]
-
-with open('{}/config.json'.format(compath), "r") as f:
-    cf = json.load(f)
-
-uname = platform.uname()
-if uname.node == "DESKTOP-KMIGUPV":
-    mch = "XPS"
-else:
-    mch = "NERSC"
-mask_path = cf[mch]['outdir']
-
 
 
 def hitsvar2mask(hitsmap, tresh_low, tresh_up):

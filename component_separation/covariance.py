@@ -3,15 +3,13 @@ import numpy as np
 
 from component_separation.cs_util import Config
 from component_separation.io import IO
-import component_separation.MSC.MSC.pospace as ps
+from component_separation.config_planck import Planckf, Planckr, Plancks
+from component_separation.cs_util import Helperfunctions as hpf
+import component_separation.map as mp
 
 from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
-
-csu = Config()
-io = IO(csu)
-
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
@@ -49,12 +47,9 @@ def build_covmatrices(data: np.array, Tscale, freqcomb, PLANCKMAPFREQ_f, cutoff=
             353: lmaxp1
         }[fr]
 
-
     covn = np.zeros(shape=(data.shape[1], NFREQUENCIES, NFREQUENCIES, lmaxp1))
-    print(covn.shape)
     for sidx in range(covn.shape[0]):
         for fcombidx, freqc in enumerate(freqcomb):
-            print(sidx, fcombidx, freqc)
             FREQ1, FREQ2 = int(freqc.split('-')[0]), int(freqc.split('-')[1])
             freqf = np.array([int(n) for n in PLANCKMAPFREQ_f])
             fidx1 = np.where(freqf == FREQ1)[0][0]
@@ -65,8 +60,8 @@ def build_covmatrices(data: np.array, Tscale, freqcomb, PLANCKMAPFREQ_f, cutoff=
                 a = np.concatenate((data[fcombidx,sidx][:min(lmaxp1, min(LFI_cutoff(FREQ1),LFI_cutoff(FREQ2)))], b))
             else:
                 a = data[fcombidx,sidx]
-            covn[sidx,fidx1,fidx2] = a * trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
-            covn[sidx,fidx2,fidx1] = a * trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+            covn[sidx,fidx1,fidx2] = a * mp.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * mp.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+            covn[sidx,fidx2,fidx1] = a * mp.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * mp.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
     return covn
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
@@ -137,9 +132,9 @@ def cov2weight(data: np.array, freqs=np.array([F.value for F in list(Planckf)[:-
         Tscale_mat = np.zeros(shape=(nfreq,nfreq)) #keep shape as if for all frequencies
         for idx1, FREQ1 in enumerate(freqs):
             for idx2, FREQ2 in enumerate(freqs):
-                Tscale_mat[idx1,idx2] = trsf_m.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * trsf_m.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+                Tscale_mat[idx1,idx2] = mp.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * mp.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
 
-        elaw = np.array([trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in freqs])
+        elaw = np.array([mp.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in freqs])
         weight_arr = np.zeros(shape=(np.take(cov.shape, [0,1,-1])))
         for spec in range(weight_arr.shape[0]):
             for l in range(cov.shape[-1]):
@@ -217,7 +212,7 @@ def calculate_weights(cov: np.array, freqs, Tscale: str = r"K_CMB") -> np.array:
         np.array: The weightings of the respective Frequency channels
     """
 
-    elaw = np.array([trsf_m.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in freqs])
+    elaw = np.array([mp.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in freqs])
     weight_arr = np.zeros(shape=(np.take(cov.shape, [0,1,-1])))
     for spec in range(weight_arr.shape[0]):
         for l in range(cov.shape[-1]):
