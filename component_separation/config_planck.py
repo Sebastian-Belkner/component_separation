@@ -1,4 +1,3 @@
-import numpy as np
 from enum import Enum
 import itertools
 import platform
@@ -73,19 +72,13 @@ class Params:
         mch = "NERSC"
 
     PLANCKMAPFREQ = [p.value for p in list(Planckf)]
+    PLANCKMAPFREQ_f = [p.value for p in list(Planckf) if p.value not in ["545",
+        "857"]]
     PLANCKSPECTRUM = [p.value for p in list(Plancks)]
 
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
         for FREQ, FREQ2  in itertools.product(PLANCKMAPFREQ,PLANCKMAPFREQ)
-            if FREQ not in [
-        "545",
-        "857"
-    ] and
-            (FREQ2 not in [
-        "545",
-        "857"
-    ]) and (int(FREQ2)>=int(FREQ))]
-
+            if FREQ not in ["545", "857"] and (FREQ2 not in ["545", "857"]) and (int(FREQ2)>=int(FREQ))]
     speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in [
         "TB",
         "EB",
@@ -94,9 +87,7 @@ class Params:
         "BE"
     ]]
 
-    @classmethod
-    def freqfilter(cls,):
-        return = [
+    freqfilter = [
         "545",
         "857"
     ] #careful, changes must be applied manually to freqcomb in here
@@ -122,7 +113,6 @@ class NPIPE:
     def _get_noisefn():
 
         return "half_diff_npipe6v20{split}_{freq}_{nside}.fits"
-    
 
 
 class DX12:
@@ -146,6 +136,10 @@ class DX12:
 
         return "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"
 
+
+    def _get_signalest():
+
+        return "/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy"
 
 class NPIPEsim:
 
@@ -188,8 +182,6 @@ class NPIPEsim:
 
     def _get_cmbfn():
         assert 0, "To be implemented"
-
-
 
 
 class Lens_Mask:
@@ -237,16 +229,26 @@ class BeamfDX12:
         "LFI": {     
             "ap": "/global/homes/s/sebibel/data/beamf/",
             "filename": "LFI_RIMO_R3.31.fits"
-        }
+        },
+        'info' : "DX12"
     }
+
+    @classmethod
+    def get_beamf(cls):
+        return cls.beamf
 
 
 class BeamfNPIPE:
 
     beamf = { 
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/quickpol/",
-        "filename": "Bl_TEB_npipe6v20_{freq1}x{freq2}.fits"
+        "filename": "Bl_TEB_npipe6v20_{freq1}GHzx{freq2}GHz.fits",
+        'info' : "NPIPE"
     }
+    
+    @classmethod
+    def get_beamf(cls):
+        return cls.beamf
 
 
 class ConfXPS:

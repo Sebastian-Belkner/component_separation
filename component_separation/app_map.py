@@ -6,12 +6,14 @@ output are maps or masks. output directory to be specified in `config_rm.json`
 
 """
 
+#TODO needs to be tested
+
 __author__ = "S. Belkner"
 
+import os, sys
 import numpy as np
 
 from component_separation.io import IO
-import component_separation.cachechecker as cc
 from component_separation.cs_util import Config
 
 import component_separation.transformer as trsf
@@ -21,13 +23,12 @@ csu = Config()
 io = IO(csu)
 
 
-@cc.alert_cached
-def run_cmbalm2map(pathname, overwr):
+def run_cmbalm2map(pathname):
     """
     Derives map directly from alm data of pure CMB.
     """
     nsi = csu.nside_out[1]
-    cmb_tlm, cmb_elm, cmb_blm = io.load_alms('cmb', csu.sim_id)
+    cmb_tlm, cmb_elm, cmb_blm = io.load_alms('cmb', 0)
     CMB = trsf.alm_s2map(cmb_tlm, cmb_elm, cmb_blm, nsi)
     io.save_data(CMB, pathname)
 
@@ -85,15 +86,15 @@ def run_splitmaps2diffmap():
 
 
 if __name__ == '__main__':
-    bool_emp_noisemap = True
-    bool_cmbmap = False
+    bool_emp_noisemap = False
+    bool_cmbmap = True
     bool_synmap = False
 
     if bool_emp_noisemap:
         run_splitmaps2diffmap()
 
     if bool_cmbmap:
-        run_cmbalm2map(io.fh.map_cmb_sc_path_name, csu.overwrite_cache)
+        run_cmbalm2map("/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy")
 
     if bool_synmap:
         assert 0, 'To be implemented'

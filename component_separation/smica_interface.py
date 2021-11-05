@@ -5,25 +5,16 @@ interface.py: in the future, this could be somewhat serve as connecting applicat
 
 __author__ = "S. Belkner"
 
-
-import os
-import os.path
-
+import os, sys
 from logging import CRITICAL, DEBUG, ERROR, INFO
-from os import path
-
-import sys
 
 import numpy as np
-
-from component_separation.io import IO
 import smica
-from component_separation.cs_util import Config
 
-csu = Config()
-io = IO(csu)
 
 def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
+    """ Base building a model as provided by Maude
+    """
     ### Noise part
     nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
@@ -41,7 +32,7 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
         cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 
     ### Galactic foreground part
-    dim = 3 #6 is highest possible
+    dim = 6 #6 is highest possible
     gal = smica.SourceND(nmap, Q, dim, name='gal')
     if gal_mixmat is None:
         gal.fix_mixmat('null')
@@ -50,18 +41,74 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
         gal.fix_powspec("null")
 
     model = smica.Model(complist=[cmb, gal, noise])
+
     return model
 
 
-def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_template=None, afix=None, no_starting_point=False):
-    """ Fit the model to empirical covariance.
+def fit_model_to_cov_new(model, stats, nmodes, maxiter=50, noise_template=None, afix=None, no_starting_point=False):
+    """ Fit model to empirical covariance. Base fitting procedure as provided from Maude
     """
     def is_mixmat_fixed(model):
         return np.sum(model.get_comp_by_name("gal")._mixmat.get_mask())==0
     qmin=0
     cg_maxiter = 1
     cg_eps = 1e-20
-    nmap = stats.shape[0]
+    cmb,gal,noise = model._complist
+
+    # find a starting point
+    acmb = model.get_comp_by_name("cmb").mixmat()
+    cfix = 1-cmb._powspec.get_mask() #0:free 1:fixed
+
+    polar = True if acmb.shape[1]==2 else False
+
+
+    if not is_mixmat_fixed(model) and not no_starting_point:
+        model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=len(nmodes))
+
+    model.quasi_newton(stats, nmodes)
+    model.close_form(stats)
+    mm_i = model.mismatch(stats, nmodes, exact=True)
+
+
+    # start CG/close form
+    cmbfix = "null" if polar else cfix 
+    hist = np.array([[np.nan, np.nan] for n in range(maxiter)])
+    for i in range(maxiter):
+        gal.fix_powspec("null")
+        cmb.fix_powspec(cmbfix)
+
+        model.conjugate_gradient(stats, nmodes,maxiter=cg_maxiter, avextol=cg_eps)
+
+        if mm_i!=model.mismatch(stats, nmodes, exact=True):
+            cmbfix = cfix if polar else "all" 
+            cmb.fix_powspec(cmbfix)
+        if i==int(maxiter/2): # fit also noise at some point
+            Nt = noise.powspec()
+            noise.set_powspec(Nt, fixed=noise_template)
+
+        model.close_form(stats)
+
+        # compute new mismatch 
+        mm_f = model.mismatch(stats, nmodes, exact=True)
+        gain = mm_i-mm_f
+        if gain==0 and i>maxiter/2.0:
+            break
+        print("iter= %4i mismatch = %10.5f  gain= %7.5f " % (i, mm_f, gain))
+        hist[i,0] = mm_f
+        hist[i,1] = gain
+        mm_i = mm_f
+
+    return model, hist
+
+
+def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_template=None, afix=None, no_starting_point=False):
+    """ Fit model to empirical covariance. Base fitting procedure as provided from Maude
+    """
+    def is_mixmat_fixed(model):
+        return np.sum(model.get_comp_by_name("gal")._mixmat.get_mask())==0
+    qmin=0
+    cg_maxiter = 1
+    cg_eps = 1e-20
     cmb,gal,noise = model._complist
 
     # find a starting point
@@ -129,16 +176,11 @@ def fit_model_to_cov(model, stats, nmodes, maxiter=50, noise_template=None, afix
     return model, hist
 
 
-# Only way to get B-fit to run is when
-    # noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all")  fixed =all
-    # cmb.set_mixmat(acmb, fixed='all') fixed=all
-    #         # fit mixing matrix
-        # gal.fix_powspec("null")
-
-# model.quasi_newton():
-#  STDEV = sqrt(diag(CRB) / nq) results in nans (CRB negative)
-# model.conjugate_gradient()
-#   initial mismatch often nan for B-fit
-
-
-# For B-fit, if maxiter too high -> singular matrix after a while
+def calc_nmodes(bins, mask):
+    nmode = np.ones((bins.shape[0]))
+    fsky = np.mean(mask**2)
+    for idx, q in enumerate(bins):
+        rg = np.arange(q[0],q[1]+1)
+        nmode[idx] = np.sum(2*rg+1, axis=0)
+    nmode *= fsky
+    return nmode

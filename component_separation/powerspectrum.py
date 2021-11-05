@@ -1,15 +1,11 @@
 import healpy as hp
 import numpy as np
 
-from component_separation.cs_util import Config
-from component_separation.io import IO
-
 from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
-csu = Config()
-io = IO(csu)
+from component_separation.cs_util import Helperfunctions as hpf
 
 
 #TODO perhaps make smica fit with LFI and HFI up to ell = 1000.
@@ -25,28 +21,28 @@ def cov2cov_smooth(cov, cutoff):
         for n in range(1):
             for m in range(cov.shape[2]):
                 if n != m:
-                    cov[spec,n,m,cutoff:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
-                    cov[spec,m,n,cutoff:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
+                    cov[spec,n,m,cutoff:] = np.nan#np.zeros_like(cov[spec,n,m,cutoff:])
+                    cov[spec,m,n,cutoff:] = np.nan#np.zeros_like(cov[spec,m,n,cutoff:])
 
     for spec in range(cov.shape[0]):
         n=1
         for m in range(cov.shape[2]):
             if m>n:
-                cov[spec,n,m,1500:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
-                cov[spec,m,n,1500:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
+                cov[spec,n,m,1500:] = np.nan#np.zeros_like(cov[spec,n,m,cutoff:])
+                cov[spec,m,n,1500:] = np.nan#np.zeros_like(cov[spec,m,n,cutoff:])
 
     for spec in range(cov.shape[0]):
         n=2
         for m in range(cov.shape[2]):
             if m>n:
-                cov[spec,n,m,1500:] = 0#np.zeros_like(cov[spec,n,m,cutoff:])
-                cov[spec,m,n,1500:] = 0#np.zeros_like(cov[spec,m,n,cutoff:])
+                cov[spec,n,m,1500:] = np.nan#np.zeros_like(cov[spec,n,m,cutoff:])
+                cov[spec,m,n,1500:] = np.nan#np.zeros_like(cov[spec,m,n,cutoff:])
     return cov
 
 
 @log_on_start(INFO, "Starting to process spectrum")
 @log_on_end(DEBUG, "Spectrum processed successfully: '{result}' ")
-def process_all(data, freqcomb, beamf, nside, spectrum_scale):
+def process_all(data, freqcomb, beamf, nside, spectrum_scale="K_CMB"):
     """
     Root function. Executes general processing for everydays usage 
     """
@@ -83,14 +79,14 @@ def apply_pixwin(data: np.array, freqcomb, nside) -> np.array:
 
 @log_on_start(INFO, "Starting to apply scaling onto data {data}")
 @log_on_end(DEBUG, "Data scaled successfully: '{result}' ")
-def apply_scale(data: np.array, scale: str = 'C_l') -> np.array:
+def apply_scale(data: np.array, scale: str = 'Cl') -> np.array:
     """
-    Assumes C_l as input. output may be D_l. Guaranteed to multiply spectrum by 1e12.
+    Assumes Cl as input. output may be D_l. Guaranteed to multiply spectrum by 1e12.
     """
     lmaxp1 = data.shape[-1]
-    if scale == "D_l":
+    if scale == "Dl":
         data *= np.array([hpf.llp1e12(idx) for idx in range(lmaxp1)])
-    elif scale == "C_l":
+    elif scale == "Cl":
         data *= np.array([1e12 for idx in range(lmaxp1)])
     return data
 

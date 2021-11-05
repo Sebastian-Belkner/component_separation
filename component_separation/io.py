@@ -4,10 +4,7 @@ io.py: Filehandling functions
 """
 
 import functools
-import json
-import os
-import copy
-import sys
+import os, sys
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
@@ -24,7 +21,7 @@ class IO:
 
 
     def load_powerspectra(self, dset, processed = True):
-        if self.csu.spectrum_type == 'Chonetal':
+        if self.csu.spectrum_type == 'JC':
             if processed:
                 if dset == 'noise':
                     path_name = self.fh.noise_sc_path_name
@@ -260,11 +257,12 @@ class IO:
         return masks_file
 
 
-    def load_alms(component, id):
+    def load_alms(self, component, id):
         if component == 'cmb':
             cmb_tlm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=1)
             cmb_elm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=2)
             cmb_blm = hp.read_alm('/project/projectdirs/cmb/data/generic/cmb/ffp10/mc/scalar/ffp10_lensed_scl_cmb_000_alm_mc_%04d.fits'%int(id), hdu=3)
+            
             return cmb_tlm, cmb_elm, cmb_blm
         else:
             print('unclear request for loading alms. Exiting..')
@@ -452,7 +450,7 @@ class IO:
         # Then beamf_info can be removed from the function parameters
         def _get_beamffn():
             beamf = dict()
-            if self.csu.freqdset.startswith('DX12'):
+            if beamf_info['info'] == 'DX12':
                 for freqc in freqcomb:
                     freqs = freqc.split('-')
                     if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
@@ -499,7 +497,7 @@ class IO:
                                         bf_filename = beamf_info["LFI"]['filename']
                                 ))
                             }})
-            elif self.csu.freqdset.startswith('NPIPE'):
+            elif beamf_info['info'] == 'NPIPE':
                 for freqc in freqcomb:
                     freqs = freqc.split('-')
                     beamf.update({
@@ -507,13 +505,14 @@ class IO:
                             "HFI": fits.open(
                                 "{bf_path}{bf_filename}"
                                 .format(
-                                    bf_path = beamf_info["HFI"]['ap'].replace("{split}", self.csu.freqdatsplit),
+                                    bf_path = beamf_info['ap'].replace("{split}", self.csu.freqdatsplit),
                                     bf_filename = beamf_info['filename']
                                         .replace("{freq1}", freqs[0])
                                         .replace("{freq2}", freqs[1])
                                 ))
                             }
                         })
+
             return beamf
 
         beamf = _get_beamffn()
@@ -531,7 +530,6 @@ class IO:
         freqs = self.csu.PLANCKMAPFREQ_f
         lmaxp1 = self.csu.lmax+1
         beamf_array = np.zeros(shape=(3, len(freqs), len(freqs), lmaxp1))
-        
         for idspec, spec in enumerate(["T", "E", "B"]):
             for ida, freqa in enumerate(freqs):
                 for idb, freqb in enumerate(freqs):
@@ -539,7 +537,7 @@ class IO:
                         bf = beamf[freqa+'-'+freqb]
                     else:
                         bf = beamf[freqb+'-'+freqa]
-                    if self.csu.freqdset.startswith('DX12'):
+                    if beamf_info['info'] == 'DX12':
                         if int(freqa) >= 100 and int(freqb) >= 100:
                             beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1]
                         elif int(freqa) < 100 and int(freqb) < 100:
@@ -562,7 +560,7 @@ class IO:
                                 b[:min(lmaxp1, len(b))],
                                 np.array([np.NaN for n in range(max(0, lmaxp1-len(b)))])))
                             beamf_array[idspec,ida,idb] = buff*np.sqrt(bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1])
-                    elif self.csu.freqdset.startswith('NPIPE'):
+                    elif beamf_info['info'] == 'NPIPE':
                         ### now that all cross beamfunctions exist, and beamf
                         ### files have the same structure, no difference between applying lfis and hfis anymore
                         beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(TEB_dict[spec])[:lmaxp1]

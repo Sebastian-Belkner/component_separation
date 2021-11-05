@@ -1,15 +1,13 @@
 import healpy as hp
 import numpy as np
 
-from component_separation.cs_util import Config
-from component_separation.io import IO
-from component_separation.config_planck import Planckf, Planckr, Plancks
-from component_separation.cs_util import Helperfunctions as hpf
-import component_separation.map as mp
-
 from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
+
+from component_separation.cs_util import Helperfunctions as hpf
+import component_separation.map as mp
+
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
@@ -66,7 +64,7 @@ def build_covmatrices(data: np.array, Tscale, freqcomb, PLANCKMAPFREQ_f, cutoff=
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def cov2weight(data: np.array, freqs=np.array([F.value for F in list(Planckf)[:-2]]), Tscale='K_CMB'):
+def cov2weight(data: np.array, freqs, Tscale='K_CMB'):
     """Calculates weights vector from cov matrix
 
     Args:
@@ -85,6 +83,7 @@ def cov2weight(data: np.array, freqs=np.array([F.value for F in list(Planckf)[:-
             """drops all row and columns with np.nan's.
             """
             masked = a[ ~np.isnan(a) ]
+            # print(a)
             mskd = masked.reshape(int(np.sqrt(len(masked))),int(np.sqrt(len(masked))))
             return mskd
 
@@ -121,28 +120,22 @@ def cov2weight(data: np.array, freqs=np.array([F.value for F in list(Planckf)[:-
                 pad_shape(maskit(cov)), pad_with)
         return ret
 
-    def calc_w(cov: np.array) -> np.array:
-        """Calculates weightings of the frequency channels
-        Args:
-            cov: The inverted covariance matrices of Dimension [lmax,Nspec,Nspec]
-        Returns:
-            np.array: The weightings of the respective Frequency channels
-        """
+    Tscale_mat = np.zeros(shape=(nfreq,nfreq)) #keep shape as if for all frequencies
+    for idx1, FREQ1 in enumerate(freqs):
+        for idx2, FREQ2 in enumerate(freqs):
+            Tscale_mat[idx1,idx2] = mp.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * mp.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
 
-        Tscale_mat = np.zeros(shape=(nfreq,nfreq)) #keep shape as if for all frequencies
-        for idx1, FREQ1 in enumerate(freqs):
-            for idx2, FREQ2 in enumerate(freqs):
-                Tscale_mat[idx1,idx2] = mp.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * mp.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+    elaw = np.array([mp.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in freqs])
+    weight_arr = np.zeros(shape=(np.take(data.shape, [0,1,-1])))
+    for spec in range(weight_arr.shape[0]):
+        for l in range(data.shape[-1]):
+            weight_arr[spec,:,l] = np.array([
+                (invert_cov(np.multiply(data[spec,:,:,l],Tscale_mat)) \
+                    @ elaw)\
+                     / (elaw.T @ invert_cov(np.multiply(data[spec,:,:,l],Tscale_mat))\
+                          @ elaw)])
+    return weight_arr
 
-        elaw = np.array([mp.tcmb2trj_sc(FREQ, fr=r'K_CMB', to=Tscale) for FREQ in freqs])
-        weight_arr = np.zeros(shape=(np.take(cov.shape, [0,1,-1])))
-        for spec in range(weight_arr.shape[0]):
-            for l in range(cov.shape[-1]):
-                weight_arr[spec,:,l] = np.array([
-                    (invert_cov(np.multiply(cov[spec,:,:,l],Tscale_mat)) @ elaw) / (elaw.T @ invert_cov(np.multiply(cov[spec,:,:,l],Tscale_mat)) @ elaw)])
-        return weight_arr
-
-    return calc_w(data)
 
 
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")

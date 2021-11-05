@@ -1,18 +1,14 @@
 import healpy as hp
 import numpy as np
 
-from component_separation.cs_util import Config
-from component_separation.io import IO
-from component_separation.cs_util import Helperfunctions as hpf
-import component_separation.spherelib.python.spherelib.astro as slhpastro
-import component_separation.MSC.MSC.apodize as ap
-
 from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
 from typing import Dict, List, Optional, Tuple
 
-csu = Config()
-io = IO(csu)
+from component_separation.cs_util import Helperfunctions as hpf
+
+import component_separation.spherelib.python.spherelib.astro as slhpastro
+import component_separation.MSC.MSC.apodize as ap
 
 
 def create_difference_map(data_hm1, data_hm2):
