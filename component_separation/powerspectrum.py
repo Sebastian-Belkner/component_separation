@@ -8,37 +8,6 @@ from typing import Dict, List, Optional, Tuple
 from component_separation.cs_util import Helperfunctions as hpf
 
 
-#TODO perhaps make smica fit with LFI and HFI up to ell = 1000.
-def cov2cov_smooth(cov, cutoff):
-    """
-    currently takes any LFI[0] X (LFI or HFI) crossspectra and applies a windowfunction, effectively setting it to zero.
-    This needs to be done as the freq 030 crosspowerspectra have unphysical behaviour for ell>900. This is also true for
-    other LFIs. BUT: if all are set to zero, we loose cmb-signal-power in EE, as there is still signal on that scale.
-
-    Thus we need to cherry pick which crossspectra can actually be set to zero without impacting the SMICA fit and MV weights..
-    """
-    for spec in range(cov.shape[0]):
-        for n in range(1):
-            for m in range(cov.shape[2]):
-                if n != m:
-                    cov[spec,n,m,cutoff:] = np.nan#np.zeros_like(cov[spec,n,m,cutoff:])
-                    cov[spec,m,n,cutoff:] = np.nan#np.zeros_like(cov[spec,m,n,cutoff:])
-
-    for spec in range(cov.shape[0]):
-        n=1
-        for m in range(cov.shape[2]):
-            if m>n:
-                cov[spec,n,m,1500:] = np.nan#np.zeros_like(cov[spec,n,m,cutoff:])
-                cov[spec,m,n,1500:] = np.nan#np.zeros_like(cov[spec,m,n,cutoff:])
-
-    for spec in range(cov.shape[0]):
-        n=2
-        for m in range(cov.shape[2]):
-            if m>n:
-                cov[spec,n,m,1500:] = np.nan#np.zeros_like(cov[spec,n,m,cutoff:])
-                cov[spec,m,n,1500:] = np.nan#np.zeros_like(cov[spec,m,n,cutoff:])
-    return cov
-
 
 @log_on_start(INFO, "Starting to process spectrum")
 @log_on_end(DEBUG, "Spectrum processed successfully: '{result}' ")

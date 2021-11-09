@@ -62,7 +62,6 @@ smica_params = dict({
 
 def bin_data(bins, cov_ltot_s, cov_lN_s, cov_lS_s):
 
-
     cov_ltot_bnd = hpf.bin_it(cov_ltot_s, bins=bins)
 
     cov_lN_bnd = hpf.bin_it(cov_lN_s, bins=bins)
@@ -75,7 +74,17 @@ def bin_data(bins, cov_ltot_s, cov_lN_s, cov_lS_s):
     return cov_ltot_bnd.copy(), cov_lN_bnd.copy(), C_lS_bnd.copy()
 
 
-def fit(cov_ltot, cov_lN, cov_lS, nmodes, gal_mixmat, B_fit):
+def smooth_data(covltot, covlN, covlS):
+    cutoff = 1200
+    covlT_smoothed = cv.cov2cov_smooth(covltot, cutoff=cutoff)
+    covlN_smoothed = cv.cov2cov_smooth(covlN, cutoff=cutoff)
+    covlS_smoothed = cv.cov2cov_smooth(covlS, cutoff=cutoff)
+
+    # print(covlT_smoothed, covlN_smoothed, covlS_smoothed)
+    return np.nan_to_num(covlT_smoothed), np.nan_to_num(covlN_smoothed), np.nan_to_num(covlS_smoothed)
+
+
+def fitp(cov_ltot, cov_lN, cov_lS, nmodes, gal_mixmat, B_fit):
 
     smica_model = smint.build_smica_model(len(nmodes), np.nan_to_num(cov_lN), np.nan_to_num(cov_lS), gal_mixmat, B_fit)
     smica_model, hist = smint.fit_model_to_cov(
@@ -89,7 +98,22 @@ def fit(cov_ltot, cov_lN, cov_lS, nmodes, gal_mixmat, B_fit):
     return smica_model
 
 
+def fitp_old(covltot, covlN, covlS, nmodes, gal_mixmat, B_fit):
+
+    smica_model = smint.build_smica_model_old(len(nmodes), np.nan_to_num(covlN), np.nan_to_num(covlS), gal_mixmat, B_fit)
+    smica_model, hist = smint.fit_model_to_cov_old(
+        smica_model,
+        covltot,
+        nmodes,
+        maxiter=50,
+        noise_template=np.where(False, 0.0, 1.0),#covlN<4e-3
+        afix=None)
+
+    return smica_model
+
+
 def extract_model_parameters(smica_model):
+
     smica_cmb = smica_model.get_comp_by_name('cmb').powspec()[0]
     smica_gal = np.array([smica_model.get_comp_by_name('gal').powspec()])
     smica_cov = np.array([smica_model.covariance()])
@@ -100,34 +124,39 @@ def extract_model_parameters(smica_model):
     return smica_cov, smica_cov4D, smica_cmb, smica_gal, smica_weights_tot
 
 
-def run_fit():
+def run_fit(fit):
+
     _Tscale = "K_CMB"
-    Cl_tot = io.load_data(fn.get_spectrum("T", "non-separated"))
-    covl_tot = cv.build_covmatrices(Cl_tot, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    Cltot = io.load_data(fn.get_spectrum("T", "non-separated"))
+    covltot = cv.build_covmatrices(Cltot, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
 
-    Cl_N = io.load_data(fn.get_spectrum("N", "non-separated"))
-    covl_N = cv.build_covmatrices(Cl_N, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    ClN = io.load_data(fn.get_spectrum("N", "non-separated"))
+    covlN = cv.build_covmatrices(ClN, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
 
-    Cl_S = io.load_data(fns.get_spectrum("S", "non-separated"))
-    covl_S = cv.build_covmatrices(Cl_S, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    ClS = io.load_data(fns.get_spectrum("S", "non-separated"))
+    covlS = cv.build_covmatrices(ClS, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
 
     nmodes_lowell = smint.calc_nmodes(Smica_bins.SMICA_lowell_bins, pmask['100'])
     nmodes_highell = smint.calc_nmodes(Smica_bins.SMICA_highell_bins, pmask['100'])
 
+    covltot_smoothed, covlN_smoothed, ClS_smoothed = covltot, covlN, covlS#smooth_data(covltot, covlN, covlS)
+
     ## EE fit
-    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(Smica_bins.SMICA_lowell_bins, covl_tot[1], covl_N[1], covl_S[1])
-    smica_model = fit(cov_ltot_bnd, cov_lN_bnd, C_lS_bnd, nmodes_lowell, None, B_fit=False)
+    covltot_bnd, covlN_bnd, ClS_bnd = bin_data(Smica_bins.SMICA_lowell_bins, covltot_smoothed[1], covlN_smoothed[1], ClS_smoothed[1])
+    smica_model = fit(covltot_bnd, covlN_bnd, ClS_bnd, nmodes_lowell, None, B_fit=False)
     smica_params["gal_mm"]["E"] = np.array([smica_model.get_comp_by_name('gal').mixmat()])
-    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(Smica_bins.SMICA_highell_bins, covl_tot[1], covl_N[1], covl_S[1])
-    smica_model = fit(cov_ltot_bnd, cov_lN_bnd, C_lS_bnd, nmodes_highell, smica_params["gal_mm"]["E"][0], B_fit=False)
+
+    covltot_bnd, covlN_bnd, ClS_bnd = bin_data(Smica_bins.SMICA_highell_bins, covltot_smoothed[1], covlN_smoothed[1], ClS_smoothed[1])
+    smica_model = fit(covltot_bnd, covlN_bnd, ClS_bnd, nmodes_highell, smica_params["gal_mm"]["E"][0], B_fit=False)
     smica_params["cov"]["E"], smica_params["cov4D"]["E"], smica_params["CMB"]["E"], smica_params["gal"]["E"], smica_params["w"]["E"]  = extract_model_parameters(smica_model)
 
     ## BB fit
-    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(Smica_bins.SMICA_lowell_bins, covl_tot[2], covl_N[2], covl_S[2])
-    smica_model = fit(cov_ltot_bnd, cov_lN_bnd, C_lS_bnd, nmodes_lowell, None, B_fit=True)
+    covltot_bnd, covlN_bnd, ClS_bnd = bin_data(Smica_bins.SMICA_lowell_bins, covltot_smoothed[2], covlN_smoothed[2], ClS_smoothed[2])
+    smica_model = fit(covltot_bnd, covlN_bnd, ClS_bnd, nmodes_lowell, None, B_fit=True)
     smica_params["gal_mm"]["B"] = np.array([smica_model.get_comp_by_name('gal').mixmat()])
-    cov_ltot_bnd, cov_lN_bnd, C_lS_bnd = bin_data(Smica_bins.SMICA_highell_bins, covl_tot[2], covl_N[2], covl_S[2])
-    smica_model = fit(cov_ltot_bnd, cov_lN_bnd, C_lS_bnd, nmodes_highell, smica_params["gal_mm"]["B"][0], B_fit=True)
+
+    covltot_bnd, covlN_bnd, ClS_bnd = bin_data(Smica_bins.SMICA_highell_bins, covltot_smoothed[2], covlN_smoothed[2], ClS_smoothed[2])
+    smica_model = fit(covltot_bnd, covlN_bnd, ClS_bnd, nmodes_highell, smica_params["gal_mm"]["B"][0], B_fit=True)
     smica_params["cov"]["B"], smica_params["cov4D"]["B"], smica_params["CMB"]["B"], smica_params["gal"]["B"], smica_params["w"]["B"]  = extract_model_parameters(smica_model)
 
     for k, v in smica_params.items():
@@ -139,6 +168,7 @@ def run_fit():
 
 
 def run_propag():
+
     bins = csu.bins
     W_smica = io.load_data(fns.get_misc('w'))
     W_mv = io.load_data(fn.get_misc('w'))
@@ -195,17 +225,16 @@ def run_propag():
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
     bool_fit = True
-    bool_propag = True
+    bool_propag = False
     store_data = True
 
     if bool_fit:
-        run_fit()
+        # run_fit()
+        run_fit(fitp_old)
 
     if bool_propag:
         run_propag()
-
-
-
+        
 
 def run_propag_ext():
     from typing import Dict
@@ -282,4 +311,3 @@ def run_propag_ext():
     smica_C_lmin_unsc = np.array(ps.map2cl_spin(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask['100'], lmax=lmax-1,
         lmax_mask=lmax*2))*1e12 #maps are different scale than processed powerspectra from this' package pipeline, thus *1e12
     io.save_data(smica_C_lmin_unsc, io.fh.clmin_smica_path_name)
-

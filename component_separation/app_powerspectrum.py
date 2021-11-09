@@ -79,9 +79,8 @@ if __name__ == '__main__':
     bool_with_noise = True
 
     if bool_map2cls:
-        run_map2cls('T')
-        if bool_with_noise:
-            run_map2cls('N')
+        # run_map2cls('T')
+        run_map2cls('N')
 
     if bool_alm2cls:
         run_alm2cls("/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy")

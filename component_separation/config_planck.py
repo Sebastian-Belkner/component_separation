@@ -36,7 +36,7 @@ class Planckr(Enum):
 class Params:
     mskset = "smica"
     freqdset = "DX12"
-    spectrum_type = "pseudo"
+    spectrum_type = "JC"
     lmax = 4000
     lmax_mask = 6000
     freqdatsplit = ""
@@ -115,6 +115,12 @@ class NPIPE:
         return "half_diff_npipe6v20{split}_{freq}_{nside}.fits"
 
 
+    def _get_signalest():
+
+        return "/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy"
+
+
+
 class DX12:
 
     def _get_pladir():
@@ -140,6 +146,7 @@ class DX12:
     def _get_signalest():
 
         return "/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy"
+
 
 class NPIPEsim:
 

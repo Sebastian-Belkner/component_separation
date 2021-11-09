@@ -15,7 +15,7 @@ from component_separation.config_planck import (Params, Planckf, Planckr,
                                                 Plancks)
 
 class Config(Params):
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         Load Configuartion file and store as parameters, but do not expose config file.
         """
@@ -37,9 +37,16 @@ class Config(Params):
         self.CB_color_cycle_lighter = ["#68ACCE", "#AC4657", "#ADAC57", "#005713", "#130268", "#8A2479", 
         "#248A79", "#797913", "#680235", "#460000", "#4679AC", "#686868"]
 
+
+        """
+        Overwrite all params which are directly passed to __init__
+        """
+        self.__dict__.update(Params.__dict__)
+        self.__dict__.update(kwargs)
+
         print(40*"$")
         print("Run with the following settings:")
-        print(Params.__dict__)
+        print(self.__dict__)
         print(40*"$")
 
 
