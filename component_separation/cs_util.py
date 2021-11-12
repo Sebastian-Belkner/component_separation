@@ -213,10 +213,10 @@ class Filename_gen:
         return path.join(dir_map_loc, filename_loc)
 
 
-    def get_mask(self, TorP):
+    def get_mask(self, TorP, apodized):
 
         return [path.join(self.mask.get_dir(), fn) 
-            for fn in self.mask.get_fn(TorP)]
+            for fn in self.mask.get_fn(TorP, apodized)]
 
 
     def get_beamf(self):

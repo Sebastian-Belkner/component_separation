@@ -36,14 +36,11 @@ fn = fn_gen(csu)
 fns = fns_gen(csu)
 io = IO(csu)
 
-tmask_fn = fn.get_mask('T')
-pmask_fn = fn.get_mask('P')
+apo = csu.spectrum_type == 'pseudo'
+tmask_fn = fn.get_mask('T', apodized=apo)
+pmask_fn = fn.get_mask('P', apodized=apo)
 tmask_sg = io.load_mask(tmask_fn, stack=True)
 pmask_sg = io.load_mask(pmask_fn, stack=True)
-
-if csu.spectrum_type == 'pseudo':
-    tmask_sg = mp.apodize_mask(tmask_sg)
-    pmask_sg = mp.apodize_mask(pmask_sg)
 
 tmask, pmask = dict(), dict()
 for FREQ in csu.PLANCKMAPFREQ:
@@ -75,7 +72,8 @@ def bin_data(bins, cov_ltot_s, cov_lN_s, cov_lS_s):
 
 
 def smooth_data(covltot, covlN, covlS):
-    cutoff = 1200
+
+    cutoff = 900
     covlT_smoothed = cv.cov2cov_smooth(covltot, cutoff=cutoff)
     covlN_smoothed = cv.cov2cov_smooth(covlN, cutoff=cutoff)
     covlS_smoothed = cv.cov2cov_smooth(covlS, cutoff=cutoff)
@@ -106,7 +104,7 @@ def fitp_old(covltot, covlN, covlS, nmodes, gal_mixmat, B_fit):
         covltot,
         nmodes,
         maxiter=50,
-        noise_template=np.where(False, 0.0, 1.0),#covlN<4e-3
+        noise_template=None,#np.where(covlN, 0.0, 1.0),#covlN<4e-3
         afix=None)
 
     return smica_model
@@ -139,7 +137,7 @@ def run_fit(fit):
     nmodes_lowell = smint.calc_nmodes(Smica_bins.SMICA_lowell_bins, pmask['100'])
     nmodes_highell = smint.calc_nmodes(Smica_bins.SMICA_highell_bins, pmask['100'])
 
-    covltot_smoothed, covlN_smoothed, ClS_smoothed = covltot, covlN, covlS#smooth_data(covltot, covlN, covlS)
+    covltot_smoothed, covlN_smoothed, ClS_smoothed = smooth_data(covltot, covlN, covlS) # covltot, covlN, covlS
 
     ## EE fit
     covltot_bnd, covlN_bnd, ClS_bnd = bin_data(Smica_bins.SMICA_lowell_bins, covltot_smoothed[1], covlN_smoothed[1], ClS_smoothed[1])
@@ -203,10 +201,20 @@ def run_propag():
             print('freq: ', det)
             ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-            combalmE += hp.almxfl(hp.almxfl(alm[itf][1],np.nan_to_num(1/beamf[1,itf,itf,:csu.lmax])), np.squeeze(W_total[1,itf,:]))
-            combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:csu.lmax])
-            combalmB += hp.almxfl(hp.almxfl(alm[itf][2],np.nan_to_num(1/beamf[1,itf,itf,:csu.lmax])), np.squeeze(W_total[2,itf,:]))
-            combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:csu.lmax])
+            combalmE += hp.almxfl(
+                # hp.almxfl(
+                    hp.almxfl(
+                        alm[itf][1], np.nan_to_num(1/beamf[1,itf,itf,:csu.lmax])),
+                    # np.nan_to_num(1/beamf[1,itf,itf,:csu.lmax])),
+                np.squeeze(W_total[1,itf,:]))
+            # combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:csu.lmax])
+            combalmB += hp.almxfl(
+                # hp.almxfl(
+                    hp.almxfl(
+                        alm[itf][2], np.nan_to_num(1/beamf[2,itf,itf,:csu.lmax])),
+                        # np.nan_to_num(1/beamf[2,itf,itf,:csu.lmax])),
+                np.squeeze(W_total[2,itf,:]))
+            # combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:csu.lmax])
 
     mapT_combined = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
     io.save_data(mapT_combined, fns.get_map('T', 'combined'))
@@ -216,16 +224,16 @@ def run_propag():
     maq_lpDXS = hp.smoothing(hp.ma(mapT_combined[1]), np.radians(1))
     mau_lpDXS = hp.smoothing(hp.ma(mapT_combined[2]), np.radians(1))
 
-    mapT_combined_fn = fns.get_spectrum('T', 'combined')
+    mapT_combined_fn = fns.get_map('T', 'combined')
     mapT_combined_smoothed_fn = mapT_combined_fn.replace('.', 'smoothed.')
 
-    io.save_data(np.array([np.zeros_like(maq_lpDXS),mau_lpDXS, mau_lpDXS]), mapT_combined_smoothed_fn)
+    io.save_data(np.array([np.zeros_like(maq_lpDXS),maq_lpDXS, mau_lpDXS]), mapT_combined_smoothed_fn)
 
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_fit = True
-    bool_propag = False
+    bool_fit = False
+    bool_propag = True
     store_data = True
 
     if bool_fit:

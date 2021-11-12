@@ -248,8 +248,10 @@ class IO:
             return a*b
 
         masks_file = [
-            hp.read_map(fn, dtype=np.bool)
-            for fn in mask_fn]
+            np.load(fn) 
+            if fn.endswith('.npy') else hp.read_map(fn, dtype=np.bool)
+                for fn in mask_fn]
+
         masks_file = functools.reduce(
             _multi,
             [a for a in masks_file])

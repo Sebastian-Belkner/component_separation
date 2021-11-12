@@ -58,12 +58,12 @@ def build_smica_model_old(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     cmb.set_mixmat(acmb, fixed="all")
     cmbcq = C_lS_bnd[0,0,:]
     if B_fit:
-        cmb.set_powspec(cmbcq*0, fixed='all') # B modes fit
+        cmb.set_powspec(cmbcq, fixed='all') # B modes fit
     else:
         cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 
     ### Galactic foreground part
-    dim = 6
+    dim = 3
     if gal_mixmat is None:
         gal = smica.SourceND(nmap, Q, dim, name='gal')
         gal.fix_mixmat('null')
@@ -102,13 +102,6 @@ def fit_model_to_cov_old(model, stats, nmodes, maxiter=50, noise_fix=False, nois
         if not no_starting_point:
             model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=qmax)
             cmb.set_mixmat(acmb, fixed=afix)
-            if asyn is not None:
-                agfix = 1-gal._mixmat.get_mask()
-                ag = gal.mixmat()
-                agfix[:,-2:] = 1
-                ag[0:int(nmap/2),-2] = asyn
-                ag[int(nmap/2):,-1]  = asyn
-                gal.set_mixmat(ag, fixed=agfix)
 
     print('starting quasi newton')
     model.quasi_newton(stats, nmodes)
@@ -117,7 +110,7 @@ def fit_model_to_cov_old(model, stats, nmodes, maxiter=50, noise_fix=False, nois
     print('starting close_form')
     model.close_form(stats)
     print('starting set_powspec 2')
-    cmb.set_powspec (cmbcq, fixed=cfix)
+    cmb.set_powspec(cmbcq, fixed=cfix)
     mm = model.mismatch(stats, nmodes, exact=True)
     mmG = model.mismatch(stats, nmodes, exact=True)
 

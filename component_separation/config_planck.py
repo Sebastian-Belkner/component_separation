@@ -34,9 +34,9 @@ class Planckr(Enum):
 
 
 class Params:
-    mskset = "smica"
+    mskset = "lens"
     freqdset = "DX12"
-    spectrum_type = "JC"
+    spectrum_type = "pseudo"
     lmax = 4000
     lmax_mask = 6000
     freqdatsplit = ""
@@ -197,15 +197,24 @@ class Lens_Mask:
         return "/global/homes/s/sebibel/data/mask/"
 
 
-    def get_fn(TorP):
+    def get_fn(TorP, apodized=False):
         if TorP == "T":
-            return [
+            if apodized:
+                return [ 
+                    "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz_apodized.npy"]
+            else:
+                return [
                     "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
-                ]
+                    ]
         else:
-            return [
-                    "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
+            if apodized:
+                return [
+                    "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz_apodized.npy"
                 ]
+            else:
+                return [
+                    "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
+                    ]
 
 
 class Smica_Mask:
@@ -214,16 +223,26 @@ class Smica_Mask:
         return "/global/homes/s/sebibel/data/mask/"
 
 
-    def get_fn(TorP):
+    def get_fn(TorP, apodized=False):
         if TorP == "T":
-            return [
+            if apodized:
+                return [
+                    "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz_apodized.npy"
+                    ]
+            else:
+                return [
                     "PR3vJan18_temp_lensingmask_gPR2_70_psPR2_143_COT2_smicadx12_smicapoldx12_psPR2_217_sz.fits.gz"
-                ]
+                    ]
         else:
-            return [
-                "psmaskP_2048.fits.gz",
-                "gmaskP_apodized_0_2048.fits.gz"
-                ]
+            if apodized:
+                return [
+                    "psmaskP_2048_gmaskP_apodized.npy",
+                    ]
+            else:
+                return [
+                    "psmaskP_2048.fits.gz",
+                    "gmaskP_apodized_0_2048.fits.gz"
+                    ]
 
 
 class BeamfDX12:

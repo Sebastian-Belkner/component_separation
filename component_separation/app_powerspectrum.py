@@ -36,14 +36,12 @@ def run_map2cls(info_component):
             maps[FREQ] = io.load_pla(inpath_map_pla_name, field=(0,1,2), ud_grade=(True, FREQ))
     maps = mp.process_all(maps)
 
-    tmask_fn = fn.get_mask('T')
-    pmask_fn = fn.get_mask('P')
+    apo = csu.spectrum_type == 'pseudo'
+    tmask_fn = fn.get_mask('T', apodized=apo)
+    pmask_fn = fn.get_mask('P', apodized=apo)
     tmask_sg = io.load_mask(tmask_fn, stack=True)
     pmask_sg = io.load_mask(pmask_fn, stack=True)
 
-    if csu.spectrum_type == 'pseudo':
-        tmask_sg = mp.apodize_mask(tmask_sg)
-        pmask_sg = mp.apodize_mask(pmask_sg)
 
     tmask, pmask = dict(), dict()
     for FREQ in csu.PLANCKMAPFREQ:
@@ -79,7 +77,7 @@ if __name__ == '__main__':
     bool_with_noise = True
 
     if bool_map2cls:
-        # run_map2cls('T')
+        run_map2cls('T')
         run_map2cls('N')
 
     if bool_alm2cls:

@@ -204,3 +204,9 @@ def remove_dipole(data):
 def remove_monopole(data):
     "DEPRECATED"
     return hp.remove_monopole(data, fitval=False)
+
+
+    
+# if csu.spectrum_type == 'pseudo':
+#     tmask_sg = mp.apodize_mask(tmask_sg)
+#     pmask_sg = mp.apodize_mask(pmask_sg)
