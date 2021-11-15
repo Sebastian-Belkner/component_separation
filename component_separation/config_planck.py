@@ -1,6 +1,7 @@
 from enum import Enum
 import itertools
 import platform
+import numpy as np
 
 
 class Frequency(Enum):
@@ -71,15 +72,15 @@ class Params:
     else:
         mch = "NERSC"
 
-    PLANCKMAPFREQ = [p.value for p in list(Frequency)]
-    PLANCKMAPFREQ_f = [p.value for p in list(Frequency) if p.value not in ["545",
+    FREQ = [p.value for p in list(Frequency)]
+    FREQ_f = [p.value for p in list(Frequency) if p.value not in ["545",
         "857"]]
-    PLANCKSPECTRUM = [p.value for p in list(Spectrum)]
+    SPECTRUM = [p.value for p in list(Spectrum)]
 
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
-        for FREQ, FREQ2  in itertools.product(PLANCKMAPFREQ,PLANCKMAPFREQ)
+        for FREQ, FREQ2  in itertools.product(FREQ,FREQ)
             if FREQ not in ["545", "857"] and (FREQ2 not in ["545", "857"]) and (int(FREQ2)>=int(FREQ))]
-    speccomb  = [spec for spec in PLANCKSPECTRUM if spec not in [
+    speccomb  = [spec for spec in SPECTRUM if spec not in [
         "TB",
         "EB",
         "ET",
@@ -87,7 +88,7 @@ class Params:
         "BE"
     ]]
 
-    freqfilter = [
+    FREQFILTER = [
         "545",
         "857"
     ] #careful, changes must be applied manually to freqcomb in here
@@ -95,24 +96,36 @@ class Params:
 
 class NPIPE:
 
-    def _get_pladir():
 
-        return "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/"
+    @classmethod
+    def _get_ddir(cls, split_loc, simid_loc):
 
-
-    def _get_plafn():
-
-        return "npipe6v20{split}_{freq}_map.fits"
+        return "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/".format(split=split_loc)
 
 
-    def _get_noisedir():
+    @classmethod
+    def _get_dfn(cls, split_loc, freq_loc):
+
+        return "npipe6v20{split}_{freq}_map.fits".format(
+            split = split_loc,
+            freq = freq_loc
+        )
+
+
+    @classmethod
+    def _get_noisedir(cls, split_loc, freq_loc):
 
         return "INTERNAL"
 
 
-    def _get_noisefn():
+    @classmethod
+    def _get_noisefn(cls, split_loc, freq_loc):
 
-        return "half_diff_npipe6v20{split}_{freq}_{nside}.fits"
+        return "half_diff_npipe6v20{split}_{freq}_{nside}.fits".format(
+            split = split_loc,
+            freq = freq_loc,
+            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside
+        )
 
 
     def _get_signalest():
@@ -120,17 +133,25 @@ class NPIPE:
         return "/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy"
 
 
-
 class DX12:
 
-    def _get_pladir():
+    nside = ['1024', '2048']
+
+    @classmethod
+    def _get_ddir(cls, split_loc, simid_loc):
 
         return "/global/cfs/cdirs/cmb/data/planck2018/pr3/frequencymaps/"
 
 
-    def _get_plafn():
+    @classmethod
+    def _get_dfn(cls, split_loc, freq_loc):
 
-        return "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full.fits"
+        return "{LorH}_SkyMap_{freq}_{nside}_R3.{num}_full.fits".format(
+            freq= freq_loc,
+            LorH = "LFI" if int(freq_loc)<100 else "HFI",
+            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside,
+            num = "00" if int(freq_loc)<100 else "01"
+        )
 
 
     def _get_noisedir():
@@ -138,10 +159,15 @@ class DX12:
         return "INTERNAL"
 
 
-    def _get_noisefn():
+    @classmethod
+    def _get_noisefn(cls, freq_loc):
 
-        return "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"
-
+        return "{LorH}_SkyMap_{freq}_{nside}_R3.{num}_full-eohd.fits".format(
+            LorH = "LFI" if int(freq_loc)<100 else "HFI",
+            freq = freq_loc,
+            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside,
+            num = "00" if int(freq_loc)<100 else "01"
+        )
 
     def _get_signalest():
 
@@ -149,40 +175,65 @@ class DX12:
 
 
 class NPIPEsim:
-
+    simid = np.concatenate((np.array(['']), np.array([str(n).zfill(4) for n in range(200)])))
+    split = ['','A','B']
+    freq = [
+        '030',
+        '044',
+        '070',
+        '100',
+        '143',
+        '217',
+        '353',
+        '545',
+        '857'
+    ]
+    nside = ['1024', '2048']
     data={
-        "noisefix_filename": "noisefix/noisefix_{freq}{split}_{sim_id}.fits",
+        "noisefix_filename": "noisefix/noisefix_{freq}{split}_{simid}.fits",
         "order": "NESTED",
     }
 
-    def _get_pladir():
 
-        return "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/"
+    @classmethod
+    def _get_ddir(cls, split_loc, simid_loc):
+        assert split_loc in cls.split, "{}".format(split_loc)
+        assert simid_loc in cls.simid, "{}".format(simid_loc)
+
+        return "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{simid}/".format(simid=simid_loc, split=split_loc)
 
 
-    def _get_plafn():
+    @classmethod
+    def _get_dfn(cls, split_loc, freq_loc):
+        assert split_loc in cls.split, "{}".format(split_loc)
+        assert freq_loc in cls.freq, "{}".format(freq_loc)
 
-        return "npipe6v20{split}_{freq}_map.fits"
-
+        return "npipe6v20{split}_{freq}_map.fits".format(freq=freq_loc, split=split_loc)
 
     def _get_noisedir():
         # NPIPEsimdiff:    
         #     "ap": "/global/cscratch1/sd/sebibel/map/frequency/",
-        #     "filename": "{sim_id}_half_diff_npipe6v20{split}_{freq}_{nside}.fits",
+        #     "filename": "{simid}_half_diff_npipe6v20{split}_{freq}_{nside}.fits",
         #     "order": "NESTED",
         assert 0, "To be implemented"
         return "INTERNAL"
 
 
-    def _get_noisefn():
+    @classmethod
+    def _get_noisefn(cls, split_loc, freq_loc):
         assert 0, "To be implemented"
-        return "half_diff_npipe6v20{split}_{freq}_{nside}.fits"
+
+        return "half_diff_npipe6v20{split}_{freq}_{nside}.fits".format(
+            split = split_loc,
+            freq = freq_loc,
+            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside[1])
 
 
+    @classmethod
     def _get_cmbdir():
         # NPIPEsimcmb:
-        #     "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{sim_id}/input/",
-        #     "filename": "ffp10_cmb_{freq}_alm_mc_{sim_id}_nside{nside}_quickpol.fits",
+        #     "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}_sim/{simid}/input/",
+        #     "filename": "ffp10_cmb_{freq}_alm_mc_{simid}_nside{nside}_quickpol.fits",
         #     "order": "NESTED",
         assert 0, "To be implemented"
     
@@ -299,10 +350,10 @@ class ConfXPS:
         "filename": "{LorH}_SkyMap_{freq}_{nside}_R3.{00/1}_full-eohd.fits"
     },
     NPIPE_sim_diff={
-        "sim_id": "0200"
+        "simid": "0200"
     },
     NPIPE_sim={
-        "sim_id": "0200"
+        "simid": "0200"
         }
     lens={
         "tmask":{
@@ -336,3 +387,9 @@ class ConfXPS:
     outdir_map_ap= "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/map/frequency/",
     outdir_mask_ap= "/mnt/c/Users/sebas/OneDrive/Desktop/Uni/data/tmp/mask/frequency/"
 
+
+class Asserter:
+    info_component = ["N", "F", "S", "T"]
+    info_combination = ["non-separated"]
+    FREQ = ['030', '044', '070', '100', '143', '217', '353', '545', '857']
+    misc_type = ["w"]

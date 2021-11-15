@@ -84,51 +84,49 @@ class Params:
         mch = "NERSC"
 
     FREQFILTER = [
-        Frequency.LFI_1,
-        Frequency.LFI_2,
-        Frequency.LFI_3,
-        Frequency.LFI_4,
-        Frequency.LFI_5,
-        Frequency.LFI_6,
-        Frequency.LFI_7,
-        Frequency.LFI_8,
-        Frequency.HFI_1,
-        Frequency.HFI_2,
-        Frequency.HFI_3,
-        Frequency.HFI_4,
-        Frequency.HFI_5,
-        Frequency.HFI_6,
-        Frequency.HFI_7,
-        Frequency.HFI_8,
-        Frequency.HFI_9,
-        Frequency.HFI_10,
-        Frequency.HFI_11,
-        Frequency.HFI_12
+        Frequency.LFI_1.value,
+        Frequency.LFI_2.value,
+        Frequency.LFI_3.value,
+        Frequency.LFI_4.value,
+        Frequency.LFI_5.value,
+        Frequency.LFI_6.value,
+        Frequency.LFI_7.value,
+        Frequency.LFI_8.value,
+        Frequency.HFI_2.value,
+        Frequency.HFI_3.value,
+        Frequency.HFI_4.value,
+        Frequency.HFI_5.value,
+        Frequency.HFI_6.value,
+        Frequency.HFI_7.value,
+        Frequency.HFI_8.value,
+        Frequency.HFI_9.value,
+        Frequency.HFI_10.value,
+        Frequency.HFI_11.value,
+        Frequency.HFI_12.value
         ]
 
     FREQ = [p.value for p in list(Frequency)]
     FREQ_f = [p.value for p in list(Frequency)
     if p.value not in [
-        Frequency.LFI_1,
-        Frequency.LFI_2,
-        Frequency.LFI_3,
-        Frequency.LFI_4,
-        Frequency.LFI_5,
-        Frequency.LFI_6,
-        Frequency.LFI_7,
-        Frequency.LFI_8,
-        Frequency.HFI_1,
-        Frequency.HFI_2,
-        Frequency.HFI_3,
-        Frequency.HFI_4,
-        Frequency.HFI_5,
-        Frequency.HFI_6,
-        Frequency.HFI_7,
-        Frequency.HFI_8,
-        Frequency.HFI_9,
-        Frequency.HFI_10,
-        Frequency.HFI_11,
-        Frequency.HFI_12
+        Frequency.LFI_1.value,
+        Frequency.LFI_2.value,
+        Frequency.LFI_3.value,
+        Frequency.LFI_4.value,
+        Frequency.LFI_5.value,
+        Frequency.LFI_6.value,
+        Frequency.LFI_7.value,
+        Frequency.LFI_8.value,
+        Frequency.HFI_2.value,
+        Frequency.HFI_3.value,
+        Frequency.HFI_4.value,
+        Frequency.HFI_5.value,
+        Frequency.HFI_6.value,
+        Frequency.HFI_7.value,
+        Frequency.HFI_8.value,
+        Frequency.HFI_9.value,
+        Frequency.HFI_10.value,
+        Frequency.HFI_11.value,
+        Frequency.HFI_12.value
     ]]
 
     SPECTRUM = [p.value for p in list(Spectrum)]
@@ -136,47 +134,45 @@ class Params:
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
         for FREQ, FREQ2  in itertools.product(FREQ,FREQ)
             if FREQ not in [
-        Frequency.LFI_1,
-        Frequency.LFI_2,
-        Frequency.LFI_3,
-        Frequency.LFI_4,
-        Frequency.LFI_5,
-        Frequency.LFI_6,
-        Frequency.LFI_7,
-        Frequency.LFI_8,
-        Frequency.HFI_1,
-        Frequency.HFI_2,
-        Frequency.HFI_3,
-        Frequency.HFI_4,
-        Frequency.HFI_5,
-        Frequency.HFI_6,
-        Frequency.HFI_7,
-        Frequency.HFI_8,
-        Frequency.HFI_9,
-        Frequency.HFI_10,
-        Frequency.HFI_11,
-        Frequency.HFI_12
+        Frequency.LFI_1.value,
+        Frequency.LFI_2.value,
+        Frequency.LFI_3.value,
+        Frequency.LFI_4.value,
+        Frequency.LFI_5.value,
+        Frequency.LFI_6.value,
+        Frequency.LFI_7.value,
+        Frequency.LFI_8.value,
+        Frequency.HFI_2.value,
+        Frequency.HFI_3.value,
+        Frequency.HFI_4.value,
+        Frequency.HFI_5.value,
+        Frequency.HFI_6.value,
+        Frequency.HFI_7.value,
+        Frequency.HFI_8.value,
+        Frequency.HFI_9.value,
+        Frequency.HFI_10.value,
+        Frequency.HFI_11.value,
+        Frequency.HFI_12.value
         ] and (FREQ2 not in [
-        Frequency.LFI_1,
-        Frequency.LFI_2,
-        Frequency.LFI_3,
-        Frequency.LFI_4,
-        Frequency.LFI_5,
-        Frequency.LFI_6,
-        Frequency.LFI_7,
-        Frequency.LFI_8,
-        Frequency.HFI_1,
-        Frequency.HFI_2,
-        Frequency.HFI_3,
-        Frequency.HFI_4,
-        Frequency.HFI_5,
-        Frequency.HFI_6,
-        Frequency.HFI_7,
-        Frequency.HFI_8,
-        Frequency.HFI_9,
-        Frequency.HFI_10,
-        Frequency.HFI_11,
-        Frequency.HFI_12
+        Frequency.LFI_1.value,
+        Frequency.LFI_2.value,
+        Frequency.LFI_3.value,
+        Frequency.LFI_4.value,
+        Frequency.LFI_5.value,
+        Frequency.LFI_6.value,
+        Frequency.LFI_7.value,
+        Frequency.LFI_8.value,
+        Frequency.HFI_2.value,
+        Frequency.HFI_3.value,
+        Frequency.HFI_4.value,
+        Frequency.HFI_5.value,
+        Frequency.HFI_6.value,
+        Frequency.HFI_7.value,
+        Frequency.HFI_8.value,
+        Frequency.HFI_9.value,
+        Frequency.HFI_10.value,
+        Frequency.HFI_11.value,
+        Frequency.HFI_12.value
         ]) and (int(FREQ2)>=int(FREQ))]
     speccomb  = [spec for spec in SPECTRUM if spec not in [
         "TB",
@@ -285,6 +281,7 @@ class Lens_Mask:
 
 class Smica_Mask:
 
+
     def get_dir():
 
         return "/global/homes/s/sebibel/data/mask/"
@@ -361,3 +358,10 @@ class Beamfd90csim:
     @classmethod
     def get_beamf(cls):
         return cls.beamf
+    
+
+class Asserter:
+    info_component = ["N", "F", "S", "T"]
+    info_combination = ["non-separated"]
+    FREQ = ['021', '025', '030', '036', '043', '052', '062', '075', '090', '108', '129', '155', '186', '223', '268', '321', '385', '462', '555', '666', '799']
+    misc_type = ["w"]

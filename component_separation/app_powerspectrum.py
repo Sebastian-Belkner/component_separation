@@ -18,8 +18,9 @@ import component_separation.transformer as trsf
 import component_separation.powerspectrum as pospec
 import component_separation.map as mp
 
-csu = Config(experiment='Pico')
-fn = fn_gen(csu)
+experiment = 'Planck'
+csu = Config(experiment=experiment)
+fn = fn_gen(csu, experiment=experiment)
 io = IO(csu)
 
 
@@ -29,9 +30,9 @@ def run_map2cls(info_component):
     print("outpath_pow_sc_name: {}".format(outpath_pow_sc_name))
 
     maps = dict()
-    for FREQ in csu.PLANCKMAPFREQ:
-        if FREQ not in csu.freqfilter:
-            inpath_map_pla_name = fn.get_pla(FREQ, info_component)
+    for FREQ in csu.FREQ:
+        if FREQ not in csu.FREQFILTER:
+            inpath_map_pla_name = fn.get_d(FREQ, info_component)
             print("inpath_map_pla_name: {}".format(inpath_map_pla_name))
             maps[FREQ] = io.load_pla(inpath_map_pla_name, field=(0,1,2), ud_grade=(True, FREQ))
     maps = mp.process_all(maps)
@@ -41,7 +42,6 @@ def run_map2cls(info_component):
     pmask_fn = fn.get_mask('P', apodized=apo)
     tmask_sg = io.load_mask(tmask_fn, stack=True)
     pmask_sg = io.load_mask(pmask_fn, stack=True)
-
 
     tmask, pmask = dict(), dict()
     for FREQ in csu.PLANCKMAPFREQ:

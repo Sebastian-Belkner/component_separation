@@ -109,7 +109,7 @@ class IO:
             FREQ:'{abs_path}{freq_filename}'
                 .format(
                     abs_path = abs_path\
-                        .replace("{sim_id}", self.csu.sim_id)\
+                        .replace("{simid}", self.csu.simid)\
                         .replace("{split}", cf_loc['pa']['freqdatsplit'] if "split" in cf_loc[mch][freqdset] else ""),
                     freq_filename = freq_filename
                         .replace("{freq}", FREQ)
@@ -118,7 +118,7 @@ class IO:
                         .replace("{00/1}", "00" if int(FREQ)<100 else "01")
                         .replace("{even/half1}", "evenring" if int(FREQ)>=100 else "ringhalf-1")
                         .replace("{odd/half2}", "oddring" if int(FREQ)>=100 else "ringhalf-2")
-                        .replace("{sim_id}", self.csu.sim_id)\
+                        .replace("{simid}", self.csu.simid)\
                         .replace("{split}", cf_loc['pa']['freqdatsplit'] if "split" in cf_loc[mch][freqdset] else "")
                     )
                 for FREQ in self.csu.PLANCKMAPFREQ

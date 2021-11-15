@@ -30,13 +30,6 @@ def iff_make_dir(outpath_name):
         os.makedirs(outpath_name)
 
 
-class Asserter:
-    info_component = ["N", "F", "S", "T"]
-    info_combination = ["non-separated"]
-    PLANCKMAPFREQS = ['030', '044', '070', '100', '143', '217', '353', '545', '857']
-    misc_type = ["w"]
-
-
 class Asserter_smica:
     info_component = ["N", "F", "S", "T"]
     info_combination = ["non-separated", "separated", "combined"]
