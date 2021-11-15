@@ -18,7 +18,7 @@ import component_separation.transformer as trsf
 import component_separation.powerspectrum as pospec
 import component_separation.map as mp
 
-csu = Config()
+csu = Config(experiment='Pico')
 fn = fn_gen(csu)
 io = IO(csu)
 

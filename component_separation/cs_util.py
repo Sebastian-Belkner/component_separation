@@ -11,18 +11,19 @@ import numpy as np
 from scipy import interpolate
 
 import component_separation.cachechecker as cc
-from component_separation.config_planck import (Params, Planckf, Planckr,
-                                                Plancks)
 
-class Config(Params):
-    def __init__(self, **kwargs):
+class Config:
+    def __init__(self, experiment, **kwargs):
+        assert experiment in ['Planck', 'Pico']
+        if experiment == 'Planck':
+            from component_separation.config_planck import (Params, 
+            Frequency, Frequencyclass, Spectrum)
+        elif experiment == 'Pico':
+            from component_separation.config_pico import (Params,
+            Frequency, Frequencyclass, Spectrum)
         """
         Load Configuartion file and store as parameters, but do not expose config file.
         """
-        # TODO configuration could depend on what is currently done
-            # 1. map generation
-            # 2. powerspectrum generation
-            # 3. component separation
 
         uname = platform.uname()
         if uname.node == "DESKTOP-KMIGUPV":
@@ -36,7 +37,6 @@ class Config(Params):
         "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888"]
         self.CB_color_cycle_lighter = ["#68ACCE", "#AC4657", "#ADAC57", "#005713", "#130268", "#8A2479", 
         "#248A79", "#797913", "#680235", "#460000", "#4679AC", "#686868"]
-
 
         """
         Overwrite all params which are directly passed to __init__
@@ -190,7 +190,7 @@ class Filename_gen:
             .replace("{sim_id}", str(sim_id))\
             .replace("{split}", self.csu_loc.freqdatsplit)\
             .replace("{freq}", freq)\
-            .replace("{LorH}", Planckr.LFI.value if int(freq)<100 else Planckr.HFI.value)\
+            .replace("{LorH}", Frequencyclass.LFI.value if int(freq)<100 else Frequencyclass.HFI.value)\
             .replace("{nside}", str(self.csu_loc.nside_desc_map[0]) if int(freq)<100 else str(self.csu_loc.nside_desc_map[1]))\
             .replace("{00/1}", "00" if int(freq)<100 else "01")
                     
@@ -368,7 +368,7 @@ class Filename_gen:
                     .replace("{split}", self.csu_loc.freqdatsplit),
                 freq_filename = freq_filename
                     .replace("{freq}", FREQ)
-                    .replace("{LorH}", Planckr.LFI.value if int(FREQ)<100 else Planckr.HFI.value)
+                    .replace("{LorH}", Frequencyclass.LFI.value if int(FREQ)<100 else Frequencyclass.HFI.value)
                     .replace("{nside}", str(nside_desc[0]) if int(FREQ)<100 else str(nside_desc[1]))
                     .replace("{00/1}", "00" if int(FREQ)<100 else "01")
                     .replace("{even/half1}", "evenring" if int(FREQ)>=100 else "ringhalf-1")

@@ -67,8 +67,8 @@ def process_all(data):
     for freq, val in data.items():
         data[freq] = replace_undefnan(data[freq])
         data[freq] = remove_brightsaturate(data[freq])
-        data[freq] = subtract_mean(data[freq])
-        data[freq] = remove_dipole(data[freq])
+        # data[freq] = subtract_mean(data[freq])
+        # data[freq] = remove_dipole(data[freq])
     return data
 
 

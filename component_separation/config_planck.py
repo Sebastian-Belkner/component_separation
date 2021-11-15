@@ -3,7 +3,7 @@ import itertools
 import platform
 
 
-class Planckf(Enum):
+class Frequency(Enum):
     LFI_1 = '030'
     LFI_2 = '044'
     LFI_3 = '070'
@@ -15,7 +15,7 @@ class Planckf(Enum):
     HFI_6 = '857'
 
     
-class Plancks(Enum):
+class Spectrum(Enum):
     # the order must be the same as the order of pospace function returns
     TT = "TT"#00
     EE = "EE"#11
@@ -28,7 +28,7 @@ class Plancks(Enum):
     BE = "BE"#21
 
 
-class Planckr(Enum):
+class Frequencyclass(Enum):
     LFI = "LFI"
     HFI = "HFI"
 
@@ -36,7 +36,7 @@ class Planckr(Enum):
 class Params:
     mskset = "lens"
     freqdset = "DX12"
-    spectrum_type = "pseudo"
+    spectrum_type = "JC"
     lmax = 4000
     lmax_mask = 6000
     freqdatsplit = ""
@@ -71,10 +71,10 @@ class Params:
     else:
         mch = "NERSC"
 
-    PLANCKMAPFREQ = [p.value for p in list(Planckf)]
-    PLANCKMAPFREQ_f = [p.value for p in list(Planckf) if p.value not in ["545",
+    PLANCKMAPFREQ = [p.value for p in list(Frequency)]
+    PLANCKMAPFREQ_f = [p.value for p in list(Frequency) if p.value not in ["545",
         "857"]]
-    PLANCKSPECTRUM = [p.value for p in list(Plancks)]
+    PLANCKSPECTRUM = [p.value for p in list(Spectrum)]
 
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
         for FREQ, FREQ2  in itertools.product(PLANCKMAPFREQ,PLANCKMAPFREQ)

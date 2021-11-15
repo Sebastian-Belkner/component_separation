@@ -173,7 +173,7 @@ def run_propag():
     W_total = hpf.interp_smica_mv_weights(W_smica, W_mv, bins, 4001)
     W_total[:,:,0:2] = 0.0
 
-    nalm = int((csu.lmax)*(csu.lmax-1+2)/2) 
+    nalm = int((2501)*(2501-1+2)/2) 
     alm = np.zeros(shape=(len(csu.PLANCKMAPFREQ_f),3,nalm))
     
     maps = dict()
@@ -190,11 +190,16 @@ def run_propag():
     for itf, freq in enumerate(csu.PLANCKMAPFREQ_f):
         print('freq: ', freq)
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
-        alm[itf][1:] = trsf.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, csu.lmax-1) # full sky QU->EB        #TODO no TT at the moment
+        if apo:
+            alm[itf][1:] = hp.map2alm(np.array([n*hp.ud_grade(pmask[freq], nside_out=ns) for n in maps[freq]]), 2500)[1:] # full sky QU->EB        #TODO no TT at the moment
+        else:
+            alm[itf][1:] = trsf.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, 2500) # full sky QU->EB        #TODO no TT at the moment
  
     # combalmT = np.zeros((nalm), dtype=np.complex128)
     combalmE = np.zeros((nalm), dtype=np.complex128)
     combalmB = np.zeros((nalm), dtype=np.complex128)
+    beam_e = hp.gauss_beam(np.radians(5/60), 4100, pol = True)[:,1]
+    beam_b = hp.gauss_beam(np.radians(5/60), 4100, pol = True)[:,2]
 
     for itf, det in enumerate(csu.PLANCKMAPFREQ): #weights do not depend on freqfilter, but almE/B do
         if det in csu.PLANCKMAPFREQ_f:
@@ -202,23 +207,23 @@ def run_propag():
             ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
             combalmE += hp.almxfl(
-                # hp.almxfl(
+                hp.almxfl(
                     hp.almxfl(
-                        alm[itf][1], np.nan_to_num(1/beamf[1,itf,itf,:csu.lmax])),
-                    # np.nan_to_num(1/beamf[1,itf,itf,:csu.lmax])),
-                np.squeeze(W_total[1,itf,:]))
-            # combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:csu.lmax])
+                        alm[itf][1], np.nan_to_num(1/beamf[1,itf,itf,:2500])),
+                    beam_e[:2500]),
+                np.squeeze(W_total[1,itf,:2500]))
+            combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:2500])
             combalmB += hp.almxfl(
-                # hp.almxfl(
+                hp.almxfl(
                     hp.almxfl(
-                        alm[itf][2], np.nan_to_num(1/beamf[2,itf,itf,:csu.lmax])),
-                        # np.nan_to_num(1/beamf[2,itf,itf,:csu.lmax])),
-                np.squeeze(W_total[2,itf,:]))
-            # combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:csu.lmax])
+                        alm[itf][2], np.nan_to_num(1/beamf[2,itf,itf,:2500])),
+                        beam_b[:2500]),
+                np.squeeze(W_total[2,itf,:2500]))
+            combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:2500])
 
     mapT_combined = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
     io.save_data(mapT_combined, fns.get_map('T', 'combined'))
-    ClT_combined = trsf.map2cls({'combined':mapT_combined}, {'combined':tmask['030']}, {'combined':pmask['030']}, csu.spectrum_type, csu.lmax-1, freqcomb=['combined-combined'], lmax_mask=csu.lmax_mask)
+    ClT_combined = trsf.map2cls({'combined':mapT_combined}, {'combined':tmask['030']}, {'combined':pmask['030']}, csu.spectrum_type, 2500, freqcomb=['combined-combined'], lmax_mask=csu.lmax_mask)
     io.save_data(ClT_combined, fns.get_spectrum('T', 'combined'))
 
     maq_lpDXS = hp.smoothing(hp.ma(mapT_combined[1]), np.radians(1))
@@ -232,7 +237,7 @@ def run_propag():
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_fit = False
+    bool_fit = True
     bool_propag = True
     store_data = True
 
