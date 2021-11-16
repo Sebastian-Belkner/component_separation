@@ -56,11 +56,17 @@ class Config:
 
         self.bins = getattr(Smica_bins, self.binname)
 
+        if self.mskset == "smica":
+            from component_separation.config_planck import BeamfDX12
+            self.get_beamf = BeamfDX12.get_beamf
+        elif self.mskset == "lens":
+            from component_separation.config_planck import BeamfNPIPE
+            self.get_beamf = BeamfNPIPE.get_beamf
+
         print(40*"$")
         print("Run with the following settings:")
         print(self.__dict__)
         print(40*"$")
-
 
 
 class Filename_gen:
@@ -72,16 +78,10 @@ class Filename_gen:
         powerspec, map, alms,
         powspectype (pseudo, chonetal)
         ...
-
     Create filename hierarchically,
         1. choose useful hierarical directory structure
         2. for each config file setting, generate unique level0 name
         3. for all files generated upon runtime, generate unique level1 name
-
-    The goal is to,
-     1. set up directories
-     2. generate hierarch. filename
-     2. pass info to cachechecker
     """
 
     def __init__(self, csu_loc, experiment='Planck', dir_structure=None, fn_structure=None, simid=None):

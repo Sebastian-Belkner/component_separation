@@ -1,5 +1,5 @@
-"""
-run_powerspectrum.py: script for generating powerspectra from maps.
+"""run_powerspectrum.py:
+script for generating powerspectra from maps.
 Depends on all maps being generated to begin with. Use ``run_map.py``, if e.g. noisemaps are missing.
 """
 
@@ -34,7 +34,8 @@ def run_map2cls(info_component):
         if FREQ not in csu.FREQFILTER:
             inpath_map_pla_name = fn.get_d(FREQ, info_component)
             print("inpath_map_pla_name: {}".format(inpath_map_pla_name))
-            maps[FREQ] = io.load_d(inpath_map_pla_name, field=(0,1,2), ud_grade=(True, FREQ))
+            nside_out = csu.nside_out[0] if int(FREQ)<100 else csu.nside_out[1]
+            maps[FREQ] = io.load_d(inpath_map_pla_name, field=(0,1,2), nside_out=nside_out)
     maps = mp.process_all(maps)
 
     apo = csu.spectrum_type == 'pseudo'

@@ -19,7 +19,6 @@ import numpy as np
 import component_separation.covariance as cv
 import component_separation.smica_interface as smint
 import component_separation.map as mp
-import component_separation.MSC.MSC.pospace as ps #TODO remove dependency
 import component_separation.transformer as trsf
 
 from component_separation.cs_util import Helperfunctions as hpf
@@ -39,15 +38,13 @@ io = IO(csu)
 apo = csu.spectrum_type == 'pseudo'
 tmask_fn = fn.get_mask('T', apodized=apo)
 pmask_fn = fn.get_mask('P', apodized=apo)
-tmask_sg = io.load_mask(tmask_fn, stack=True)
-pmask_sg = io.load_mask(pmask_fn, stack=True)
-
+tmask_sg = io.load_mask(tmask_fn)
+pmask_sg = io.load_mask(pmask_fn)
 tmask, pmask = dict(), dict()
 for FREQ in csu.FREQ:
     if FREQ not in csu.FREQFILTER:
         tmask[FREQ] = tmask_sg
         pmask[FREQ] = pmask_sg
-
 smica_params = dict({
     'cov': dict(), 
     "cov4D": dict(), 
@@ -242,7 +239,7 @@ if __name__ == '__main__':
 
     if bool_fit:
         # run_fit()
-        run_fit(fitp_old)
+        run_fit(fitp)
 
     if bool_propag:
         run_propag()
@@ -320,6 +317,6 @@ def run_propag_ext():
 
     CMB["TQU"]['out'] = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
     io.save_data(CMB["TQU"]['out'], io.fh.cmbmap_smica_path_name) #TODO rename to MVmap or similar
-    smica_C_lmin_unsc = np.array(ps.map2cl_spin(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask['100'], lmax=lmax-1,
+    smica_C_lmin_unsc = np.array(trsf.map2cl_ss(qumap=CMB["TQU"]['out'][1:3], spin=2, mask=pmask['100'], lmax=lmax-1,
         lmax_mask=lmax*2))*1e12 #maps are different scale than processed powerspectra from this' package pipeline, thus *1e12
     io.save_data(smica_C_lmin_unsc, io.fh.clmin_smica_path_name)

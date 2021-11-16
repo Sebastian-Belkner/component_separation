@@ -15,9 +15,9 @@ from astropy.io import fits
 from logdecorator import log_on_end, log_on_error, log_on_start
 
 class IO:
-    def __init__(self, csu, fn=None):
+    def __init__(self, csu, experiment='Planck'):
         self.csu = csu
-        self.fn = fn
+        self.get_beamf = csu.get_beamf
 
 
     def load_mask(self, mask_fn, stack=True):
@@ -25,17 +25,9 @@ class IO:
         if stack != True:
             assert 0, 'Not yet implemented'
 
-        def _multi(a, b):
-            return a*b
-
-        masks_file = [
-            np.load(fn) 
-            if fn.endswith('.npy') else hp.read_map(fn, dtype=np.bool)
-                for fn in mask_fn]
-
-        masks_file = functools.reduce(
-            _multi,
-            [a for a in masks_file])
+        masks_file = np.prod(np.array([
+            np.load(fn) if fn.endswith('.npy') else hp.read_map(fn, dtype=np.bool)
+                for fn in mask_fn]),axis=0)
 
         return masks_file
 
@@ -54,19 +46,18 @@ class IO:
             return None
 
 
-    def load_d(self, pathname, field, ud_grade=(None, None)):
-        """Collects planck maps (.fits files) and stores to dictionaries. Mask data must be placed in `PATH/mask/`,
-        Map data in `PATH/map/`.
+    def load_d(self, pathname, field, nside_out=None):
+        """read map (.fits file) using healpy backend.
         Args:
             pathname (str): complete name to the file
             field (tuple): data fields to be read
-            ud_grade (tuple): First element is None or True, second element is the freq-split where either ud_grade nside is applied
+            nside_out (str): 
             
         Returns:
             List[Dict]: Planck maps (data and masks) and some header information
 
         """
-        if ud_grade[0] is None:
+        if nside_out is None:
 
             return hp.read_map(
                 pathname,
@@ -81,7 +72,7 @@ class IO:
                     field=field,
                     dtype=np.float64,
                     nest=False),
-                nside_out=self.csu.nside_out[0] if int(ud_grade[1])<100 else self.csu.nside_out[1])
+                nside_out=nside_out)
 
 
     def load_alms(self, component, id):
@@ -123,9 +114,19 @@ class IO:
             return None
 
 
+    @log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb_loc}")
+    @log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
+    def load_beamf(self, freqcomb_loc=None, lmax_loc=None, freqdatsplit_loc=None):
+
+        freqcomb = self.csu.freqcomb if freqcomb_loc is None else freqcomb_loc
+        lmax = self.csu.lmax if freqcomb_loc is None else lmax_loc
+        freqdatsplit = self.csu.freqdatsplit if freqdatsplit_loc is None else freqdatsplit_loc
+        return self.get_beamf(fits, freqcomb, lmax, freqdatsplit)
+
+
     @log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb}")
     @log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
-    def load_beamf(self, beamf_info, freqcomb: List) -> Dict:
+    def load_beamf_old(self, beamf_info, freqcomb: List) -> Dict:
         """Collects planck beamfunctions (.fits files) and stores to dictionaries. beamf files must be placed in `PATH/beamf/`.
 
         Args:

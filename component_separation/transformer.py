@@ -56,7 +56,7 @@ def map2cls(maps, tmask, pmask, powerspectrum_type, lmax, freqcomb, nside_out=[1
 @log_on_start(INFO, "Starting to calculate JC powerspectra.")
 @log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
 def _map2cls(iqumap, tmask: List, pmask: List, lmax, lmax_mask, freqcomb, nside_out) -> np.array:
-    """Calculate powerspectrum using MSC.pospace and iqumaps
+    """map 2 powerspectrum, temp and pol, using MSC.pospace
 
     Args:
         iqumap ([type]): [description]
@@ -81,6 +81,28 @@ def _map2cls(iqumap, tmask: List, pmask: List, lmax, lmax_mask, freqcomb, nside_
             tmask2=_ud_grade(tmask[FREQC.split("-")[0]], FREQC.split("-")[1], nside_out),
             pmask2=_ud_grade(pmask[FREQC.split("-")[0]], FREQC.split("-")[1], nside_out)
         ) for FREQC in freqcomb 
+    ])
+
+    return retval
+
+
+@log_on_start(INFO, "Starting to calculate JC powerspectra.")
+@log_on_end(DEBUG, "Spectrum calculated successfully: '{result}' ")
+def map2cl_ss(qumap, pmask: List, spin, lmax, lmax_mask) -> np.array:
+    """map2 powerspectrum _ spin only, single map
+
+    Args:
+        qumap ([type]): [description]
+        pmask (List): [description]
+        spin ([type]): [description]
+        lmax ([type]): [description]
+        lmax_mask ([type]): [description]
+
+    Returns:
+        np.array: [description]
+    """
+    retval = np.array([
+        ps.map2cl_spin(qumap=qumap, spin=spin, mask=pmask['100'], lmax=lmax-1, lmax_mask=lmax_mask)
     ])
 
     return retval

@@ -2,6 +2,7 @@ from enum import Enum
 import itertools
 import platform
 import numpy as np
+import os
 
 
 class Frequency(Enum):
@@ -86,11 +87,10 @@ class Params:
         "BT",
         "BE"
     ]]
-
     FREQFILTER = [
         "545",
         "857"
-    ] #careful, changes must be applied manually to freqcomb in here
+    ] #careful, changes in here must be applied manually to freqcomb etc.
 
 
 class NPIPE:
@@ -135,6 +135,7 @@ class NPIPE:
 class DX12:
     nside = ['1024', '2048']
 
+
     @classmethod
     def _get_ddir(cls, split_loc, simid_loc):
 
@@ -175,17 +176,7 @@ class DX12:
 class NPIPEsim:
     simid = np.concatenate((np.array(['']), np.array([str(n).zfill(4) for n in range(200)])))
     split = ['','A','B']
-    freq = [
-        '030',
-        '044',
-        '070',
-        '100',
-        '143',
-        '217',
-        '353',
-        '545',
-        '857'
-    ]
+    freq = ['030','044', '070',  '100',  '143',  '217',  '353',  '545',  '857']
     nside = ['1024', '2048']
     data={
         "noisefix_filename": "noisefix/noisefix_{freq}{split}_{simid}.fits",
@@ -245,10 +236,12 @@ class NPIPEsim:
 class Lens_Mask:
 
     def get_dir():
+
         return "/global/homes/s/sebibel/data/mask/"
 
 
     def get_fn(TorP, apodized=False):
+
         if TorP == "T":
             if apodized:
                 return [ 
@@ -271,6 +264,7 @@ class Lens_Mask:
 class Smica_Mask:
 
     def get_dir():
+
         return "/global/homes/s/sebibel/data/mask/"
 
 
@@ -297,8 +291,7 @@ class Smica_Mask:
 
 
 class BeamfDX12:
-
-    beamf = {
+    beamf_info = {
         "HFI": {     
             "ap": "/global/homes/s/sebibel/data/beamf/",
             "filename": "Bl_TEB_R3.01_fullsky_{freq1}x{freq2}.fits"
@@ -310,24 +303,155 @@ class BeamfDX12:
         'info' : "DX12"
     }
 
+    TEB_dict = {
+        "T": 0,
+        "E": 1,
+        "B": 2
+    }
+    LFI_dict = {
+        "030": 28,
+        "044": 29,
+        "070": 30
+    }
+    freqdatsplit = ['','A','B']
+
 
     @classmethod
-    def get_beamf(cls):
+    def get_beamf(cls, fits, freqcomb, lmax, freqdatsplit_loc='') -> np.array:
+        """Read files and return all auto- and cross-bl in np.array 
 
-        return cls.beamf
+        Returns:
+            np.array: [description]
+        """
+        indfreq = np.array([])
+        beamf = dict()
+        for freqc in freqcomb:
+            freqs = freqc.split('-')
+            indfreq = np.concatenate((indfreq, [freqs[0]]))
+            if int(freqs[0]) >= 100 and int(freqs[1]) >= 100:
+                beamf.update({
+                    freqc: {
+                        "HFI": fits.open(
+                            "{bf_path}{bf_filename}"
+                            .format(
+                                bf_path = cls.beamf_info["HFI"]['ap'].replace("{split}", freqdatsplit_loc),
+                                bf_filename = cls.beamf_info["HFI"]['filename']
+                                    .replace("{freq1}", freqs[0])
+                                    .replace("{freq2}", freqs[1])
+                            ))
+                        }
+                    })
+            elif int(freqs[0]) < 100 and int(freqs[1]) >= 100:
+                beamf.update({
+                    freqc: {
+                        "HFI": fits.open(
+                            "{bf_path}{bf_filename}"
+                            .format(
+                                bf_path = cls.beamf_info["HFI"]['ap'].replace("{split}", freqdatsplit_loc),
+                                bf_filename = cls.beamf_info["HFI"]['filename']
+                                    .replace("{freq1}", freqs[1])
+                                    .replace("{freq2}", freqs[1])
+                        ))
+                    }
+                })
+                beamf[freqc].update({
+                    "LFI": fits.open(
+                            "{bf_path}{bf_filename}"
+                            .format(
+                                bf_path = cls.beamf_info["LFI"]['ap'].replace("{split}", freqdatsplit_loc),
+                                bf_filename = cls.beamf_info["LFI"]['filename']
+                        ))
+                })
+            elif int(freqs[0]) < 100 and int(freqs[1]) < 100:
+                beamf.update({
+                    freqc: {
+                        "LFI": fits.open(
+                            "{bf_path}{bf_filename}"
+                            .format(
+                                bf_path = cls.beamf_info["LFI"]['ap'].replace("{split}", freqdatsplit_loc),
+                                bf_filename = cls.beamf_info["LFI"]['filename']
+                        ))
+                    }})
+        lmaxp1 = lmax+1
+        indfreq_srt = sorted(set(indfreq))
+        beamf_array = np.zeros(shape=(3, len(indfreq_srt), len(indfreq_srt), lmaxp1))
+        for idspec, spec in enumerate(["T", "E", "B"]):
+            for ida, freqa in enumerate(indfreq_srt):
+                for idb, freqb in enumerate(indfreq_srt):
+                    if ida < idb:
+                        bf = beamf[freqa+'-'+freqb]
+                    else:
+                        bf = beamf[freqb+'-'+freqa]
+                    
+                    if int(freqa) >= 100 and int(freqb) >= 100:
+                        beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(cls.TEB_dict[spec])[:lmaxp1]
+                    elif int(freqa) < 100 and int(freqb) < 100:
+                        b1 = np.sqrt(bf["LFI"][cls.LFI_dict[freqa]].data.field(0))
+                        buff1 = np.concatenate((
+                            b1[:min(lmaxp1, len(b1))],
+                            np.array([np.NaN for n in range(max(0, lmaxp1-len(b1)))])))
+                        b2 = np.sqrt(bf["LFI"][cls.LFI_dict[freqb]].data.field(0))
+                        buff2 = np.concatenate((
+                            b2[:min(lmaxp1, len(b2))],
+                            np.array([np.NaN for n in range(max(0, lmaxp1-len(b2)))])))
+                        beamf_array[idspec,ida,idb] = buff1*buff2
+                    else:
+                        if ida < idb:
+                            freqc = freqa
+                        else:
+                            freqc = freqb
+                        b = np.sqrt(bf["LFI"][cls.LFI_dict[freqc]].data.field(0))
+                        buff = np.concatenate((
+                            b[:min(lmaxp1, len(b))],
+                            np.array([np.NaN for n in range(max(0, lmaxp1-len(b)))])))
+                        beamf_array[idspec,ida,idb] = buff*np.sqrt(bf["HFI"][1].data.field(cls.TEB_dict[spec])[:lmaxp1])
+        return beamf_array
 
 
 class BeamfNPIPE:
-    beamf = { 
+    split = ['','A','B']
+    beamf_info = { 
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/quickpol/",
         "filename": "Bl_TEB_npipe6v20_{freq1}GHzx{freq2}GHz.fits",
         'info' : "NPIPE"
     }
+    TEB_dict = {
+        "T": 0,
+        "E": 1,
+        "B": 2
+    }
+    LFI_dict = {
+        "030": 28,
+        "044": 29,
+        "070": 30
+    }
     
 
     @classmethod
-    def get_beamf(cls):
-        return cls.beamf
+    def get_beamf(cls, fits, freqcomb, lmax, freqdatsplit_loc):
+        indfreq = np.array([])
+        lmaxp1 = lmax+1
+        beamf = dict()
+        for freqc in freqcomb:
+            freqs = freqc.split('-')
+            indfreq = np.concatenate((indfreq, [freqs[0]]))
+            beamf.update({
+                freqc: fits.open(
+                    os.path.join(
+                        cls.beamf_info['ap'].format(split=freqdatsplit_loc), 
+                        cls.beamf_info['filename'].format(freq1=freqs[0], freq2=freqs[1])
+            ))})
+        indfreq_srt = sorted(set(indfreq))
+        beamf_array = np.zeros(shape=(3, len(indfreq_srt), len(indfreq_srt), lmaxp1))
+        for idspec, spec in enumerate(["T", "E", "B"]):
+            for ida, freqa in enumerate(indfreq_srt):
+                for idb, freqb in enumerate(indfreq_srt):
+                    if ida < idb:
+                        bf = beamf[freqa+'-'+freqb]
+                    else:
+                        bf = beamf[freqb+'-'+freqa]
+                    beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(cls.TEB_dict[spec])[:lmaxp1]
+        return cls.beamf_info
 
 
 class ConfXPS:

@@ -211,7 +211,6 @@ class d90:
 
 
 class d90sim:
-
     freq = [p.value for p in list(Frequency)]
     boloid = ['38', '32', '28', '24', '22', '18', '13', '11', '10', '08', '07', '06',
        '04', '04', '03', '03', '02', '02', '02', '01', '01']
@@ -335,8 +334,10 @@ class Beamfd90sim:
         'info' : "d90sim"
     }
 
+
     @classmethod
     def get_beamf(cls):
+
         return cls.beamf
 
 
@@ -359,6 +360,7 @@ class Beamfd90csim:
 
     @classmethod
     def get_beamf(cls):
+
         return cls.beamf
     
 
