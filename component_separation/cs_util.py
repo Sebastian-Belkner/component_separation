@@ -1,4 +1,10 @@
 
+"""cs_util.py:
+Configuration handler and Filenamegenerators.
+Loads either of the config_XXX.py files and imports its data/beam/maskclasses, depending on the configuration
+Filename class works depending on the configuration.
+"""
+
 import functools
 import logging
 import logging.handlers
@@ -12,8 +18,14 @@ from scipy import interpolate
 
 import component_separation.cachechecker as cc
 
+#TODO class Config could be further improved as follows:
+# 1. collect all attributes which are supposed to be included as filenameattribute (in this way, its very transparent for future change)
+# 2. test which of the attributes match the current request, remove if needed
+# 3. loop over remaining attributes, link with '/'
+
+# currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
 class Config:
-    def __init__(self, experiment, **kwargs):
+    def __init__(self, experiment='Planck', **kwargs):
         assert experiment in ['Planck', 'Pico']
         if experiment == 'Planck':
             from component_separation.config_planck import (Params, 
@@ -50,12 +62,7 @@ class Config:
         print(40*"$")
 
 
-#TODO the algorithm could be further improved as follows:
-# 1. collect all attributes which are supposed to be included as filenameattribute (in this way, its very transparent for future change)
-# 2. test which of the attributes match the current request, remove if needed
-# 3. loop over remaining attributes, link with '/'
 
-# currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
 class Filename_gen:
     """Generator to consistenly create filenames,
         1. from configuration file
@@ -77,7 +84,7 @@ class Filename_gen:
      2. pass info to cachechecker
     """
 
-    def __init__(self, csu_loc, experiment, dir_structure=None, fn_structure=None, simid=None):
+    def __init__(self, csu_loc, experiment='Planck', dir_structure=None, fn_structure=None, simid=None):
         """To add a new attribute,
             1. add it to dir/fn_structure
             2a. add an instance test (here in the __init__)
@@ -232,17 +239,6 @@ class Filename_gen:
 
 
     def _get_mapdir(self, info_component, simid=None):
-        """dir structure:
-            compsep/
-                --syn/
-                    simid/dataset/mask/
-                        --map/
-                        --spec/
-                --dataset/mask/
-                        --map/
-                            dset_msk_map__ + filename
-                        --spec/
-        """
         assert info_component in self.ass.info_component
         assert type(simid) == int or simid is None
 
@@ -265,18 +261,6 @@ class Filename_gen:
     def _get_mapspecmiscdir(self, info_component, simid=None):
         assert info_component in self.ass.info_component
         assert type(simid) == int or simid is None
-
-        """dir structure:
-            compsep/
-                --syn/
-                    simid/dataset/mask/
-                        --map/
-                        --spec/
-                --dataset/mask/
-                        --map/
-                            dset_msk_map__ + filename
-                        --spec/
-        """
 
         ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
         cc.iff_make_dir(ap)
@@ -582,134 +566,84 @@ class Filename_gen_SMICA:
 
 
 class Smica_bins:
-
     SMICA_lowell_bins = np.array([
-    [5.000000000000000000e+00, 9.000000000000000000e+00],
-    [1.000000000000000000e+01, 1.900000000000000000e+01],
-    [2.000000000000000000e+01, 2.900000000000000000e+01],
-    [3.000000000000000000e+01, 3.900000000000000000e+01],
-    [4.000000000000000000e+01, 5.900000000000000000e+01],
-    [6.000000000000000000e+01, 7.900000000000000000e+01],
-    [8.000000000000000000e+01, 9.900000000000000000e+01],
-    [1.000000000000000000e+02, 1.190000000000000000e+02],
-    [1.200000000000000000e+02, 1.390000000000000000e+02],
-    [1.400000000000000000e+02, 1.590000000000000000e+02]])
+    [5.00e+00, 9.00e+00], [1.00e+01, 1.90e+01],
+    [2.00e+01, 2.90e+01], [3.00e+01, 3.90e+01],
+    [4.00e+01, 5.90e+01], [6.00e+01, 7.90e+01],
+    [8.00e+01, 9.90e+01], [1.00e+02, 1.19e+02],
+    [1.20e+02, 1.39e+02], [1.40e+02, 1.59e+02]], dtype=float)
 
     SMICA_highell_bins = np.array([
-    [2.000000000000000000e+00, 9.000000000000000000e+00],
-    [1.000000000000000000e+01, 1.900000000000000000e+01],
-    [2.000000000000000000e+01, 2.900000000000000000e+01],
-    [3.000000000000000000e+01, 3.900000000000000000e+01],
-    [4.000000000000000000e+01, 5.900000000000000000e+01],
-    [6.000000000000000000e+01, 7.900000000000000000e+01],
-    [8.000000000000000000e+01, 9.900000000000000000e+01],
-    [1.000000000000000000e+02, 1.190000000000000000e+02],
-    [1.200000000000000000e+02, 1.390000000000000000e+02],
-    [1.400000000000000000e+02, 1.590000000000000000e+02],
-    [1.600000000000000000e+02, 1.790000000000000000e+02],
-    [1.800000000000000000e+02, 1.990000000000000000e+02],
-    [2.000000000000000000e+02, 2.190000000000000000e+02],
-    [2.200000000000000000e+02, 2.390000000000000000e+02],
-    [2.400000000000000000e+02, 2.590000000000000000e+02],
-    [2.600000000000000000e+02, 2.790000000000000000e+02],
-    [2.800000000000000000e+02, 2.990000000000000000e+02],
-    [3.000000000000000000e+02, 3.190000000000000000e+02],
-    [3.200000000000000000e+02, 3.390000000000000000e+02],
-    [3.400000000000000000e+02, 3.590000000000000000e+02],
-    [3.600000000000000000e+02, 3.790000000000000000e+02],
-    [3.800000000000000000e+02, 3.990000000000000000e+02],
-    [4.000000000000000000e+02, 4.190000000000000000e+02],
-    [4.200000000000000000e+02, 4.390000000000000000e+02],
-    [4.400000000000000000e+02, 4.590000000000000000e+02],
-    [4.600000000000000000e+02, 4.790000000000000000e+02],
-    [4.800000000000000000e+02, 4.990000000000000000e+02],
-    [5.000000000000000000e+02, 5.490000000000000000e+02],
-    [5.500000000000000000e+02, 5.990000000000000000e+02],
-    [6.000000000000000000e+02, 6.490000000000000000e+02],
-    [6.500000000000000000e+02, 6.990000000000000000e+02],
-    [7.000000000000000000e+02, 7.490000000000000000e+02],
-    [7.500000000000000000e+02, 7.990000000000000000e+02],
-    [8.000000000000000000e+02, 8.490000000000000000e+02],
-    [8.500000000000000000e+02, 8.990000000000000000e+02],
-    [9.000000000000000000e+02, 9.490000000000000000e+02],
-    [9.500000000000000000e+02, 9.990000000000000000e+02]
-    ], dtype=int)
+    [2.00e+00, 9.00e+00], [1.00e+01, 1.90e+01],
+    [2.00e+01, 2.90e+01], [3.00e+01, 3.90e+01],
+    [4.00e+01, 5.90e+01], [6.00e+01, 7.90e+01],
+    [8.00e+01, 9.90e+01], [1.00e+02, 1.19e+02],
+    [1.20e+02, 1.39e+02], [1.40e+02, 1.59e+02],
+    [1.60e+02, 1.79e+02], [1.80e+02, 1.99e+02],
+    [2.00e+02, 2.19e+02], [2.20e+02, 2.39e+02],
+    [2.40e+02, 2.59e+02], [2.60e+02, 2.79e+02],
+    [2.80e+02, 2.99e+02], [3.00e+02, 3.19e+02],
+    [3.20e+02, 3.39e+02], [3.40e+02, 3.59e+02],
+    [3.60e+02, 3.79e+02], [3.80e+02, 3.99e+02],
+    [4.00e+02, 4.19e+02], [4.20e+02, 4.39e+02],
+    [4.40e+02, 4.59e+02], [4.60e+02, 4.79e+02],
+    [4.80e+02, 4.99e+02], [5.00e+02, 5.49e+02],
+    [5.50e+02, 5.99e+02], [6.00e+02, 6.49e+02],
+    [6.50e+02, 6.99e+02], [7.00e+02, 7.49e+02],
+    [7.50e+02, 7.99e+02], [8.00e+02, 8.49e+02],
+    [8.50e+02, 8.99e+02], [9.00e+02, 9.49e+02],
+    [9.50e+02, 9.99e+02]], dtype=float)
 
-    linear_equisized_bins_100 = np.array([[   0,   99],
-       [ 100,  199],
-       [ 200,  299],
-       [ 300,  399],
-       [ 400,  499],
-       [ 500,  599],
-       [ 600,  699],
-       [ 700,  799],
-       [ 800,  899],
-       [ 900,  999],
-       [1000, 1099],
-       [1100, 1199],
-       [1200, 1299],
-       [1300, 1399],
-       [1400, 1499],
-       [1500, 1599],
-       [1600, 1699],
-       [1700, 1799],
-       [1800, 1899],
-       [1900, 1999],
-       [2000, 2099],
-       [2100, 2199],
-       [2200, 2299],
-       [2300, 2399],
-       [2400, 2499],
-       [2500, 2599],
-       [2600, 2699],
-       [2700, 2799],
-       [2800, 2899]])
+    linear_equisized_bins_100 = np.array([
+       [   0,   99], [ 100,  199],
+       [ 200,  299], [ 300,  399],
+       [ 400,  499], [ 500,  599],
+       [ 600,  699], [ 700,  799],
+       [ 800,  899], [ 900,  999],
+       [1000, 1099], [1100, 1199],
+       [1200, 1299], [1300, 1399],
+       [1400, 1499], [1500, 1599],
+       [1600, 1699], [1700, 1799],
+       [1800, 1899], [1900, 1999],
+       [2000, 2099], [2100, 2199],
+       [2200, 2299], [2300, 2399],
+       [2400, 2499], [2500, 2599],
+       [2600, 2699], [2700, 2799],
+       [2800, 2899]], dtype=float)
 
 
 class Helperfunctions:
-
     llp1e12 = lambda x: x*(x+1)*1e12/(2*np.pi)
+
 
     @staticmethod
     def bin_it(data, bins=Smica_bins.SMICA_lowell_bins):
+
         ret = np.ones((*data.shape[:-1], len(bins)))
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
                 for k in range(bins.shape[0]):
                     ret[i,j,k] = np.nanmean(data[i,j,int(bins[k][0]):int(bins[k][1])+1])
         ret = np.nan_to_num(ret)
-        """
-        The following is a 'negative-value' to nearest neighbor interpolation,
-        but it breaks the B-fit pipeline for SMICA.
-        """
-        # for i in range(ret.shape[0]):
-        #     for j in range(ret.shape[1]):
-        #         fill_left=False
-        #         for k in range(ret.shape[2]):
-        #             if ret[i,j,k]<0:
-        #                 if k==0:
-        #                     fill_left = True
-        #                 elif k>0:
-        #                     ret[i,j,k] = ret[i,j,k-1]
-        #             if ret[i,j,k]>0 and fill_left==True:
-        #                 fill_left = False
-        #                 ret[i,j,:k] = [ret[i,j,k] for _ in range(k)]   
+
         return ret
 
 
     @staticmethod
     def bin_it1D(data, bins):
+
         ret = np.ones(len(bins))
         for k in range(bins.shape[0]):
             ret[k] = np.nanmean(np.nan_to_num(data[int(bins[k][0]):int(bins[k][1])]))
+
         return np.nan_to_num(ret)
 
 
-    ### TODO
-    ## T currently not supported
-    ## add smoothing for weights at high ell (especially important when crossing, e.g. npipe data with dx12 derived weights)
     @staticmethod   
     def interp_smica_mv_weights(W_smica, W_mv, bins, lmaxp1):
+        
+        ## TODO T currently not supported
+        ## add smoothing for weights at high ell (especially important when crossing, e.g. npipe data with dx12 derived weights)
         W_total = np.zeros(shape=(*W_mv.shape[:-1], lmaxp1))
         xnew = np.arange(0,bins[-1][1]+1,1)
         for it in range(W_total.shape[1]): #weights do not depend on freqfilter, but almE/B do
@@ -717,16 +651,19 @@ class Helperfunctions:
             W_total[1,it] = np.concatenate((W_Einterp(xnew),W_mv[1,it,xnew.shape[0]:]))
             W_Binterp = interpolate.interp1d(np.mean(bins, axis=1), W_smica[1,it,:], bounds_error = False, fill_value='extrapolate')
             W_total[2,it] = np.concatenate((W_Binterp(xnew),W_mv[2,it,xnew.shape[0]:]))
+
         return W_total
 
 
     @staticmethod
     def multi(a,b):
+
         return a*b
     
     
     @staticmethod
     def reorder_spectrum_dict(spectrum):
+
         spec_data = dict()
         for f in spectrum.keys():
             for s in spectrum[f].keys():
@@ -738,12 +675,14 @@ class Helperfunctions:
                     spec_data[s].update({
                         f: spectrum[f][s]
                     })
+
         return spec_data
 
 
-    #TODO this functions seems to be incorrect, errorbars vary with binsize..
     @staticmethod
     def std_dev_binned(d, lmax=3000, binwidth=200, log=True):
+        
+        #TODO check if function is incorrect, errorbars sometimes vary with binsize?
         if log == False:
             bins = np.linspace(0, lmax+1, binwidth)
         else:
@@ -770,7 +709,29 @@ class Helperfunctions:
             weights=val * val)
         mean = sy / n
         std = np.sqrt(sy2/n - mean*mean)
+
         return mean, std, _
+
+
+    @staticmethod
+    def negvalinterp(data, bins):
+        """
+        The following is a 'negative-value' to nearest neighbor interpolation,
+        but it breaks the B-fit pipeline for SMICA.
+        """
+        ret = np.ones(len(bins))
+        for i in range(ret.shape[0]):
+            for j in range(ret.shape[1]):
+                fill_left=False
+                for k in range(ret.shape[2]):
+                    if ret[i,j,k]<0:
+                        if k==0:
+                            fill_left = True
+                        elif k>0:
+                            ret[i,j,k] = ret[i,j,k-1]
+                    if ret[i,j,k]>0 and fill_left==True:
+                        fill_left = False
+                        ret[i,j,:k] = [ret[i,j,k] for _ in range(k)]
 
 
     @staticmethod

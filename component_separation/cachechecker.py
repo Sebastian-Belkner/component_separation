@@ -9,7 +9,9 @@ compares if metadata agrees with settings.
 
 
 def alert_cached(func):
+
     def wrapped(*args):
+
         if os.path.isfile(args[0]):
             print('Output file {} already exists. Overwrite settings are set to {}'.format(args[0], args[1]))
             if args[1]:
@@ -24,6 +26,7 @@ def alert_cached(func):
 
 
 def iff_make_dir(outpath_name):
+    
     if os.path.exists(outpath_name):
         pass
     else:

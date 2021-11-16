@@ -34,7 +34,7 @@ def run_map2cls(info_component):
         if FREQ not in csu.FREQFILTER:
             inpath_map_pla_name = fn.get_d(FREQ, info_component)
             print("inpath_map_pla_name: {}".format(inpath_map_pla_name))
-            maps[FREQ] = io.load_pla(inpath_map_pla_name, field=(0,1,2), ud_grade=(True, FREQ))
+            maps[FREQ] = io.load_d(inpath_map_pla_name, field=(0,1,2), ud_grade=(True, FREQ))
     maps = mp.process_all(maps)
 
     apo = csu.spectrum_type == 'pseudo'

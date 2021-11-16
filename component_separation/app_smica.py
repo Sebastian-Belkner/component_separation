@@ -6,7 +6,7 @@ Depends on all (noise, signal, full) spectra being generated to begin with. Use 
 
 To let SMICA run sucessfully, we have adapted the following:
 1. For B-fit, set all C_ltot bins < 0 to zero.
-2. smica.mocel.quasi_newton()'s local diag(CRB): I assume all elements to be positive
+2. smica.mocel.quasi_newton()'s local diag(CRB): assume all elements to be positive
 """
 
 __author__ = "S. Belkner"
@@ -43,8 +43,8 @@ tmask_sg = io.load_mask(tmask_fn, stack=True)
 pmask_sg = io.load_mask(pmask_fn, stack=True)
 
 tmask, pmask = dict(), dict()
-for FREQ in csu.PLANCKMAPFREQ:
-    if FREQ not in csu.freqfilter:
+for FREQ in csu.FREQ:
+    if FREQ not in csu.FREQFILTER:
         tmask[FREQ] = tmask_sg
         pmask[FREQ] = pmask_sg
 
@@ -78,7 +78,6 @@ def smooth_data(covltot, covlN, covlS):
     covlN_smoothed = cv.cov2cov_smooth(covlN, cutoff=cutoff)
     covlS_smoothed = cv.cov2cov_smooth(covlS, cutoff=cutoff)
 
-    # print(covlT_smoothed, covlN_smoothed, covlS_smoothed)
     return np.nan_to_num(covlT_smoothed), np.nan_to_num(covlN_smoothed), np.nan_to_num(covlS_smoothed)
 
 
@@ -117,7 +116,7 @@ def extract_model_parameters(smica_model):
     smica_cov = np.array([smica_model.covariance()])
     smica_cov4D = np.array([smica_model.covariance4D()])
 
-    smica_weights_tot = cv.cov2weight(smica_cov, np.array(csu.PLANCKMAPFREQ_f))
+    smica_weights_tot = cv.cov2weight(smica_cov, np.array(csu.FREQ_f))
 
     return smica_cov, smica_cov4D, smica_cmb, smica_gal, smica_weights_tot
 
@@ -126,13 +125,13 @@ def run_fit(fit):
 
     _Tscale = "K_CMB"
     Cltot = io.load_data(fn.get_spectrum("T", "non-separated"))
-    covltot = cv.build_covmatrices(Cltot, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    covltot = cv.build_covmatrices(Cltot, _Tscale, csu.freqcomb, csu.FREQ_f)
 
     ClN = io.load_data(fn.get_spectrum("N", "non-separated"))
-    covlN = cv.build_covmatrices(ClN, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    covlN = cv.build_covmatrices(ClN, _Tscale, csu.freqcomb, csu.FREQ_f)
 
     ClS = io.load_data(fns.get_spectrum("S", "non-separated"))
-    covlS = cv.build_covmatrices(ClS, _Tscale, csu.freqcomb, csu.PLANCKMAPFREQ_f)
+    covlS = cv.build_covmatrices(ClS, _Tscale, csu.freqcomb, csu.FREQ_f)
 
     nmodes_lowell = smint.calc_nmodes(Smica_bins.SMICA_lowell_bins, pmask['100'])
     nmodes_highell = smint.calc_nmodes(Smica_bins.SMICA_highell_bins, pmask['100'])
@@ -174,20 +173,20 @@ def run_propag():
     W_total[:,:,0:2] = 0.0
 
     nalm = int((2501)*(2501-1+2)/2) 
-    alm = np.zeros(shape=(len(csu.PLANCKMAPFREQ_f),3,nalm))
+    alm = np.zeros(shape=(len(csu.FREQ_f),3,nalm))
     
     maps = dict()
-    for FREQ in csu.PLANCKMAPFREQ:
-        if FREQ not in csu.freqfilter:
-            inpath_map_pla_name = fn.get_pla(FREQ, "T")
+    for FREQ in csu.FREQ:
+        if FREQ not in csu.FREQFILTER:
+            inpath_map_pla_name = fn.get_d(FREQ, "T")
             print("inpath_map_pla_name: {}".format(inpath_map_pla_name))
-            maps[FREQ] = io.load_pla(inpath_map_pla_name, field=(0,1,2), ud_grade=(True, FREQ))
+            maps[FREQ] = io.load_d(inpath_map_pla_name, field=(0,1,2), ud_grade=(True, FREQ))
 
     maps = mp.process_all(maps)
     beamf_dict = fn.get_beamf()
     beamf = io.load_beamf(beamf_dict, csu.freqcomb)
 
-    for itf, freq in enumerate(csu.PLANCKMAPFREQ_f):
+    for itf, freq in enumerate(csu.FREQ_f):
         print('freq: ', freq)
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
         if apo:
@@ -201,8 +200,8 @@ def run_propag():
     beam_e = hp.gauss_beam(np.radians(5/60), 4100, pol = True)[:,1]
     beam_b = hp.gauss_beam(np.radians(5/60), 4100, pol = True)[:,2]
 
-    for itf, det in enumerate(csu.PLANCKMAPFREQ): #weights do not depend on freqfilter, but almE/B do
-        if det in csu.PLANCKMAPFREQ_f:
+    for itf, det in enumerate(csu.FREQ): #weights do not depend on FREQFILTER, but almE/B do
+        if det in csu.FREQ_f:
             print('freq: ', det)
             ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
@@ -237,7 +236,7 @@ def run_propag():
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_fit = True
+    bool_fit = False
     bool_propag = True
     store_data = True
 
@@ -296,7 +295,7 @@ def run_propag_ext():
 
     maps = mp.process_all(maps)
 
-    for freq in csu.PLANCKMAPFREQ_f:
+    for freq in csu.FREQ_f:
         print('freq: ', freq)
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
         alms = trsf.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, lmax-1) # full sky QU->EB
@@ -309,8 +308,8 @@ def run_propag_ext():
     combalmE = np.zeros((nalm), dtype=np.complex128)
     combalmB = np.zeros((nalm), dtype=np.complex128)
 
-    for it, det in enumerate(csu.PLANCKMAPFREQ): #weights do not depend on freqfilter, but almE/B do
-        if det in csu.PLANCKMAPFREQ_f:
+    for it, det in enumerate(csu.FREQ): #weights do not depend on FREQFILTER, but almE/B do
+        if det in csu.FREQ_f:
             print('freq: ', det)
             ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
             # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))

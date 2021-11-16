@@ -17,8 +17,7 @@ class Frequency(Enum):
 
     
 class Spectrum(Enum):
-    # the order must be the same as the order of pospace function returns
-    TT = "TT"#00
+    TT = "TT"#00 # the order must be the same as the order of pospace function returns
     EE = "EE"#11
     BB = "BB"#22
     TE = "TE"#01
@@ -124,7 +123,7 @@ class NPIPE:
         return "half_diff_npipe6v20{split}_{freq}_{nside}.fits".format(
             split = split_loc,
             freq = freq_loc,
-            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside
+            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside[1]
         )
 
 
@@ -134,7 +133,6 @@ class NPIPE:
 
 
 class DX12:
-
     nside = ['1024', '2048']
 
     @classmethod
@@ -149,7 +147,7 @@ class DX12:
         return "{LorH}_SkyMap_{freq}_{nside}_R3.{num}_full.fits".format(
             freq= freq_loc,
             LorH = "LFI" if int(freq_loc)<100 else "HFI",
-            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside,
+            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside[1],
             num = "00" if int(freq_loc)<100 else "01"
         )
 
@@ -165,7 +163,7 @@ class DX12:
         return "{LorH}_SkyMap_{freq}_{nside}_R3.{num}_full-eohd.fits".format(
             LorH = "LFI" if int(freq_loc)<100 else "HFI",
             freq = freq_loc,
-            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside,
+            nside = cls.nside[0] if int(freq_loc)<100 else cls.nside[1],
             num = "00" if int(freq_loc)<100 else "01"
         )
 
@@ -210,6 +208,8 @@ class NPIPEsim:
 
         return "npipe6v20{split}_{freq}_map.fits".format(freq=freq_loc, split=split_loc)
 
+
+    @classmethod
     def _get_noisedir():
         # NPIPEsimdiff:    
         #     "ap": "/global/cscratch1/sd/sebibel/map/frequency/",
@@ -310,19 +310,21 @@ class BeamfDX12:
         'info' : "DX12"
     }
 
+
     @classmethod
     def get_beamf(cls):
+
         return cls.beamf
 
 
 class BeamfNPIPE:
-
     beamf = { 
         "ap": "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/quickpol/",
         "filename": "Bl_TEB_npipe6v20_{freq1}GHzx{freq2}GHz.fits",
         'info' : "NPIPE"
     }
     
+
     @classmethod
     def get_beamf(cls):
         return cls.beamf
@@ -389,7 +391,7 @@ class ConfXPS:
 
 
 class Asserter:
-    info_component = ["N", "F", "S", "T"]
+    info_component = ["N", "F", "S", "T"] #Noise, Foreground, Signal, Total
     info_combination = ["non-separated"]
     FREQ = ['030', '044', '070', '100', '143', '217', '353', '545', '857']
     misc_type = ["w"]

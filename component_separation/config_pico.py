@@ -249,6 +249,7 @@ class d90sim:
 
     def _get_signalest():
         assert 0, "To be implemented"
+
         return "/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy"
 
 
@@ -260,6 +261,7 @@ class Lens_Mask:
 
 
     def get_fn(TorP, apodized=False):
+
         if TorP == "T":
             if apodized:
                 return [ 
@@ -361,7 +363,11 @@ class Beamfd90csim:
     
 
 class Asserter:
-    info_component = ["N", "F", "S", "T"]
+    info_component = ["N", "F", "S", "T"] #Noise, Foreground, Signal, Total
     info_combination = ["non-separated"]
-    FREQ = ['021', '025', '030', '036', '043', '052', '062', '075', '090', '108', '129', '155', '186', '223', '268', '321', '385', '462', '555', '666', '799']
+    FREQ = [
+        '021', '025', '030', '036', '043', '052', 
+        '062', '075', '090', '108', '129', '155',
+        '186', '223', '268', '321', '385', '462',
+        '555', '666', '799']
     misc_type = ["w"]
