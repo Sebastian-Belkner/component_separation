@@ -12,13 +12,21 @@ import numpy as np
 import smica
 
 
-def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
+def build_smica_model(Q, N_cov_bn, C_lS_bnd, maskset, gal_mixmat=None, B_fit=False):
     """ Base building a model as provided by Maude
     """
+    if maskset == 'lens':
+        dim = 3 #6 is highest possible
+        fixed = 'null'
+    else:
+        dim = 6
+        fixed = 'all'
+
     ### Noise part
     nmap = N_cov_bn.shape[0]
     noise = smica.NoiseAmpl(nmap, Q, name='noise')
-    noise.set_ampl(np.ones((nmap,1)), fixed='all') #For DX12 this may be fixed
+
+    noise.set_ampl(np.ones((nmap,1)), fixed=fixed) #For DX12 this may be fixed
     noise.set_powspec(np.nan_to_num(N_cov_bn), fixed="all")
 
     ### CMB part
@@ -27,12 +35,12 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
     cmb.set_mixmat(acmb, fixed='all')
     cmbcq = C_lS_bnd[0,0,:]
     if B_fit:
-        cmb.set_powspec(cmbcq, fixed='null')
+        cmb.set_powspec(cmbcq, fixed='all')
     else:
         cmb.set_powspec(cmbcq) # where cmbcq is a starting point for cmbcq like binned lcdm
 
     ### Galactic foreground part
-    dim = 6 #6 is highest possible
+
     gal = smica.SourceND(nmap, Q, dim, name='gal')
     if gal_mixmat is None:
         gal.fix_mixmat('null')
@@ -79,8 +87,6 @@ def build_smica_model_old(Q, N_cov_bn, C_lS_bnd, gal_mixmat=None, B_fit=False):
 def fit_model_to_cov_old(model, stats, nmodes, maxiter=50, noise_fix=False, noise_template=None, afix=None, asyn=None, qmax=None, no_starting_point=False, fixedmixing=True):
     """ Fit the model to empirical covariance.
     """
-    def is_mixmat_fixed(model):
-        return np.sum(model.get_comp_by_name("gal")._mixmat.get_mask())==0
     qmin=0
     cg_maxiter = 1
     cg_eps = 1e-20
@@ -90,7 +96,7 @@ def fit_model_to_cov_old(model, stats, nmodes, maxiter=50, noise_fix=False, nois
     # find a starting point
 
     acmb = model.get_comp_by_name("cmb").mixmat()
-    # afix = 1-cmb._mixmat.get_mask() #0:free 1:fixed
+    afix = 1-cmb._mixmat.get_mask() #0:free 1:fixed
     cfix = 1-cmb._powspec.get_mask() #0:free 1:fixed
 
     cmbcq = np.squeeze(model.get_comp_by_name("cmb").powspec())
@@ -98,7 +104,7 @@ def fit_model_to_cov_old(model, stats, nmodes, maxiter=50, noise_fix=False, nois
 
     print("starting point chosen.")
 
-    if not is_mixmat_fixed(model):
+    if not np.sum(model.get_comp_by_name("gal")._mixmat.get_mask())==0:
         if not no_starting_point:
             model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=qmax)
             cmb.set_mixmat(acmb, fixed=afix)
@@ -106,7 +112,7 @@ def fit_model_to_cov_old(model, stats, nmodes, maxiter=50, noise_fix=False, nois
     print('starting quasi newton')
     model.quasi_newton(stats, nmodes)
     print('starting set_powspec')
-    cmb.set_powspec (cmbcq, fixed=cfix)
+    cmb.set_powspec(cmbcq, fixed=cfix)
     print('starting close_form')
     model.close_form(stats)
     print('starting set_powspec 2')
@@ -160,8 +166,6 @@ def fit_model_to_cov_old(model, stats, nmodes, maxiter=50, noise_fix=False, nois
 def fit_model_to_cov_new(model, stats, nmodes, maxiter=50, noise_template=None, afix=None, no_starting_point=False):
     """ Fit model to empirical covariance. Base fitting procedure as provided from Maude
     """
-    def is_mixmat_fixed(model):
-        return np.sum(model.get_comp_by_name("gal")._mixmat.get_mask())==0
     qmin=0
     cg_maxiter = 1
     cg_eps = 1e-20
@@ -173,7 +177,7 @@ def fit_model_to_cov_new(model, stats, nmodes, maxiter=50, noise_template=None, 
 
     polar = True if acmb.shape[1]==2 else False
 
-    if not is_mixmat_fixed(model) and not no_starting_point:
+    if not np.sum(model.get_comp_by_name("gal")._mixmat.get_mask())==0:
         model.ortho_subspace(stats, nmodes, acmb, qmin=qmin, qmax=len(nmodes))
 
     model.quasi_newton(stats, nmodes)

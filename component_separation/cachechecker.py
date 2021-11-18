@@ -31,10 +31,3 @@ def iff_make_dir(outpath_name):
         pass
     else:
         os.makedirs(outpath_name)
-
-
-class Asserter_smica:
-    info_component = ["N", "F", "S", "T"]
-    info_combination = ["non-separated", "separated", "combined"]
-    PLANCKMAPFREQS = ['030', '044', '070', '100', '143', '217', '353', '545', '857']
-    misc_type = ['cov', "cov4D", "CMB", "gal_mm", "gal", "w"]

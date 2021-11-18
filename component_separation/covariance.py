@@ -43,7 +43,7 @@ def cov2cov_smooth(cov, cutoff) -> np.array:
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(data: np.array, Tscale, freqcomb, PLANCKMAPFREQ_f, cutoff=None):
+def build_covmatrices(data: np.array, Tscale, freqcomb, FREQ_f, LFI_cutoff=None, cutoff=None):
     """Calculates the covariance matrices from the data
 
     Args:
@@ -60,28 +60,20 @@ def build_covmatrices(data: np.array, Tscale, freqcomb, PLANCKMAPFREQ_f, cutoff=
             _j +=_i
             if _j == nfreqcombs:
                 break
+
         return _i
+
+
     NFREQUENCIES = get_nfreq(data.shape[0])
     lmaxp1 = data.shape[-1]
     if cutoff is None:
         cutoff = lmaxp1
-    def LFI_cutoff(fr):
-        # KEEP. Cuts LFI channels for ell=700 as they cause numerical problems
-        return {
-            30: cutoff,
-            44: cutoff,
-            70: cutoff,
-            100: lmaxp1,
-            143: lmaxp1,
-            217: lmaxp1,
-            353: lmaxp1
-        }[fr]
 
     covn = np.zeros(shape=(data.shape[1], NFREQUENCIES, NFREQUENCIES, lmaxp1))
     for sidx in range(covn.shape[0]):
         for fcombidx, freqc in enumerate(freqcomb):
             FREQ1, FREQ2 = int(freqc.split('-')[0]), int(freqc.split('-')[1])
-            freqf = np.array([int(n) for n in PLANCKMAPFREQ_f])
+            freqf = np.array([int(n) for n in FREQ_f])
             fidx1 = np.where(freqf == FREQ1)[0][0]
             fidx2 = np.where(freqf == FREQ2)[0][0]
 

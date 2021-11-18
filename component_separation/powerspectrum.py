@@ -8,7 +8,6 @@ from typing import Dict, List, Optional, Tuple
 from component_separation.cs_util import Helperfunctions as hpf
 
 
-
 @log_on_start(INFO, "Starting to process spectrum")
 @log_on_end(DEBUG, "Spectrum processed successfully: '{result}' ")
 def process_all(data, freqcomb, beamf, nside, spectrum_scale="K_CMB"):

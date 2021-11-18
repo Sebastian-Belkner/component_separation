@@ -121,6 +121,7 @@ class IO:
         freqcomb = self.csu.freqcomb if freqcomb_loc is None else freqcomb_loc
         lmax = self.csu.lmax if freqcomb_loc is None else lmax_loc
         freqdatsplit = self.csu.freqdatsplit if freqdatsplit_loc is None else freqdatsplit_loc
+        
         return self.get_beamf(fits, freqcomb, lmax, freqdatsplit)
 
 

@@ -27,15 +27,14 @@ import component_separation.cachechecker as cc
 class Config:
     def __init__(self, experiment='Planck', **kwargs):
         assert experiment in ['Planck', 'Pico']
+
+        self.experiment = experiment
         if experiment == 'Planck':
             from component_separation.config_planck import (Params, 
-            Frequency, Frequencyclass, Spectrum)
+            Frequency, Spectrum)
         elif experiment == 'Pico':
             from component_separation.config_pico import (Params,
-            Frequency, Frequencyclass, Spectrum)
-        """
-        Load Configuartion file and store as parameters, but do not expose config file.
-        """
+            Frequency, Spectrum)
 
         uname = platform.uname()
         if uname.node == "DESKTOP-KMIGUPV":
@@ -56,12 +55,16 @@ class Config:
 
         self.bins = getattr(Smica_bins, self.binname)
 
-        if self.mskset == "smica":
-            from component_separation.config_planck import BeamfDX12
-            self.get_beamf = BeamfDX12.get_beamf
-        elif self.mskset == "lens":
-            from component_separation.config_planck import BeamfNPIPE
-            self.get_beamf = BeamfNPIPE.get_beamf
+        if experiment == 'Planck':
+            if self.mskset == "smica":
+                from component_separation.config_planck import BeamfDX12
+                self.get_beamf = BeamfDX12.get_beamf
+            elif self.mskset == "lens":
+                from component_separation.config_planck import BeamfNPIPE
+                self.get_beamf = BeamfNPIPE.get_beamf
+        elif experiment == 'Pico':
+            from component_separation.config_pico import Beamfd90sim
+            self.get_beamf = Beamfd90sim.get_beamf
 
         print(40*"$")
         print("Run with the following settings:")
@@ -84,15 +87,15 @@ class Filename_gen:
         3. for all files generated upon runtime, generate unique level1 name
     """
 
-    def __init__(self, csu_loc, experiment='Planck', dir_structure=None, fn_structure=None, simid=None):
+    def __init__(self, csu_loc, experiment_loc=None, dir_structure=None, fn_structure=None, simid=None):
         """To add a new attribute,
             1. add it to dir/fn_structure
             2a. add an instance test (here in the __init__)
             2b. or add a runtime test (perhaps in get_spectrum())
         """
-        #TODO implement dir_structure and fn_structure. Or don't
-
         self.csu_loc = csu_loc
+        experiment = csu_loc.experiment if experiment_loc is None else experiment_loc
+        self.simid = simid
 
         if experiment == 'Planck':
             from component_separation.config_planck import Asserter as ass
@@ -122,7 +125,7 @@ class Filename_gen:
             if csu_loc.freqdset.startswith("NPIPE"):
                 from component_separation.config_planck import BeamfNPIPE as beamf
                 self.beamf = beamf
-            if csu_loc.freqdset.startswith("DX12"):
+            elif csu_loc.freqdset.startswith("DX12"):
                 from component_separation.config_planck import BeamfDX12 as beamf
                 self.beamf = beamf
             else:
@@ -144,7 +147,9 @@ class Filename_gen:
 
     def get_misc(self, misc_type, simid=None, prefix=None):
         assert misc_type in self.ass.misc_type
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None, simid
+
+        simid = self.simid if simid is None else simid
 
         dir_misc_loc = self._get_miscdir(simid)
         if prefix is None:
@@ -156,10 +161,12 @@ class Filename_gen:
         return path.join(dir_misc_loc, filename_loc)
 
 
-    def get_spectrum(self, info_component, info_combination="non-separated", simid=None, prefix=None):
+    def get_spectrum(self, info_component, info_combination="non-separated", simid=-1, prefix=None):
         assert info_component in self.ass.info_component, info_component
         assert info_combination in self.ass.info_combination
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
 
         if info_component == "S" and simid is None:
@@ -181,16 +188,18 @@ class Filename_gen:
     def get_d(self, freq, info_component, simid=None):
         assert freq in self.ass.FREQ, freq
         assert info_component in self.ass.info_component, info_component
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         if info_component == self.ass.info_component[0]:  # Noise
             dir_plamap_loc = self.dset_fn._get_noisedir()
             if dir_plamap_loc == "INTERNAL":
                 dir_plamap_loc = self._get_mapdir(info_component)
-            fn_loc = self.dset_fn._get_noisefn()
+            fn_loc = self.dset_fn._get_noisefn(freq, simid)
         if info_component == self.ass.info_component[3]:  # data
             dir_plamap_loc = self.dset_fn._get_ddir(str(simid), self.csu_loc.freqdatsplit)
-            fn_loc = self.dset_fn._get_dfn(self.csu_loc.freqdatsplit, freq)
+            fn_loc = self.dset_fn._get_dfn(self.csu_loc.freqdatsplit, freq, simid)
                     
         return path.join(dir_plamap_loc, fn_loc)
         
@@ -199,7 +208,9 @@ class Filename_gen:
         assert 0, 'To be implemented'
         assert info_component in self.ass.info_component, info_component
         assert info_combination in self.ass.info_combination
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         dir_map_loc = self._get_dir(info_component, simid)
         if prefix is None:
@@ -217,13 +228,15 @@ class Filename_gen:
             for fn in self.mask.get_fn(TorP, apodized)]
 
 
-    def get_beamf(self):
-        # TODO this needs to access proper dir + fn, as with masks and data. It works, but it's ugly
-        return self.beamf.beamf
+    def get_beamfinfo(self, ):
+
+        return self.beamf.get_beaminfo
 
 
     def _get_miscdir(self, simid=None):
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
         cc.iff_make_dir(ap)
@@ -240,7 +253,9 @@ class Filename_gen:
 
     def _get_mapdir(self, info_component, simid=None):
         assert info_component in self.ass.info_component
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
         cc.iff_make_dir(ap)
@@ -260,7 +275,9 @@ class Filename_gen:
 
     def _get_mapspecmiscdir(self, info_component, simid=None):
         assert info_component in self.ass.info_component
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
         cc.iff_make_dir(ap)
@@ -278,7 +295,9 @@ class Filename_gen:
     def _get_specfn(self, info_component, info_combination, simid=None, prefix=None):
         assert info_component in self.ass.info_component
         assert info_combination in self.ass.info_combination
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         if prefix is None:
             retval = 'Cl{}'.format(info_component)
@@ -305,7 +324,9 @@ class Filename_gen:
         assert 0, 'To be implemented'
         assert info_component in ["noise", "foreground", "signal", "non-sep"]
         assert info_combination in ["combined", "perfreq"]
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         if prefix is None:
             retval = 'Map'
@@ -329,6 +350,8 @@ class Filename_gen:
 
 
     def _get_dfn(self, FREQ, simid=None):
+
+        simid = self.simid if simid is None else simid
         freqdset = self.csu_loc.freqdset
         nside_desc = self.csu_loc.nside_desc_map
         mch = self.csu_loc.mch
@@ -355,7 +378,7 @@ class Filename_gen:
 
     def _get_miscfn(self, misc_type, simid, prefix):
         assert misc_type in self.ass.misc_type
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
 
         if prefix is None:
             retval = "{}".format(misc_type)
@@ -365,8 +388,8 @@ class Filename_gen:
 
         retval = '_'.join([retval, self.csu_loc.spectrum_type])
 
-        if simid is not None:
-            retval = '_'.join([retval, simid])
+        if simid != -1:
+            retval = '_'.join([retval, str(simid).zfill(4)])
 
         return '.'.join([retval, "npy"])
 
@@ -384,18 +407,29 @@ class Filename_gen_SMICA:
         #TODO implement dir_structure and fn_structure
 
         self.csu_loc = csu_loc
-        from component_separation.cachechecker import Asserter_smica as ass
+        if csu_loc.experiment == 'Planck':
+            from component_separation.config_planck import Asserter_smica as ass
+        else:
+             from component_separation.config_pico import Asserter_smica as ass
         self.ass = ass
+        self.simid = simid
 
         if csu_loc.mch == 'NERSC':
-            if csu_loc.freqdset == "NPIPE":
-                from component_separation.config_planck import NPIPE as dset_fn
-                self.dset_fn = dset_fn
-            elif csu_loc.freqdset == "DX12":
-                from component_separation.config_planck import DX12 as dset_fn
-                self.dset_fn = dset_fn
-            else:
-                assert 0, "to be implemented: {}".format(csu_loc.freqdset)
+            if csu_loc.experiment == 'Planck':
+                if csu_loc.freqdset == "NPIPE":
+                    from component_separation.config_planck import NPIPE as dset_fn
+                    self.dset_fn = dset_fn
+                elif csu_loc.freqdset == "DX12":
+                    from component_separation.config_planck import DX12 as dset_fn
+                    self.dset_fn = dset_fn
+                else:
+                    assert 0, "to be implemented: {}".format(csu_loc.freqdset)
+            elif csu_loc.experiment == 'Pico':
+                if csu_loc.freqdset == "d90sim":
+                    from component_separation.config_pico import d90sim as dset_fn
+                    self.dset_fn = dset_fn
+                else:
+                    assert 0, "to be implemented: {}".format(csu_loc.freqdset)
         
         dir_structure = "{dataset}/{mask}/{simXX}/{smicasepCOMP}/{spec}"
         fn_structure = "Cl_{binname}_{info_component}_{info_comb}_{lmax}_{lmax_mask}_{spectrum_type}_{nside}_{simXX}"
@@ -404,8 +438,10 @@ class Filename_gen_SMICA:
     def get_spectrum(self, info_component, info_combination, simid=None, prefix=None):
         assert info_component in self.ass.info_component, info_component
         assert info_combination in self.ass.info_combination, info_combination
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
         assert not(info_combination == "separated" and info_component == "T"), "{} and {} is not a valid request".format(info_component, info_combination)
+
+        simid = self.simid if simid is None else simid
 
         if info_component == "S" and simid is None:
             "Special case, as smica needs signal estimator"
@@ -424,8 +460,10 @@ class Filename_gen_SMICA:
     def get_map(self, info_component, info_combination, simid=None, prefix=None):
         assert info_component in self.ass.info_component, info_component
         assert info_combination in self.ass.info_combination, info_combination
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
         assert not(info_combination == "separated" and info_component == "T"), "{} and {} is not a valid request".format(info_component, info_combination)
+
+        simid = self.simid if simid is None else simid
 
 
         dir_spec_loc = self._get_dir(info_component, info_combination, simid)
@@ -439,7 +477,9 @@ class Filename_gen_SMICA:
 
 
     def get_misc(self, desc, simid=None, prefix=None):
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         dir_misc_loc = self._get_miscdir(simid)
         if prefix is None:
@@ -452,7 +492,9 @@ class Filename_gen_SMICA:
 
 
     def _get_miscdir(self, simid=None):
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
         cc.iff_make_dir(ap)
@@ -470,7 +512,9 @@ class Filename_gen_SMICA:
     def _get_dir(self, info_component, info_combination, simid=None):
         assert info_component in self.ass.info_component
         assert info_combination in self.ass.info_combination
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
         cc.iff_make_dir(ap)
@@ -494,7 +538,9 @@ class Filename_gen_SMICA:
     def _get_specfn(self, info_component, info_combination, simid=None, prefix=None):
         assert info_component in self.ass.info_component
         assert info_combination in self.ass.info_combination
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         if prefix is None:
             retval = 'Cl{}'.format(info_component)
@@ -521,7 +567,9 @@ class Filename_gen_SMICA:
     def _get_mapfn(self, info_component, info_combination, simid=None, prefix=None):
         assert info_component in self.ass.info_component
         assert info_combination in self.ass.info_combination
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
+
+        simid = self.simid if simid is None else simid
 
         if prefix is None:
             retval = 'Map{}'.format(info_component)
@@ -552,7 +600,7 @@ class Filename_gen_SMICA:
 
     def _get_miscfn(self, misc_type, simid, prefix):
         assert misc_type in self.ass.misc_type
-        assert type(simid) == int or simid is None
+        assert simid in self.ass.simid or simid is None
 
         if prefix is None:
             retval = "smica_{}".format(misc_type)

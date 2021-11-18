@@ -41,22 +41,22 @@ class Spectrum(Enum):
     BE = "BE"#21
 
 
-class Frequencyclass(Enum):
-    LFI = "LFI"
-    HFI = "HFI"
+class Beamwidth:
+    Bw = np.array([38.4, 32.0, 28.3, 23.6, 22.2, 18.4, 12.8, 10.7, 9.5, 7.9, 7.4, 6.2, 4.3, 3.6, 3.2, 2.6, 2.5, 2.1, 1.5, 1.3, 1.1])/60.
 
 
 class Params:
     mskset = "lens"
     freqdset = "d90sim"
     spectrum_type = "JC"
-    lmax = 2000
-    lmax_mask = 4000
+    lmax = 1500
+    lmax_mask = 2500
     freqdatsplit = ""
     num_sim = 5
     binname = "SMICA_highell_bins"
     overwrite_cache = True
     simdata = True
+    simid = 0
 
     specfilter = [
         "TB",
@@ -84,8 +84,6 @@ class Params:
         mch = "NERSC"
 
     FREQFILTER = [
-        Frequency.LFI_1.value,
-        Frequency.LFI_2.value,
         Frequency.LFI_3.value,
         Frequency.LFI_4.value,
         Frequency.LFI_5.value,
@@ -100,16 +98,12 @@ class Params:
         Frequency.HFI_7.value,
         Frequency.HFI_8.value,
         Frequency.HFI_9.value,
-        Frequency.HFI_10.value,
-        Frequency.HFI_11.value,
-        Frequency.HFI_12.value
+        Frequency.HFI_10.value
         ]
 
     FREQ = [p.value for p in list(Frequency)]
     FREQ_f = [p.value for p in list(Frequency)
     if p.value not in [
-        Frequency.LFI_1.value,
-        Frequency.LFI_2.value,
         Frequency.LFI_3.value,
         Frequency.LFI_4.value,
         Frequency.LFI_5.value,
@@ -124,9 +118,7 @@ class Params:
         Frequency.HFI_7.value,
         Frequency.HFI_8.value,
         Frequency.HFI_9.value,
-        Frequency.HFI_10.value,
-        Frequency.HFI_11.value,
-        Frequency.HFI_12.value
+        Frequency.HFI_10.value
     ]]
 
     SPECTRUM = [p.value for p in list(Spectrum)]
@@ -134,8 +126,6 @@ class Params:
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
         for FREQ, FREQ2  in itertools.product(FREQ,FREQ)
             if FREQ not in [
-        Frequency.LFI_1.value,
-        Frequency.LFI_2.value,
         Frequency.LFI_3.value,
         Frequency.LFI_4.value,
         Frequency.LFI_5.value,
@@ -150,12 +140,8 @@ class Params:
         Frequency.HFI_7.value,
         Frequency.HFI_8.value,
         Frequency.HFI_9.value,
-        Frequency.HFI_10.value,
-        Frequency.HFI_11.value,
-        Frequency.HFI_12.value
+        Frequency.HFI_10.value
         ] and (FREQ2 not in [
-        Frequency.LFI_1.value,
-        Frequency.LFI_2.value,
         Frequency.LFI_3.value,
         Frequency.LFI_4.value,
         Frequency.LFI_5.value,
@@ -170,9 +156,7 @@ class Params:
         Frequency.HFI_7.value,
         Frequency.HFI_8.value,
         Frequency.HFI_9.value,
-        Frequency.HFI_10.value,
-        Frequency.HFI_11.value,
-        Frequency.HFI_12.value
+        Frequency.HFI_10.value
         ]) and (int(FREQ2)>=int(FREQ))]
     speccomb  = [spec for spec in SPECTRUM if spec not in [
         "TB",
@@ -214,28 +198,40 @@ class d90sim:
     freq = [p.value for p in list(Frequency)]
     boloid = ['38', '32', '28', '24', '22', '18', '13', '11', '10', '08', '07', '06',
        '04', '04', '03', '03', '02', '02', '02', '01', '01']
-    nside = '2048'
-    simid = np.arange(0,100)
+    nside = '0512'
+    simid_loc = np.arange(0,100)
 
 
-    def _get_ddir():
+    def _get_ddir(simid, freqdatsplit):
 
         return "/project/projectdirs/pico/data_xx.yy/90.91/"
 
 
-    def _get_dfn():
+    @classmethod
+    def _get_dfn(cls, freqdatsplit, freq, simid):
 
-        return "pico_90p91_comb_f{freq}_b{boloid}_ellmin00_map_{nside}_mc_{simid}.fits"
+        return "pico_90p91_comb_f{freq}_b{boloid}_ellmin00_map_{nside}_mc_{simid}.fits".format(
+            freq = freq,
+            boloid = cls.boloid[np.where(np.array(cls.freq)==freq)[0][0]],
+            nside = cls.nside,
+            simid = str(simid).zfill(4)
+        )
 
 
     def _get_noisedir():
 
-        return '/project/projectdirs/pico/data_xx.yy/90.00'
+        return '/project/projectdirs/pico/data_xx.yy/90.00/'
 
 
-    def _get_noisefn():
+    @classmethod
+    def _get_noisefn(cls, freq, simid):
 
-        return "cmbs4_90_noise_f{freq}_b{boloid}_ellmin00_map_{nside}_mc_{simid}.fits"
+        return "cmbs4_90_noise_f{freq}_b{boloid}_ellmin00_map_{nside}_mc_{simid}.fits".format(
+            freq = freq,
+            boloid = cls.boloid[np.where(np.array(cls.freq)==freq)[0][0]],
+            nside = cls.nside,
+            simid = str(simid).zfill(4)
+        )
 
 
     def _get_cmbdir():
@@ -336,9 +332,27 @@ class Beamfd90sim:
 
 
     @classmethod
-    def get_beamf(cls):
+    def get_beamf(cls, fits, freqcomb, lmax, freqdatsplit):
+        import healpy as hp
+        """Return Beams, but only from frequencies of interest
 
-        return cls.beamf
+        Returns:
+            np.array: beams
+        """
+        freqs = Params.FREQ_f
+        allfreqs = np.array([f.value for f in list(Frequency)])
+        lmax = Params.lmax if lmax is None else lmax
+        ret = np.ones(shape=(3, len(freqs), len(freqs), lmax+1))
+        for ifa, freqa in enumerate(freqs):
+            for ifb, freqb in enumerate(freqs):
+                if ifa<=ifb:
+                    bifa = np.where(allfreqs==freqa)[0][0]
+                    bifb = np.where(allfreqs==freqb)[0][0]
+                    ret[:,ifa,ifb,:] *= np.sqrt(hp.gauss_beam(np.radians(Beamwidth.Bw[bifa]), lmax=lmax, pol=True)[:,0:3].T)
+                    ret[:,ifa,ifb,:] *= np.sqrt(hp.gauss_beam(np.radians(Beamwidth.Bw[bifb]), lmax=lmax, pol=True)[:,0:3].T)
+                else:
+                    ret[:,ifb,ifa,:] = ret[:,ifa,ifb,:]
+        return ret
 
 
 class Beamfd90csim:
@@ -346,7 +360,7 @@ class Beamfd90csim:
     arcmin = {
         'comb': '15.0'
     }
-    beamf = {
+    beamf_info = {
         "HFI": {     
             "ap": "/project/projectdirs/pico/reanalysis/powspecpars/Bl/",
             "filename": "bl_gauss_{arcmin}arcmin_{freq}_TP.dat "
@@ -358,10 +372,28 @@ class Beamfd90csim:
         'info' : "d90csim"
     }
 
-    @classmethod
-    def get_beamf(cls):
 
-        return cls.beamf
+    @classmethod
+    def get_beamf(cls, freq_loc=None, lmax_loc=None):
+        import healpy as hp
+        """Return healpy gaussbeams as np.array
+
+        Returns:
+            np.array: beams
+        """
+        freq = [f.value for f in list(Frequency)] if freq_loc is None else freq_loc
+        lmax = Params.lmax if lmax_loc is None else lmax_loc
+        ret = np.array(shape=(3, len(freq), len(freq), lmax))
+        for idf, freq in enumerate(freq):
+            ret[:,freq,freq,:] = hp.gauss_beam(np.radian(Beamwidth.Bw[idf]), lmax=lmax, pol=True)[0:3]
+        return ret
+
+    
+    @classmethod
+    def get_beaminfo(cls):
+        assert 0, "Files don't seem to be beams"
+
+        return cls.beamf_info
     
 
 class Asserter:
@@ -373,3 +405,16 @@ class Asserter:
         '186', '223', '268', '321', '385', '462',
         '555', '666', '799']
     misc_type = ["w"]
+    simid = np.arange(-1,100)
+
+
+class Asserter_smica:
+    info_component = ["N", "F", "S", "T"]
+    info_combination = ["non-separated", "separated", "combined"]
+    FREQ = [
+        '021', '025', '030', '036', '043', '052', 
+        '062', '075', '090', '108', '129', '155',
+        '186', '223', '268', '321', '385', '462',
+        '555', '666', '799']
+    misc_type = ['cov', "cov4D", "CMB", "gal_mm", "gal", "w"]
+    simid = np.arange(-1,100)

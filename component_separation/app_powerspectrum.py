@@ -18,15 +18,17 @@ import component_separation.transformer as trsf
 import component_separation.powerspectrum as pospec
 import component_separation.map as mp
 
-experiment = 'Planck'
+experiment = 'Pico'
+simid=0
+
 csu = Config(experiment=experiment)
-fn = fn_gen(csu, experiment=experiment)
+fn = fn_gen(csu, experiment_loc=experiment, simid=simid)
 io = IO(csu)
 
 
 def run_map2cls(info_component):
 
-    outpath_pow_sc_name = fn.get_spectrum(info_component)
+    outpath_pow_sc_name = fn.get_spectrum(info_component, simid=simid)
     print("outpath_pow_sc_name: {}".format(outpath_pow_sc_name))
 
     maps = dict()
@@ -45,15 +47,14 @@ def run_map2cls(info_component):
     pmask_sg = io.load_mask(pmask_fn, stack=True)
 
     tmask, pmask = dict(), dict()
-    for FREQ in csu.PLANCKMAPFREQ:
-        if FREQ not in csu.freqfilter:
+    for FREQ in csu.FREQ:
+        if FREQ not in csu.FREQFILTER:
             tmask[FREQ] = tmask_sg
             pmask[FREQ] = pmask_sg
 
     Cl_usc = trsf.map2cls(maps, tmask, pmask, csu.spectrum_type, csu.lmax, csu.freqcomb, csu.nside_out, csu.lmax_mask)
 
-    beamf_dict = fn.get_beamf()
-    beamf = io.load_beamf(beamf_dict, csu.freqcomb)
+    beamf = io.load_beamf(csu.freqcomb, csu.lmax, csu.freqdatsplit)
     Cl_sc = pospec.process_all(Cl_usc, csu.freqcomb, beamf, csu.nside_out)
     io.save_data(Cl_sc, outpath_pow_sc_name)
 
@@ -79,7 +80,7 @@ if __name__ == '__main__':
 
     if bool_map2cls:
         run_map2cls('T')
-        run_map2cls('N')
+        # run_map2cls('N')
 
     if bool_alm2cls:
-        run_alm2cls("/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy")
+        run_alm2cls("/global/cscratch1/sd/sebibel/compsep/Planck/Sest/ClS_NPIPEsim.npy")

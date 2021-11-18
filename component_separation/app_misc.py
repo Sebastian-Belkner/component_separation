@@ -20,10 +20,51 @@ import component_separation.MSC.MSC.pospace as ps #remove dependency
 import component_separation.powerspectrum as pospec
 import component_separation.covariance as cv
 
-csu = Config()
+csu = Config(experiment='Pico')
 fn = fn_gen(csu)
 io = IO(csu)
 
+cutoff = 2000
+lmaxp1 = csu.lmax+1
+
+
+def planck_cutoff(fr):
+    # KEEP. Cuts LFI channels for ell=700 as they cause numerical problems
+    return {
+        30: cutoff,
+        44: cutoff,
+        70: cutoff,
+        100: lmaxp1,
+        143: lmaxp1,
+        217: lmaxp1,
+        353: lmaxp1
+    }[fr]
+
+
+def pico_cutoff(fr):
+    return {
+        21: cutoff,
+        25: cutoff,
+        30: cutoff,
+        36: cutoff,
+        43: cutoff,
+        52: cutoff,
+        62: cutoff,
+        75: cutoff,
+        90: cutoff,
+        108: cutoff,
+        129: cutoff,
+        155: cutoff,
+        186: cutoff,
+        223: cutoff,
+        268: cutoff,
+        321: cutoff,
+        385: cutoff,
+        462: cutoff,
+        555: cutoff,
+        666: cutoff,
+        799: cutoff
+    }[fr]
 
 #TODO perhaps exclude LFIs for ell>1000, i.e. remove from covmatrix, instead of smoothing them..
 #TODO cov2weight seems bugged, only works when np.nan_to_num(data) is passed. but nan's is what cov2weight wants for filtering..
@@ -33,10 +74,11 @@ def run_weight(path_name):
     No SMICA, straightforward weight derivation.
     Needed for combining maps without SMICA.
     """
-    Cl_tot = io.load_data(fn.get_spectrum("T", "non-separated"))
-    covl_tot = cv.build_covmatrices(Cl_tot, "K_CMB", csu.freqcomb, csu.PLANCKMAPFREQ_f, cutoff=1400)
+    Cl_tot = io.load_data(fn.get_spectrum("T", "non-separated", simid=csu.simid))
+
+    covl_tot = cv.build_covmatrices(Cl_tot, "K_CMB", csu.freqcomb, csu.FREQ_f, pico_cutoff, cutoff=1400)
     # covl_tot = pospec.cov2cov_smooth(covl_tot, cutoff=1000)
-    weights_tot = cv.cov2weight(covl_tot, freqs=csu.PLANCKMAPFREQ_f, Tscale="K_CMB")
+    weights_tot = cv.cov2weight(covl_tot, freqs=csu.FREQ_f, Tscale="K_CMB")
     print(weights_tot.shape)
     io.save_data(weights_tot, path_name)
 
@@ -78,7 +120,7 @@ if __name__ == '__main__':
     bool_tf = False
 
     if bool_weight:
-        run_weight(fn.get_misc('w'))
+        run_weight(fn.get_misc('w', simid=csu.simid))
 
     if bool_crosscov:
         run_mappsmica2crosscov()

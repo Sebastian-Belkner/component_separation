@@ -35,9 +35,9 @@ class Frequencyclass(Enum):
 
 
 class Params:
-    mskset = "lens"
-    freqdset = "DX12"
-    spectrum_type = "JC"
+    mskset = "smica" # smica or lens
+    freqdset = "DX12" # DX12 or NPIPE
+    spectrum_type = "JC" # pseudo or JC
     lmax = 4000
     lmax_mask = 6000
     freqdatsplit = ""
@@ -61,7 +61,7 @@ class Params:
         1024,
         2048
     ]
-    outdir_ap= "/global/cscratch1/sd/sebibel/compsep/"
+    outdir_ap= "/global/cscratch1/sd/sebibel/compsep/planck/"
     powspec_truthfile= "/global/homes/s/sebibel/git/component_separation/data/powspecplanck.txt"
 
 
@@ -129,7 +129,7 @@ class NPIPE:
 
     def _get_signalest():
 
-        return "/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy"
+        return "/global/cscratch1/sd/sebibel/compsep/planck/Sest/ClS_NPIPEsim.npy"
 
 
 class DX12:
@@ -170,7 +170,7 @@ class DX12:
 
     def _get_signalest():
 
-        return "/global/cscratch1/sd/sebibel/compsep/Sest/ClS_NPIPEsim.npy"
+        return "/global/cscratch1/sd/sebibel/compsep/planck/Sest/ClS_NPIPEsim.npy"
 
 
 class NPIPEsim:
@@ -317,6 +317,12 @@ class BeamfDX12:
 
 
     @classmethod
+    def get_beaminfo(cls):
+
+        return cls.beamf_info
+
+
+    @classmethod
     def get_beamf(cls, fits, freqcomb, lmax, freqdatsplit_loc='') -> np.array:
         """Read files and return all auto- and cross-bl in np.array 
 
@@ -428,7 +434,14 @@ class BeamfNPIPE:
     
 
     @classmethod
+    def get_beaminfo(cls):
+
+        return cls.beamf_info
+
+
+    @classmethod
     def get_beamf(cls, fits, freqcomb, lmax, freqdatsplit_loc):
+
         indfreq = np.array([])
         lmaxp1 = lmax+1
         beamf = dict()
@@ -519,3 +532,12 @@ class Asserter:
     info_combination = ["non-separated"]
     FREQ = ['030', '044', '070', '100', '143', '217', '353', '545', '857']
     misc_type = ["w"]
+    simid = np.arange(-1,500)
+
+
+class Asserter_smica:
+    info_component = ["N", "F", "S", "T"]
+    info_combination = ["non-separated", "separated", "combined"]
+    FREQ = ['030', '044', '070', '100', '143', '217', '353', '545', '857']
+    misc_type = ['cov', "cov4D", "CMB", "gal_mm", "gal", "w"]
+    simid = np.arange(-1,100)
