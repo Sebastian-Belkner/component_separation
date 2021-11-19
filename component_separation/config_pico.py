@@ -49,14 +49,15 @@ class Params:
     mskset = "lens"
     freqdset = "d90sim"
     spectrum_type = "JC"
-    lmax = 1500
-    lmax_mask = 2500
+    lmax = 4000
+    lmax_mask = 6000
     freqdatsplit = ""
     num_sim = 5
     binname = "SMICA_highell_bins"
     overwrite_cache = True
     simdata = True
     simid = 0
+    cutoff = 4000
 
     specfilter = [
         "TB",
@@ -83,42 +84,30 @@ class Params:
     else:
         mch = "NERSC"
 
+    # FREQFILTER = [
+    #     Frequency.LFI_3.value,
+    #     Frequency.LFI_4.value,
+    #     Frequency.LFI_5.value,
+    #     Frequency.LFI_6.value,
+    #     Frequency.LFI_7.value,
+    #     Frequency.LFI_8.value,
+    #     Frequency.HFI_2.value,
+    #     Frequency.HFI_3.value,
+    #     Frequency.HFI_4.value,
+    #     Frequency.HFI_5.value,
+    #     Frequency.HFI_6.value,
+    #     Frequency.HFI_7.value,
+    #     Frequency.HFI_8.value,
+    #     Frequency.HFI_9.value,
+    #     Frequency.HFI_10.value
+    #     ]
+
     FREQFILTER = [
-        Frequency.LFI_3.value,
-        Frequency.LFI_4.value,
-        Frequency.LFI_5.value,
-        Frequency.LFI_6.value,
-        Frequency.LFI_7.value,
-        Frequency.LFI_8.value,
-        Frequency.HFI_2.value,
-        Frequency.HFI_3.value,
-        Frequency.HFI_4.value,
-        Frequency.HFI_5.value,
-        Frequency.HFI_6.value,
-        Frequency.HFI_7.value,
-        Frequency.HFI_8.value,
-        Frequency.HFI_9.value,
-        Frequency.HFI_10.value
         ]
 
     FREQ = [p.value for p in list(Frequency)]
     FREQ_f = [p.value for p in list(Frequency)
     if p.value not in [
-        Frequency.LFI_3.value,
-        Frequency.LFI_4.value,
-        Frequency.LFI_5.value,
-        Frequency.LFI_6.value,
-        Frequency.LFI_7.value,
-        Frequency.LFI_8.value,
-        Frequency.HFI_2.value,
-        Frequency.HFI_3.value,
-        Frequency.HFI_4.value,
-        Frequency.HFI_5.value,
-        Frequency.HFI_6.value,
-        Frequency.HFI_7.value,
-        Frequency.HFI_8.value,
-        Frequency.HFI_9.value,
-        Frequency.HFI_10.value
     ]]
 
     SPECTRUM = [p.value for p in list(Spectrum)]
@@ -126,37 +115,7 @@ class Params:
     freqcomb =  ["{}-{}".format(FREQ,FREQ2)
         for FREQ, FREQ2  in itertools.product(FREQ,FREQ)
             if FREQ not in [
-        Frequency.LFI_3.value,
-        Frequency.LFI_4.value,
-        Frequency.LFI_5.value,
-        Frequency.LFI_6.value,
-        Frequency.LFI_7.value,
-        Frequency.LFI_8.value,
-        Frequency.HFI_2.value,
-        Frequency.HFI_3.value,
-        Frequency.HFI_4.value,
-        Frequency.HFI_5.value,
-        Frequency.HFI_6.value,
-        Frequency.HFI_7.value,
-        Frequency.HFI_8.value,
-        Frequency.HFI_9.value,
-        Frequency.HFI_10.value
         ] and (FREQ2 not in [
-        Frequency.LFI_3.value,
-        Frequency.LFI_4.value,
-        Frequency.LFI_5.value,
-        Frequency.LFI_6.value,
-        Frequency.LFI_7.value,
-        Frequency.LFI_8.value,
-        Frequency.HFI_2.value,
-        Frequency.HFI_3.value,
-        Frequency.HFI_4.value,
-        Frequency.HFI_5.value,
-        Frequency.HFI_6.value,
-        Frequency.HFI_7.value,
-        Frequency.HFI_8.value,
-        Frequency.HFI_9.value,
-        Frequency.HFI_10.value
         ]) and (int(FREQ2)>=int(FREQ))]
     speccomb  = [spec for spec in SPECTRUM if spec not in [
         "TB",
@@ -165,7 +124,6 @@ class Params:
         "BT",
         "BE"
     ]]
-
 
 class d90:
 
@@ -179,7 +137,8 @@ class d90:
         return "pico_90p91_comb_f321_b03_ellmin00_map_2048_mc_0059.fits"
 
 
-    def _get_noisedir():
+    @classmethod
+    def _get_noisedir(cls, freqdatsplit, freq):
 
         return "INTERNAL"
 
@@ -217,8 +176,8 @@ class d90sim:
             simid = str(simid).zfill(4)
         )
 
-
-    def _get_noisedir():
+    @classmethod
+    def _get_noisedir(cls, freqdatsplit, freq):
 
         return '/project/projectdirs/pico/data_xx.yy/90.00/'
 
@@ -226,7 +185,7 @@ class d90sim:
     @classmethod
     def _get_noisefn(cls, freq, simid):
 
-        return "cmbs4_90_noise_f{freq}_b{boloid}_ellmin00_map_{nside}_mc_{simid}.fits".format(
+        return "pico_90_noise_f{freq}_b{boloid}_ellmin00_map_{nside}_mc_{simid}.fits".format(
             freq = freq,
             boloid = cls.boloid[np.where(np.array(cls.freq)==freq)[0][0]],
             nside = cls.nside,
@@ -395,6 +354,33 @@ class Beamfd90csim:
 
         return cls.beamf_info
     
+
+class Cutoff:
+
+    def get_cutoff(self, cutoff, lmaxp1):
+        return {
+            21: cutoff,
+            25: cutoff,
+            30: cutoff,
+            36: cutoff,
+            43: cutoff,
+            52: cutoff,
+            62: cutoff,
+            75: cutoff,
+            90: cutoff,
+            108: cutoff,
+            129: cutoff,
+            155: cutoff,
+            186: cutoff,
+            223: cutoff,
+            268: cutoff,
+            321: cutoff,
+            385: cutoff,
+            462: cutoff,
+            555: cutoff,
+            666: cutoff,
+            799: cutoff
+    }
 
 class Asserter:
     info_component = ["N", "F", "S", "T"] #Noise, Foreground, Signal, Total

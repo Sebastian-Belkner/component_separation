@@ -114,14 +114,13 @@ class IO:
             return None
 
 
-    @log_on_start(INFO, "Starting to load beamf functions from frequency channels {freqcomb_loc}")
+    @log_on_start(INFO, "Starting to load beamf functions from frequency channels")
     @log_on_end(DEBUG, "Beamfunction(s) loaded successfully")
     def load_beamf(self, freqcomb_loc=None, lmax_loc=None, freqdatsplit_loc=None):
 
         freqcomb = self.csu.freqcomb if freqcomb_loc is None else freqcomb_loc
-        lmax = self.csu.lmax if freqcomb_loc is None else lmax_loc
+        lmax = self.csu.lmax if lmax_loc is None else lmax_loc
         freqdatsplit = self.csu.freqdatsplit if freqdatsplit_loc is None else freqdatsplit_loc
-        
         return self.get_beamf(fits, freqcomb, lmax, freqdatsplit)
 
 

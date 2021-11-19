@@ -35,8 +35,8 @@ class Frequencyclass(Enum):
 
 
 class Params:
-    mskset = "smica" # smica or lens
-    freqdset = "DX12" # DX12 or NPIPE
+    mskset = "lens" # smica or lens
+    freqdset = "NPIPE" # DX12 or NPIPE
     spectrum_type = "JC" # pseudo or JC
     lmax = 4000
     lmax_mask = 6000
@@ -45,6 +45,7 @@ class Params:
     binname = "SMICA_highell_bins"
     overwrite_cache = True
     simdata = False
+    cutoff = 1100
 
     specfilter = [
         "TB",
@@ -94,16 +95,16 @@ class Params:
 
 
 class NPIPE:
-
+    nside = ['1024', '2048']
 
     @classmethod
-    def _get_ddir(cls, split_loc, simid_loc):
+    def _get_ddir(cls, simid_loc, split_loc):
 
         return "/global/cfs/cdirs/cmb/data/planck2020/npipe/npipe6v20{split}/".format(split=split_loc)
 
 
     @classmethod
-    def _get_dfn(cls, split_loc, freq_loc):
+    def _get_dfn(cls, split_loc, freq_loc, simid):
 
         return "npipe6v20{split}_{freq}_map.fits".format(
             split = split_loc,
@@ -143,7 +144,7 @@ class DX12:
 
 
     @classmethod
-    def _get_dfn(cls, split_loc, freq_loc):
+    def _get_dfn(cls, split_loc, freq_loc, simid):
 
         return "{LorH}_SkyMap_{freq}_{nside}_R3.{num}_full.fits".format(
             freq= freq_loc,
@@ -152,8 +153,8 @@ class DX12:
             num = "00" if int(freq_loc)<100 else "01"
         )
 
-
-    def _get_noisedir():
+    @classmethod
+    def _get_noisedir(cls, split_loc, freq_loc):
 
         return "INTERNAL"
 
@@ -193,7 +194,7 @@ class NPIPEsim:
 
 
     @classmethod
-    def _get_dfn(cls, split_loc, freq_loc):
+    def _get_dfn(cls, split_loc, freq_loc, simid):
         assert split_loc in cls.split, "{}".format(split_loc)
         assert freq_loc in cls.freq, "{}".format(freq_loc)
 
@@ -463,8 +464,23 @@ class BeamfNPIPE:
                         bf = beamf[freqa+'-'+freqb]
                     else:
                         bf = beamf[freqb+'-'+freqa]
-                    beamf_array[idspec,ida,idb] = bf["HFI"][1].data.field(cls.TEB_dict[spec])[:lmaxp1]
-        return cls.beamf_info
+                    beamf_array[idspec,ida,idb] = bf[1].data.field(cls.TEB_dict[spec])[:lmaxp1]
+        return beamf_array
+
+
+class Cutoff:
+
+    def get_cutoff(self, cutoff, lmaxp1):
+        # KEEP. Cuts LFI channels for ell=700 as they cause numerical problems
+        return {
+            30: cutoff,
+            44: cutoff,
+            70: cutoff,
+            100: lmaxp1,
+            143: lmaxp1,
+            217: lmaxp1,
+            353: lmaxp1
+        }
 
 
 class ConfXPS:

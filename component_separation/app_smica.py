@@ -29,15 +29,16 @@ from component_separation.cs_util import Filename_gen_SMICA as fns_gen
 from component_separation.cs_util import Filename_gen as fn_gen
 from component_separation.io import IO
 
-experiment='Pico'
-simid=0
-cutoff=900
-os.environ["OMP_NUM_THREADS"] = "32"
-csu = Config(experiment=experiment)
+experiment='Planck'
+simid=-1
+
+csu = Config(experiment=experiment, freqdset='NPIPE', mskset='lens', spectrum_type='JC')
+# csu = Config(experiment=experiment)
 fn = fn_gen(csu)
 fns = fns_gen(csu)
 io = IO(csu)
 
+os.environ["OMP_NUM_THREADS"] = "32"
 
 apo = csu.spectrum_type == 'pseudo'
 tmask_fn = fn.get_mask('T', apodized=apo)
@@ -49,6 +50,7 @@ for FREQ in csu.FREQ:
     if FREQ not in csu.FREQFILTER:
         tmask[FREQ] = tmask_sg
         pmask[FREQ] = pmask_sg
+
 smica_params = dict({
     'cov': dict(), 
     "cov4D": dict(), 
@@ -56,45 +58,6 @@ smica_params = dict({
     "gal": dict(),
     "gal_mm": dict(), 
     "w": dict()})
-
-
-def planck_cutoff(fr):
-    # KEEP. Cuts LFI channels for ell=700 as they cause numerical problems
-    return {
-        30: cutoff,
-        44: cutoff,
-        70: cutoff,
-        100: lmaxp1,
-        143: lmaxp1,
-        217: lmaxp1,
-        353: lmaxp1
-    }[fr]
-
-
-def pico_cutoff(fr):
-    return {
-        21: cutoff,
-        25: cutoff,
-        30: cutoff,
-        36: cutoff,
-        43: cutoff,
-        52: cutoff,
-        62: cutoff,
-        75: cutoff,
-        90: cutoff,
-        108: cutoff,
-        129: cutoff,
-        155: cutoff,
-        186: cutoff,
-        223: cutoff,
-        268: cutoff,
-        321: cutoff,
-        385: cutoff,
-        462: cutoff,
-        555: cutoff,
-        666: cutoff,
-        799: cutoff
-    }[fr]
 
 
 def bin_data(bins, cov_ltot_s, cov_lN_s, cov_lS_s):
@@ -110,10 +73,9 @@ def bin_data(bins, cov_ltot_s, cov_lN_s, cov_lS_s):
 
 def smooth_data(covltot, covlN, covlS):
 
-    cutoff = 900
-    covlT_smoothed = cv.cov2cov_smooth(covltot, cutoff=cutoff)
-    covlN_smoothed = cv.cov2cov_smooth(covlN, cutoff=cutoff)
-    covlS_smoothed = cv.cov2cov_smooth(covlS, cutoff=cutoff)
+    covlT_smoothed = cv.cov2cov_smooth(covltot, cutoff=1500)
+    covlN_smoothed = cv.cov2cov_smooth(covlN, cutoff=1500)
+    covlS_smoothed = cv.cov2cov_smooth(covlS, cutoff=1500)
 
     return np.nan_to_num(covlT_smoothed), np.nan_to_num(covlN_smoothed), np.nan_to_num(covlS_smoothed)
 
@@ -125,8 +87,8 @@ def fitp(cov_ltot, cov_lN, cov_lS, nmodes, gal_mixmat, B_fit):
         smica_model,
         cov_ltot,
         nmodes,
-        maxiter=50,
-        noise_template=np.where(cov_lN<2e-15, 0.0, 1.0),#np.where(cov_lN, 0.0, 1.0),
+        maxiter=100,
+        noise_template=np.where(cov_lN<4e-15, 1.0, 0.0),#np.where(cov_lN, 0.0, 1.0),
         afix=None)
 
     return smica_model
@@ -147,19 +109,19 @@ def extract_model_parameters(smica_model):
 def run_fit(fit):
 
     _Tscale = "K_CMB"
-    Cltot = io.load_data(fn.get_spectrum("T", "non-separated",simid=simid))
-    covltot = cv.build_covmatrices(Cltot, _Tscale, csu.freqcomb, csu.FREQ_f, pico_cutoff, cutoff)
+    Cltot = io.load_data(fn.get_spectrum("T", "non-separated", simid=simid))
+    covltot = cv.build_covmatrices(Cltot, _Tscale, csu.freqcomb, csu.FREQ_f, csu.cutoff_freq, 1100)
 
-    ClN = io.load_data(fn.get_spectrum("N", "non-separated",simid=simid))
-    covlN = cv.build_covmatrices(ClN, _Tscale, csu.freqcomb, csu.FREQ_f, pico_cutoff, cutoff)
+    ClN = io.load_data(fn.get_spectrum("N", "non-separated", simid=simid))
+    covlN = cv.build_covmatrices(ClN, _Tscale, csu.freqcomb, csu.FREQ_f, csu.cutoff_freq, 1100)
 
-    ClS = io.load_data(fns.get_spectrum("S", "non-separated",simid=simid))
-    covlS = cv.build_covmatrices(ClS, _Tscale, csu.freqcomb, csu.FREQ_f, pico_cutoff, cutoff)
+    ClS = io.load_data(fns.get_spectrum("S", "non-separated", simid=simid))
+    covlS = cv.build_covmatrices(ClS, _Tscale, csu.freqcomb, csu.FREQ_f, csu.cutoff_freq, 1100)
 
     nmodes_lowell = smint.calc_nmodes(Smica_bins.SMICA_lowell_bins, pmask['100'])
     nmodes_highell = smint.calc_nmodes(Smica_bins.SMICA_highell_bins, pmask['100'])
 
-    covltot_smoothed, covlN_smoothed, ClS_smoothed = smooth_data(covltot, covlN, covlS) # covltot, covlN, covlS
+    covltot_smoothed, covlN_smoothed, ClS_smoothed = smooth_data(covltot, covlN, covlS) # covltot, covlN, covlS #
 
     ## EE fit
     covltot_bnd, covlN_bnd, ClS_bnd = bin_data(Smica_bins.SMICA_lowell_bins, covltot_smoothed[1], covlN_smoothed[1], ClS_smoothed[1])
@@ -188,16 +150,14 @@ def run_fit(fit):
 
 
 def run_propag():
-    lmax_loc = 2500
+    lmax_loc = 4000
     bins = csu.bins
     W_smica = io.load_data(fns.get_misc('w', simid=simid))
     W_mv = io.load_data(fn.get_misc('w', simid=simid))
     W_total = hpf.interp_smica_mv_weights(W_smica, W_mv, bins, 4001)
     W_total[:,:,0:2] = 0.0
 
-    nalm = int((lmax_loc+1)*(lmax_loc+2)/2) 
-    alm = np.zeros(shape=(len(csu.FREQ_f),3,nalm))
-    
+
     maps = dict()
     for FREQ in csu.FREQ:
         if FREQ not in csu.FREQFILTER:
@@ -209,6 +169,8 @@ def run_propag():
     maps = mp.process_all(maps)
     beamf = io.load_beamf(csu.freqcomb, csu.lmax, csu.freqdatsplit)
 
+    nalm = int((lmax_loc+1)*(lmax_loc+2)/2) 
+    alm = np.zeros(shape=(len(csu.FREQ_f),3,nalm))
     for itf, freq in enumerate(csu.FREQ_f):
         print('freq: ', freq)
         ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
@@ -234,85 +196,18 @@ def run_propag():
                         alm[itf][1], np.nan_to_num(1/beamf[1,itf,itf,:lmax_loc])),
                     beam_e[:lmax_loc]),
                 np.squeeze(W_total[1,itf,:lmax_loc]))
-            combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmax_loc])
+            # combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmax_loc])
             combalmB += hp.almxfl(
                 hp.almxfl(
                     hp.almxfl(
                         alm[itf][2], np.nan_to_num(1/beamf[2,itf,itf,:lmax_loc])),
                         beam_b[:lmax_loc]),
                 np.squeeze(W_total[2,itf,:lmax_loc]))
-            combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmax_loc])
+            # combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmax_loc])
 
     mapT_combined = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
     io.save_data(mapT_combined, fns.get_map('T', 'combined', simid=simid))
     ClT_combined = trsf.map2cls({'combined':mapT_combined}, {'combined':tmask['030']}, {'combined':pmask['030']}, csu.spectrum_type, lmax_loc, freqcomb=['combined-combined'], lmax_mask=csu.lmax_mask)
-    io.save_data(ClT_combined, fns.get_spectrum('T', 'combined', simid=simid))
-
-    maq_lpDXS = hp.smoothing(hp.ma(mapT_combined[1]), np.radians(1))
-    mau_lpDXS = hp.smoothing(hp.ma(mapT_combined[2]), np.radians(1))
-
-    mapT_combined_fn = fns.get_map('T', 'combined', simid=simid)
-    mapT_combined_smoothed_fn = mapT_combined_fn.replace('.', 'smoothed.')
-
-    io.save_data(np.array([np.zeros_like(maq_lpDXS),maq_lpDXS, mau_lpDXS]), mapT_combined_smoothed_fn)
-
-
-def run_propag_mv():
-    lmax_loc = 2000
-    W_mv = io.load_data(fn.get_misc('w', simid=simid))
-    W_total = W_mv
-
-    nalm = int((lmax_loc+1)*(lmax_loc+2)/2) 
-    alm = np.zeros(shape=(len(csu.FREQ_f),3,nalm))
-
-    beamf = io.load_beamf(csu.freqcomb, csu.lmax, csu.freqdatsplit)
-    
-    maps = dict()
-    for FREQ in csu.FREQ:
-        if FREQ not in csu.FREQFILTER:
-            inpath_map_pla_name = fn.get_d(FREQ, "T", simid=simid)
-            print("inpath_map_pla_name: {}".format(inpath_map_pla_name))
-            nside_out = csu.nside_out[0] if int(FREQ)<100 else csu.nside_out[1]
-            maps[FREQ] = io.load_d(inpath_map_pla_name, field=(0,1,2), nside_out=nside_out)
-
-    maps = mp.process_all(maps)
-
-    for itf, freq in enumerate(csu.FREQ_f):
-        print('freq: ', freq)
-        ns = csu.nside_out[0] if int(freq) < 100 else csu.nside_out[1]
-        if apo:
-            alm[itf][1:] = hp.map2alm(np.array([n*hp.ud_grade(pmask[freq], nside_out=ns) for n in maps[freq]]), lmax_loc)[1:] # full sky QU->EB        #TODO no TT at the moment
-        else:
-            alm[itf][1:] = trsf.map2alm_spin(maps[freq], hp.ud_grade(pmask[freq], nside_out=ns), 2, lmax_loc) # full sky QU->EB        #TODO no TT at the moment
- 
-    # combalmT = np.zeros((nalm), dtype=np.complex128)
-    combalmE = np.zeros((nalm), dtype=np.complex128)
-    combalmB = np.zeros((nalm), dtype=np.complex128)
-    beam_e = hp.gauss_beam(np.radians(0.005/60), 4100, pol = True)[:,1]
-    beam_b = hp.gauss_beam(np.radians(0.005/60), 4100, pol = True)[:,2]
-
-    for itf, det in enumerate(csu.FREQ_f):
-        print('freq: ', det)
-        ns = csu.nside_out[0] if int(det) < 100 else csu.nside_out[1]
-        # combalmT += hp.almxfl(almT[name], np.squeeze(W[0,m,:]))
-        combalmE += hp.almxfl(
-            hp.almxfl(
-                hp.almxfl(
-                    alm[itf][1], np.nan_to_num(1/beamf[1,itf,itf,:lmax_loc])),
-                beam_e[:lmax_loc]),
-            np.squeeze(W_total[1,itf,:lmax_loc]))
-        combalmE = hp.almxfl(combalmE, 1/hp.pixwin(ns, pol=True)[0][:lmax_loc])
-        combalmB += hp.almxfl(
-            hp.almxfl(
-                hp.almxfl(
-                    alm[itf][2], np.nan_to_num(1/beamf[2,itf,itf,:lmax_loc])),
-                    beam_b[:lmax_loc]),
-            np.squeeze(W_total[2,itf,:lmax_loc]))
-        combalmB = hp.almxfl(combalmB, 1/hp.pixwin(ns, pol=True)[1][:lmax_loc])
-
-    mapT_combined = hp.alm2map([np.zeros_like(combalmE), combalmE, combalmB], csu.nside_out[1])
-    io.save_data(mapT_combined, fns.get_map('T', 'combined', simid=simid))
-    ClT_combined = trsf.map2cls({'combined':mapT_combined}, {'combined':tmask[csu.FREQ_f[0]]}, {'combined':pmask[csu.FREQ_f[0]]}, csu.spectrum_type, lmax_loc, freqcomb=['combined-combined'], lmax_mask=csu.lmax_mask)
     io.save_data(ClT_combined, fns.get_spectrum('T', 'combined', simid=simid))
 
     maq_lpDXS = hp.smoothing(hp.ma(mapT_combined[1]), np.radians(1))
@@ -335,7 +230,8 @@ if __name__ == '__main__':
         run_fit(fitp)
 
     if bool_propag:
-        run_propag_mv()
+        run_propag()
+
         
 
 def run_propag_ext():

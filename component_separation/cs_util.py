@@ -25,16 +25,20 @@ import component_separation.cachechecker as cc
 
 # currently, 1-3 is done implicit in the following lines, but in a non-scalable way, and not transparent for my liking
 class Config:
-    def __init__(self, experiment='Planck', **kwargs):
+    def __init__(self, experiment='Planck', verbose = False, **kwargs):
         assert experiment in ['Planck', 'Pico']
 
         self.experiment = experiment
         if experiment == 'Planck':
             from component_separation.config_planck import (Params, 
             Frequency, Spectrum)
+            from component_separation.config_planck import Cutoff as Pcut
         elif experiment == 'Pico':
             from component_separation.config_pico import (Params,
             Frequency, Spectrum)
+            from component_separation.config_pico import Cutoff as Pcut
+
+        self.cutoff_freq = Pcut().get_cutoff(Params.__dict__['cutoff'], Params.__dict__['lmax']+1)
 
         uname = platform.uname()
         if uname.node == "DESKTOP-KMIGUPV":
@@ -66,10 +70,11 @@ class Config:
             from component_separation.config_pico import Beamfd90sim
             self.get_beamf = Beamfd90sim.get_beamf
 
-        print(40*"$")
-        print("Run with the following settings:")
-        print(self.__dict__)
-        print(40*"$")
+        if verbose == True:
+            print(40*"$")
+            print("Run with the following settings:")
+            print(self.__dict__)
+            print(40*"$")
 
 
 class Filename_gen:
@@ -169,7 +174,7 @@ class Filename_gen:
         simid = self.simid if simid is None else simid
 
 
-        if info_component == "S" and simid is None:
+        if info_component == "S" and simid is -1:
             """This is a special case, as it needs to a fake signal datafile. Usually this is available for simulations, but not for real data.
             However, Smica needs a fake signal. The proper treatment may be found in Filname_gen_SMICA
             """
@@ -193,7 +198,7 @@ class Filename_gen:
         simid = self.simid if simid is None else simid
 
         if info_component == self.ass.info_component[0]:  # Noise
-            dir_plamap_loc = self.dset_fn._get_noisedir()
+            dir_plamap_loc = self.dset_fn._get_noisedir(self.csu_loc.freqdatsplit, freq)
             if dir_plamap_loc == "INTERNAL":
                 dir_plamap_loc = self._get_mapdir(info_component)
             fn_loc = self.dset_fn._get_noisefn(freq, simid)
@@ -443,7 +448,7 @@ class Filename_gen_SMICA:
 
         simid = self.simid if simid is None else simid
 
-        if info_component == "S" and simid is None:
+        if info_component == "S" and simid is -1:
             "Special case, as smica needs signal estimator"
             return self.dset_fn._get_signalest()
 

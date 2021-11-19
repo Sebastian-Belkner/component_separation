@@ -78,8 +78,8 @@ def build_covmatrices(data: np.array, Tscale, freqcomb, FREQ_f, LFI_cutoff=None,
             fidx2 = np.where(freqf == FREQ2)[0][0]
 
             if FREQ1<100 or FREQ2<100:
-                b  = np.array([np.nan for n in range(max(lmaxp1-min(LFI_cutoff(FREQ1),LFI_cutoff(FREQ2)), 0))])
-                a = np.concatenate((data[fcombidx,sidx][:min(lmaxp1, min(LFI_cutoff(FREQ1),LFI_cutoff(FREQ2)))], b))
+                b  = np.array([np.nan for n in range(max(lmaxp1-min(LFI_cutoff[FREQ1],LFI_cutoff[FREQ2]), 0))])
+                a = np.concatenate((data[fcombidx,sidx][:min(lmaxp1, min(LFI_cutoff[FREQ1],LFI_cutoff[FREQ2]))], b))
             else:
                 a = data[fcombidx,sidx]
             covn[sidx,fidx1,fidx2] = a * mp.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * mp.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
