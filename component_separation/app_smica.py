@@ -209,7 +209,7 @@ def run_propag():
     io.save_data(mapT_combined, fns.get_map('T', 'combined', simid=simid))
     ClT_combined = trsf.map2cls({'combined':mapT_combined}, {'combined':tmask['030']}, {'combined':pmask['030']}, csu.spectrum_type, lmax_loc, freqcomb=['combined-combined'], lmax_mask=csu.lmax_mask)
     io.save_data(ClT_combined, fns.get_spectrum('T', 'combined', simid=simid))
-
+    
     maq_lpDXS = hp.smoothing(hp.ma(mapT_combined[1]), np.radians(1))
     mau_lpDXS = hp.smoothing(hp.ma(mapT_combined[2]), np.radians(1))
 
