@@ -23,18 +23,18 @@ import component_separation.covariance as cv
 import component_separation.map as mp
 import component_separation.transformer as trsf
 
-experiment = 'Pico'
-simid=0
-# csu = Config(experiment=experiment, freqdset='NPIPE', mskset='lens', spectrum_type='JC')
-csu = Config(experiment=experiment)
+experiment = 'Planck'
+simid=-1
+csu = Config(experiment=experiment, freqdset='NPIPE', mskset='lens', spectrum_type='JC')
+# csu = Config(experiment=experiment)
 fn = fn_gen(csu)
 fns = fns_gen(csu)
 io = IO(csu)
 
 cutoff = 4000
 lmaxp1 = csu.lmax+1
-apo = csu.spectrum_type == 'pseudo'
 
+apo = csu.spectrum_type == 'pseudo'
 tmask_fn = fn.get_mask('T', apodized=apo)
 pmask_fn = fn.get_mask('P', apodized=apo)
 tmask_sg = io.load_mask(tmask_fn)
@@ -94,6 +94,7 @@ def run_tf(path_name):
 
 
 def run_propag_mv():
+    
     lmax_loc = 2000
     W_mv = io.load_data(fn.get_misc('w', simid=simid))
     W_total = W_mv
@@ -163,7 +164,7 @@ def run_propag_mv():
 if __name__ == '__main__':
     # set_logger(DEBUG)
     bool_weight = True
-    bool_propagmv = True
+    bool_propagmv = False
     bool_crosscov = False
     bool_tf = False
 

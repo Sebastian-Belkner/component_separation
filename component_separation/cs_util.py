@@ -389,10 +389,7 @@ class Filename_gen:
             retval = "{}".format(misc_type)
         else:
             retval = prefix.replace('/', '_')
-
-
         retval = '_'.join([retval, self.csu_loc.spectrum_type])
-
         if simid != -1:
             retval = '_'.join([retval, str(simid).zfill(4)])
 

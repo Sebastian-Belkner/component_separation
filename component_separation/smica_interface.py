@@ -44,10 +44,10 @@ def build_smica_model(Q, N_cov_bn, C_lS_bnd, maskset, gal_mixmat=None, B_fit=Fal
     gal = smica.SourceND(nmap, Q, dim, name='gal')
     if gal_mixmat is None:
         gal.fix_mixmat('null')
+        cmb.set_powspec(cmbcq, fixed='all')
     else:
         gal.set_mixmat(gal_mixmat, fixed='all')
         gal.fix_powspec("null")
-
     model = smica.Model(complist=[cmb, gal, noise])
 
     return model

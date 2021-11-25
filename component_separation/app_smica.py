@@ -88,7 +88,7 @@ def fitp(cov_ltot, cov_lN, cov_lS, nmodes, gal_mixmat, B_fit):
         cov_ltot,
         nmodes,
         maxiter=100,
-        noise_template=np.where(cov_lN<4e-15, 1.0, 0.0),#np.where(cov_lN, 0.0, 1.0),
+        noise_template=np.where(cov_lN>4e-15, 1.0, 0.0),#np.where(cov_lN, 0.0, 1.0),
         afix=None)
 
     return smica_model
@@ -221,7 +221,7 @@ def run_propag():
 
 if __name__ == '__main__':
     # hpf.set_logger(DEBUG)
-    bool_fit = False
+    bool_fit = True
     bool_propag = True
     store_data = True
 
