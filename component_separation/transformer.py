@@ -20,7 +20,7 @@ def map2alm_spin(maps, pmask, spin, lmax):
 
 
 def map2alm(maps, tmask, lmax):
-
+    assert 0, 'Check the return statement'
     return ps.map2alm([maps[0] * tmask, maps[2] * tmask],
                                 lmax=lmax)
                                 
