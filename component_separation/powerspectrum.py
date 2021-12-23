@@ -17,6 +17,7 @@ def process_all(data, freqcomb, beamf, nside, spectrum_scale="K_CMB"):
     data = apply_pixwin(data, freqcomb, nside)
     data = apply_scale(data, spectrum_scale)
     data = apply_beamfunction(data, beamf, freqcomb)
+    
     return data
 
 

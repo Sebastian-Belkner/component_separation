@@ -44,8 +44,7 @@ class Params:
     num_sim = 5
     binname = "SMICA_highell_bins"
     overwrite_cache = True
-    simdata = False
-    cutoff = 1100
+    cutoff = 4000
 
     specfilter = [
         "TB",
@@ -138,7 +137,7 @@ class DX12:
 
 
     @classmethod
-    def _get_ddir(cls, split_loc, simid_loc):
+    def _get_ddir(cls, simid_loc, split_loc):
 
         return "/global/cfs/cdirs/cmb/data/planck2018/pr3/frequencymaps/"
 
@@ -175,7 +174,7 @@ class DX12:
 
 
 class NPIPEsim:
-    simid = np.concatenate((np.array(['']), np.array([str(n).zfill(4) for n in range(200)])))
+    simid = np.concatenate((np.array(['']), np.array([str(n).zfill(4) for n in range(200, 799)])))
     split = ['','A','B']
     freq = ['030','044', '070',  '100',  '143',  '217',  '353',  '545',  '857']
     nside = ['1024', '2048']
@@ -186,7 +185,7 @@ class NPIPEsim:
 
 
     @classmethod
-    def _get_ddir(cls, split_loc, simid_loc):
+    def _get_ddir(cls, simid_loc, split_loc):
         assert split_loc in cls.split, "{}".format(split_loc)
         assert simid_loc in cls.simid, "{}".format(simid_loc)
 
@@ -548,7 +547,7 @@ class Asserter:
     info_combination = ["non-separated"]
     FREQ = ['030', '044', '070', '100', '143', '217', '353', '545', '857']
     misc_type = ["w"]
-    simid = np.arange(-1,500)
+    simid = np.arange(-1,799)
 
 
 class Asserter_smica:
@@ -556,4 +555,4 @@ class Asserter_smica:
     info_combination = ["non-separated", "separated", "combined"]
     FREQ = ['030', '044', '070', '100', '143', '217', '353', '545', '857']
     misc_type = ['cov', "cov4D", "CMB", "gal_mm", "gal", "w"]
-    simid = np.arange(-1,100)
+    simid = np.arange(-1,799)

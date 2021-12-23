@@ -9,6 +9,7 @@ import os, sys
 
 import healpy as hp
 import numpy as np
+import itertools
 
 from component_separation.cs_util import Config
 from component_separation.cs_util import Filename_gen as fn_gen
@@ -18,15 +19,7 @@ import component_separation.transformer as trsf
 import component_separation.powerspectrum as pospec
 import component_separation.map as mp
 
-experiment = 'Pico'
-simid=0
-
-csu = Config(experiment=experiment)
-fn = fn_gen(csu, experiment_loc=experiment, simid=simid)
-io = IO(csu)
-
-
-def run_map2cls(info_component):
+def run_map2cls(info_component, simid, csu, fn, io):
 
     outpath_pow_sc_name = fn.get_spectrum(info_component, simid=simid)
     print("outpath_pow_sc_name: {}".format(outpath_pow_sc_name))
@@ -53,7 +46,6 @@ def run_map2cls(info_component):
             pmask[FREQ] = pmask_sg
 
     Cl_usc = trsf.map2cls(maps, tmask, pmask, csu.spectrum_type, csu.lmax, csu.freqcomb, csu.nside_out, csu.lmax_mask)
-
     beamf = io.load_beamf(csu.freqcomb, csu.lmax, csu.freqdatsplit)
     Cl_sc = pospec.process_all(Cl_usc, csu.freqcomb, beamf, csu.nside_out)
     io.save_data(Cl_sc, outpath_pow_sc_name)
@@ -76,11 +68,17 @@ if __name__ == '__main__':
 
     bool_alm2cls = False
     bool_map2cls = True
-    bool_with_noise = True
 
-    if bool_map2cls:
-        run_map2cls('T')
-        # run_map2cls('N')
+    experiment = 'Planck'
+    simid = -1
+    for freqdset, mskset, spectype in itertools.product(["NPIPE", "DX12"],['smica', "lens"],['JC', "pseudo"]):
+        csu = Config(experiment=experiment, freqdset=freqdset, mskset=mskset, spectrum_type=spectype, simid=simid)
+        fn = fn_gen(csu)
+        io = IO(csu)
 
-    if bool_alm2cls:
-        run_alm2cls("/global/cscratch1/sd/sebibel/compsep/Planck/Sest/ClS_NPIPEsim.npy")
+        if bool_map2cls:
+            run_map2cls('T', simid, csu, fn, io)
+            # run_map2cls('N')
+
+        if bool_alm2cls:
+            run_alm2cls("/global/cscratch1/sd/sebibel/compsep/Planck/Sest/ClS_NPIPEsim.npy")

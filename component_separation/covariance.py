@@ -1,5 +1,7 @@
 import healpy as hp
 import numpy as np
+import itertools
+
 
 from logdecorator import log_on_end, log_on_error, log_on_start
 from logging import DEBUG, ERROR, INFO
@@ -9,8 +11,56 @@ from component_separation.cs_util import Helperfunctions as hpf
 import component_separation.map as mp
 
 
+def cov2cov_smooth(covltot, FREQ_f, dataset):
+    """Smoothes covariance matrix such that weight calculation is more robust, as well as the SMICA fit
+
+    Args:
+        covltot (np.array): Covariance matrix to be preprocessed
+        FREQ_f (np.array): Array of frequencie channels in the data
+        dataset (string): Descriptor of the dataset
+    """
+    assert dataset in ['NPIPE', 'DX12'], 'Dataset not yet implemented'
+
+    #The following works for NPIPE lens and smica mask, JC and pseudo spectrum
+    if dataset == 'NPIPE':
+        for ispec in range(1,3): #EE and BB
+            for freq1 in range(covltot.shape[1]):
+                for freq2 in range(covltot.shape[1]):
+                    # This removes spikes below ~3500
+                    if int(FREQ_f[freq1]) < 100 or int(FREQ_f[freq2]) < 100:
+                        if FREQ_f[freq1] != FREQ_f[freq2]:
+                            covltot[ispec,freq1,freq2,800:] = 0.0
+                    # This removes the ~3900 spike
+                    if int(FREQ_f[freq1]) >= 100 and int(FREQ_f[freq2]) >= 100:
+                        if FREQ_f[freq1] != FREQ_f[freq2]:
+                            covltot[ispec,freq1,freq2,2048:] = 0.0
+                    # This converts the np.nans coming from the beamfunctions into zeros
+                    if int(FREQ_f[freq1]) < 100 and int(FREQ_f[freq2]) < 100:
+                        if FREQ_f[freq1] == FREQ_f[freq2]:
+                            covltot[ispec,freq1,freq2,1024:] = 0.0
+    #The following works for DX12, lens and smica mask, JC and pseudo spectrum
+    elif dataset == 'DX12':
+        for ispec in range(1,3): #EE and BB
+            for freq1 in range(covltot.shape[1]):
+                for freq2 in range(covltot.shape[1]):
+                    # This removes spikes below ~3500
+                    if int(FREQ_f[freq1]) < 100 or int(FREQ_f[freq2]) < 100:
+                        if FREQ_f[freq1] != FREQ_f[freq2]:
+                            covltot[ispec,freq1,freq2,800:] = 0.0
+                    # This removes the ~3900 spike
+                    if int(FREQ_f[freq1]) >= 100 and int(FREQ_f[freq2]) >= 100:
+                        if FREQ_f[freq1] != FREQ_f[freq2]:
+                            covltot[ispec,freq1,freq2,2048:] = 0
+                    # This converts the np.nans coming from the beamfunctions into zeros
+                    if int(FREQ_f[freq1]) < 100 and int(FREQ_f[freq2]) < 100:
+                        if FREQ_f[freq1] == FREQ_f[freq2]:
+                            covltot[ispec,freq1,freq2,2048:] = 0.0
+    
+    return covltot
+
+
 #TODO perhaps make smica fit with LFI and HFI up to ell = 1000.
-def cov2cov_smooth(cov, cutoff) -> np.array:
+def cov2cov_smooth_old(cov, cutoff) -> np.array:
     """
     currently takes any LFI[0] X (LFI or HFI) crossspectra and applies a windowfunction, effectively setting it to zero.
     This needs to be done as the freq 030 crosspowerspectra have unphysical behaviour for ell>900. This is also true for
@@ -40,10 +90,50 @@ def cov2cov_smooth(cov, cutoff) -> np.array:
                 cov[spec,m,n,1500:] = np.nan#np.zeros_like(cov[spec,m,n,cutoff:])
     return cov
 
+@log_on_start(INFO, "Starting to build convariance matrices with {data}")
+@log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
+def build_covmatrices(data: np.array, Tscale, FREQ_f):
+    """Calculates the covariance matrices from the data
+
+    Args:
+        data: powerspectra with spectrum and frequency-combinations in the columns
+        
+    Returns:
+        Dict[str, np.ndarray]: The covariance matrices of Dimension [Nspec,Nspec,lmax]
+    """
+    def get_nfreq(nfreqcombs):
+
+        _i = 0
+        _j = 0
+        while True:
+            _i+=1
+            _j +=_i
+            if _j == nfreqcombs:
+                break
+
+        return _i
+
+    freqcomb = np.array(list(itertools.product(FREQ_f, FREQ_f)))
+    freqcomb_int = np.array([[int(n), int(m)] for n,m in freqcomb if int(n) <= int(m)])
+    NFREQUENCIES = get_nfreq(data.shape[0])
+    lmaxp1 = data.shape[-1]
+    covn = np.zeros(shape=(data.shape[1], NFREQUENCIES, NFREQUENCIES, lmaxp1))
+    for sidx in range(covn.shape[0]):
+        for fcombidx, freqc in enumerate(freqcomb_int):
+            FREQ1, FREQ2 = int(freqc[0]), int(freqc[1])
+            freqf = np.array([int(n) for n in FREQ_f])
+            fidx1 = np.where(freqf == FREQ1)[0][0]
+            fidx2 = np.where(freqf == FREQ2)[0][0]
+            a = data[fcombidx,sidx]
+            covn[sidx,fidx1,fidx2] = a * mp.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * mp.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+            covn[sidx,fidx2,fidx1] = a * mp.tcmb2trj_sc(FREQ1, fr=r'K_CMB', to=Tscale) * mp.tcmb2trj_sc(FREQ2, fr=r'K_CMB', to=Tscale)
+
+    return covn
+
 
 @log_on_start(INFO, "Starting to build convariance matrices with {data}")
 @log_on_end(DEBUG, "Covariance matrix built successfully: '{result}' ")
-def build_covmatrices(data: np.array, Tscale, freqcomb, FREQ_f, LFI_cutoff=None, cutoff=None):
+def build_covmatrices_old(data: np.array, Tscale, freqcomb, FREQ_f, LFI_cutoff=None, cutoff=None):
     """Calculates the covariance matrices from the data
 
     Args:
@@ -108,6 +198,8 @@ def cov2weight(data: np.array, freqs, Tscale='K_CMB'):
             """
             masked = a[ ~np.isnan(a) ]
             # print(a)
+            # print(a)
+            # print('--')
             mskd = masked.reshape(int(np.sqrt(len(masked))),int(np.sqrt(len(masked))))
             return mskd
 
@@ -142,6 +234,7 @@ def cov2weight(data: np.array, freqs, Tscale='K_CMB'):
             ret = np.pad(
                 shp2cov_nan(maskit(cov).shape),
                 pad_shape(maskit(cov)), pad_with)
+
         return ret
 
     Tscale_mat = np.zeros(shape=(nfreq,nfreq)) #keep shape as if for all frequencies
@@ -153,18 +246,22 @@ def cov2weight(data: np.array, freqs, Tscale='K_CMB'):
     weight_arr = np.zeros(shape=(np.take(data.shape, [0,1,-1])))
     for spec in range(weight_arr.shape[0]):
         for l in range(data.shape[-1]):
-            weight_arr[spec,:,l] = np.array([
-                (invert_cov(np.multiply(data[spec,:,:,l],Tscale_mat)) \
-                    @ elaw)\
-                     / (elaw.T @ invert_cov(np.multiply(data[spec,:,:,l],Tscale_mat))\
-                          @ elaw)])
+            if spec==1:
+                # print(l)
+                weight_arr[spec,:,l] = np.array([
+                    (invert_cov(np.multiply(data[spec,:,:,l],Tscale_mat)) \
+                        @ elaw)\
+                        / (elaw.T @ invert_cov(np.multiply(data[spec,:,:,l],Tscale_mat))\
+                            @ elaw)])
+                            
     return weight_arr
 
 
-
+@hpf.deprecated
 @log_on_start(INFO, "Starting to invert convariance matrix {cov}")
 @log_on_end(DEBUG, "Inversion successful: '{result}' ")
 def cov2icov(cov: np.array):
+    assert 0, "debug"
     """Inverts a covariance matrix
 
     Args:

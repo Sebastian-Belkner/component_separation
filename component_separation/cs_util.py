@@ -56,6 +56,10 @@ class Config:
         """
         self.__dict__.update(Params.__dict__)
         self.__dict__.update(kwargs)
+        if 'simid' in kwargs:
+            pass
+        else:
+            self.simid=-1
 
         self.bins = getattr(Smica_bins, self.binname)
 
@@ -92,7 +96,7 @@ class Filename_gen:
         3. for all files generated upon runtime, generate unique level1 name
     """
 
-    def __init__(self, csu_loc, experiment_loc=None, dir_structure=None, fn_structure=None, simid=None):
+    def __init__(self, csu_loc, experiment_loc=None, dir_structure=None, fn_structure=None):
         """To add a new attribute,
             1. add it to dir/fn_structure
             2a. add an instance test (here in the __init__)
@@ -100,7 +104,7 @@ class Filename_gen:
         """
         self.csu_loc = csu_loc
         experiment = csu_loc.experiment if experiment_loc is None else experiment_loc
-        self.simid = simid
+        self.simid = csu_loc.simid
 
         if experiment == 'Planck':
             from component_separation.config_planck import Asserter as ass
@@ -112,10 +116,16 @@ class Filename_gen:
         if csu_loc.mch == 'NERSC':
             if experiment == 'Planck':
                 if csu_loc.freqdset == "NPIPE":
-                    from component_separation.config_planck import NPIPE as dset_fn
+                    if csu_loc.simid == -1:
+                        from component_separation.config_planck import NPIPE as dset_fn
+                    else:
+                        from component_separation.config_planck import NPIPEsim as dset_fn
                     self.dset_fn = dset_fn
                 elif csu_loc.freqdset == "DX12":
-                    from component_separation.config_planck import DX12 as dset_fn
+                    if csu_loc.simid == -1:
+                        from component_separation.config_planck import DX12 as dset_fn
+                    else:
+                        assert 0, "To be implemented: {}".format(csu_loc.freqdset)
                     self.dset_fn = dset_fn
                 else:
                     assert 0, "to be implemented: {}".format(csu_loc.freqdset)
@@ -125,22 +135,6 @@ class Filename_gen:
                     self.dset_fn = dset_fn
                 else:
                     assert 0, "to be implemented: {}".format(csu_loc.freqdset)
-
-        if experiment == 'Planck':
-            if csu_loc.freqdset.startswith("NPIPE"):
-                from component_separation.config_planck import BeamfNPIPE as beamf
-                self.beamf = beamf
-            elif csu_loc.freqdset.startswith("DX12"):
-                from component_separation.config_planck import BeamfDX12 as beamf
-                self.beamf = beamf
-            else:
-                assert 0, "beamf to be implemented: {}".format(csu_loc.freqdset)
-        elif experiment == 'Pico':
-            if csu_loc.freqdset.startswith("d90"):
-                from component_separation.config_pico import Beamfd90sim as beamf
-                self.beamf = beamf
-            else:
-                assert 0, "beamf to be implemented: {}".format(csu_loc.freqdset)
 
         if csu_loc.mskset == "smica":
             from component_separation.config_planck import Smica_Mask as mask
@@ -174,7 +168,7 @@ class Filename_gen:
         simid = self.simid if simid is None else simid
 
 
-        if info_component == "S" and simid is -1:
+        if info_component == "S" and simid == -1:
             """This is a special case, as it needs to a fake signal datafile. Usually this is available for simulations, but not for real data.
             However, Smica needs a fake signal. The proper treatment may be found in Filname_gen_SMICA
             """
@@ -203,7 +197,7 @@ class Filename_gen:
                 dir_plamap_loc = self._get_mapdir(info_component)
             fn_loc = self.dset_fn._get_noisefn(freq, simid)
         if info_component == self.ass.info_component[3]:  # data
-            dir_plamap_loc = self.dset_fn._get_ddir(str(simid), self.csu_loc.freqdatsplit)
+            dir_plamap_loc = self.dset_fn._get_ddir(str(simid).zfill(4), self.csu_loc.freqdatsplit)
             fn_loc = self.dset_fn._get_dfn(self.csu_loc.freqdatsplit, freq, simid)
                     
         return path.join(dir_plamap_loc, fn_loc)
@@ -233,11 +227,6 @@ class Filename_gen:
             for fn in self.mask.get_fn(TorP, apodized)]
 
 
-    def get_beamfinfo(self, ):
-
-        return self.beamf.get_beaminfo
-
-
     def _get_miscdir(self, simid=None):
         assert simid in self.ass.simid or simid is None
 
@@ -249,8 +238,8 @@ class Filename_gen:
         ap = path.join(ap, self.csu_loc.mskset+'mask')  
         cc.iff_make_dir(ap)
 
-        if self.csu_loc.simdata:
-            ap = path.join(ap, 'sim{}'.format(str(simid)))
+        if self.csu_loc.simid != -1:
+            ap = path.join(ap, 'sim{}'.format(str(simid).zfill(4)))
             cc.iff_make_dir(ap)
 
         return ap
@@ -265,8 +254,8 @@ class Filename_gen:
         ap = path.join(self.csu_loc.outdir_ap, self.csu_loc.freqdset)  
         cc.iff_make_dir(ap)
 
-        if self.csu_loc.simdata:
-            ap = path.join(ap, 'sim{}'.format(str(simid)))
+        if self.csu_loc.simid != -1:
+            ap = path.join(ap, 'sim{}'.format(str(simid).zfill(4)))
             cc.iff_make_dir(ap)
 
         ap = path.join(ap, info_component)
@@ -290,8 +279,8 @@ class Filename_gen:
         ap = path.join(ap, self.csu_loc.mskset+'mask')  
         cc.iff_make_dir(ap)
 
-        if self.csu_loc.simdata:
-            ap = path.join(ap, 'sim{}'.format(str(simid)))
+        if self.csu_loc.simid != -1:
+            ap = path.join(ap, 'sim{}'.format(str(simid).zfill(4)))
             cc.iff_make_dir(ap)
 
         return ap
@@ -319,8 +308,8 @@ class Filename_gen:
         elif self.csu_loc.spectrum_type == "pseudo":
             retval='_'.join([retval, "pseudo"])
 
-        if self.csu_loc.simdata and simid is not None:
-            retval = '_'.join([retval, str(simid)])
+        if self.csu_loc.simid != -1 and simid is not None:
+            retval = '_'.join([retval, str(simid).zfill(4)])
 
         return '.'.join([retval, "npy"])
 
@@ -348,8 +337,8 @@ class Filename_gen:
         elif self.csu_loc.spectrum_type == "pseudo":
             retval='_'.join([retval, "pseudo"])
 
-        if self.csu.simdata and simid is not None:
-            retval = '_'.join([retval, str(simid)])
+        if self.csu.simid != -1 and simid is not None:
+            retval = '_'.join([retval, str(simid).zfill(4)])
 
         return '.'.join([retval, "npy"])
 
@@ -445,7 +434,7 @@ class Filename_gen_SMICA:
 
         simid = self.simid if simid is None else simid
 
-        if info_component == "S" and simid is -1:
+        if info_component == "S" and simid == -1:
             "Special case, as smica needs signal estimator"
             return self.dset_fn._get_signalest()
 
@@ -504,8 +493,8 @@ class Filename_gen_SMICA:
         ap = path.join(ap, self.csu_loc.mskset+'mask')  
         cc.iff_make_dir(ap)
 
-        if self.csu_loc.simdata:
-            ap = path.join(ap, 'sim{}'.format(str(simid)))
+        if self.csu_loc.simid != -1:
+            ap = path.join(ap, 'sim{}'.format(str(simid).zfill(4)))
             cc.iff_make_dir(ap)
 
         return ap
@@ -524,8 +513,8 @@ class Filename_gen_SMICA:
         ap = path.join(ap, self.csu_loc.mskset+'mask')  
         cc.iff_make_dir(ap)
 
-        if self.csu_loc.simdata:
-            ap = path.join(ap, 'sim{}'.format(str(simid)))
+        if self.csu_loc.simid != -1:
+            ap = path.join(ap, 'sim{}'.format(str(simid).zfill(4)))
             cc.iff_make_dir(ap)
 
         if info_combination == 'separated' or info_combination == 'combined':
@@ -560,8 +549,8 @@ class Filename_gen_SMICA:
         elif self.csu_loc.spectrum_type == "pseudo":
             retval='_'.join([retval, "pseudo"])
 
-        if self.csu_loc.simdata and simid is not None:
-            retval = '_'.join([retval, str(simid)])
+        if self.csu_loc.simid != -1 and simid is not None:
+            retval = '_'.join([retval, str(simid).zfill(4)])
 
         return '.'.join([retval, "npy"])
 
@@ -589,8 +578,8 @@ class Filename_gen_SMICA:
         elif self.csu_loc.spectrum_type == "pseudo":
             retval='_'.join([retval, "pseudo"])
 
-        if self.csu_loc.simdata and simid is not None:
-            retval = '_'.join([retval, str(simid)])
+        if self.csu_loc.simid != -1 and simid is not None:
+            retval = '_'.join([retval, str(simid).zfill(4)])
 
         return '.'.join([retval, "npy"])
 

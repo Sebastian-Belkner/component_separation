@@ -12,55 +12,35 @@ os.environ["OMP_NUM_THREADS"] = "16"
 import healpy as hp
 import numpy as np
 
+import itertools
 from component_separation.cs_util import Config
 from component_separation.io import IO
 from component_separation.cs_util import Filename_gen as fn_gen
 from component_separation.cs_util import Filename_gen_SMICA as fns_gen
 
-import component_separation.MSC.MSC.pospace as ps #remove dependency
+import component_separation.MSC.MSC.pospace as ps #TODO remove dependency
 import component_separation.powerspectrum as pospec
 import component_separation.covariance as cv
 import component_separation.map as mp
 import component_separation.transformer as trsf
 
-experiment = 'Planck'
-simid=-1
-csu = Config(experiment=experiment, freqdset='NPIPE', mskset='lens', spectrum_type='JC')
-# csu = Config(experiment=experiment)
-fn = fn_gen(csu)
-fns = fns_gen(csu)
-io = IO(csu)
-
-cutoff = 4000
-lmaxp1 = csu.lmax+1
-
-apo = csu.spectrum_type == 'pseudo'
-tmask_fn = fn.get_mask('T', apodized=apo)
-pmask_fn = fn.get_mask('P', apodized=apo)
-tmask_sg = io.load_mask(tmask_fn)
-pmask_sg = io.load_mask(pmask_fn)
-tmask, pmask = dict(), dict()
-for FREQ in csu.FREQ:
-    if FREQ not in csu.FREQFILTER:
-        tmask[FREQ] = tmask_sg
-        pmask[FREQ] = pmask_sg
-
 
 #TODO perhaps exclude LFIs for ell>1000, i.e. remove from covmatrix, instead of smoothing them..
 #TODO cov2weight seems bugged, only works when np.nan_to_num(data) is passed. but nan's is what cov2weight wants for filtering..
-def run_weight(path_name):
+def run_weight(path_name, csu):
     """
     Calculates weights derived from data defined by freqdset attribute of config.
     No SMICA, straightforward weight derivation.
     Needed for combining maps without SMICA.
     """
-    Cl_tot = io.load_data(fn.get_spectrum("T", "non-separated", simid=simid))
+    Cltot = io.load_data(fn.get_spectrum("T", "non-separated", simid=simid))
+    if Cltot is not None:
 
-    covl_tot = cv.build_covmatrices(Cl_tot, "K_CMB", csu.freqcomb, csu.FREQ_f, csu.cutoff_freq, cutoff=1400)
-    # covl_tot = pospec.cov2cov_smooth(covl_tot, cutoff=1000)
-    weights_tot = cv.cov2weight(covl_tot, freqs=csu.FREQ_f, Tscale="K_CMB")
-    print(weights_tot.shape)
-    io.save_data(weights_tot, path_name)
+        covltot = cv.build_covmatrices(Cltot, "K_CMB", csu.FREQ_f)
+        covltot = cv.cov2cov_smooth(covltot, csu.FREQ_f, freqdset)
+
+        weights_tot = cv.cov2weight(covltot, freqs=csu.FREQ_f, Tscale="K_CMB")
+        io.save_data(weights_tot, path_name)
 
 
 def run_mappsmica2crosscov():
@@ -160,22 +140,74 @@ def run_propag_mv():
 
     io.save_data(np.array([np.zeros_like(maq_lpDXS),maq_lpDXS, mau_lpDXS]), mapT_combined_smoothed_fn)
 
+    
+def run_propag_mvN():
+    
+    lmax_loc = 2000
+    W_mv = io.load_data(fn.get_misc('w', simid=simid))
+    W_total = W_mv
+    Tscale = "K_CMB"
+        
+    res_N_S = np.zeros(shape=(lmax_loc))
+    ClN = io.load_data(fn.get_spectrum("N", "non-separated", simid=0))
+    covlN = cv.build_covmatrices(ClN, Tscale, csu.FREQ_f)
+
+    for l in range(lmax_loc):
+        res_N_S[l] = np.dot(np.dot(W_total[1,:,l].T,covlN[TEB,:,:,l]*1e12),W_total[1,:,l])
+        
+    mapN_combined = hp.alm2map([np.zeros_like(res_N_S), res_N_S, res_N_S], csu.nside_out[1])
+    io.save_data(mapN_combined, fns.get_map('N', 'combined', simid=simid))
+    ClN_combined = trsf.map2cls(
+        {'combined':mapN_combined},
+        {'combined':tmask[csu.FREQ_f[0]]},
+        {'combined':pmask[csu.FREQ_f[0]]},
+        csu.spectrum_type,
+        lmax_loc,
+        freqcomb=['combined-combined'],
+        lmax_mask=csu.lmax_mask)
+    io.save_data(ClN_combined, fns.get_spectrum('N', 'combined', simid=simid))
+
 
 if __name__ == '__main__':
     # set_logger(DEBUG)
     bool_weight = True
     bool_propagmv = False
+    bool_propagmvN = False
     bool_crosscov = False
     bool_tf = False
 
-    if bool_weight:
-        run_weight(fn.get_misc('w', simid=simid))
+    experiment = 'Planck'
+    simid=-1
+    for freqdset, mskset, spectype in itertools.product(["DX12"],['smica', "lens"],['JC', "pseudo"]):
+        csu = Config(experiment=experiment, freqdset=freqdset, mskset=mskset, spectrum_type=spectype)
+        # csu = Config(experiment=experiment)
+        fn = fn_gen(csu)
+        fns = fns_gen(csu)
+        io = IO(csu)
 
-    if bool_propagmv:
-        run_propag_mv()
+        lmaxp1 = csu.lmax+1
+        apo = csu.spectrum_type == 'pseudo'
+        tmask_fn = fn.get_mask('T', apodized=apo)
+        pmask_fn = fn.get_mask('P', apodized=apo)
+        tmask_sg = io.load_mask(tmask_fn)
+        pmask_sg = io.load_mask(pmask_fn)
+        tmask, pmask = dict(), dict()
+        for FREQ in csu.FREQ:
+            if FREQ not in csu.FREQFILTER:
+                tmask[FREQ] = tmask_sg
+                pmask[FREQ] = pmask_sg
 
-    if bool_crosscov:
-        run_mappsmica2crosscov()
+        if bool_weight:
+            run_weight(fn.get_misc('w', simid=simid), csu)
 
-    if bool_tf:
-        run_tf(io.fh.out_misc_path+"tf_{}".format(csu.binname) + "_" + filename)
+        if bool_propagmv:
+            run_propag_mv()
+            
+        if bool_propagmvN:
+            run_propag_mvN()
+
+        if bool_crosscov:
+            run_mappsmica2crosscov()
+
+        if bool_tf:
+            run_tf(io.fh.out_misc_path+"tf_{}".format(csu.binname) + "_" + filename)

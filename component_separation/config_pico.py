@@ -49,15 +49,15 @@ class Params:
     mskset = "lens"
     freqdset = "d90sim"
     spectrum_type = "JC"
-    lmax = 4000
-    lmax_mask = 6000
+    lmax = 1500
+    lmax_mask = 2500
     freqdatsplit = ""
     num_sim = 5
     binname = "SMICA_highell_bins"
     overwrite_cache = True
     simdata = True
     simid = 0
-    cutoff = 4000
+    cutoff = 1400
 
     specfilter = [
         "TB",
@@ -173,8 +173,8 @@ class d90sim:
             freq = freq,
             boloid = cls.boloid[np.where(np.array(cls.freq)==freq)[0][0]],
             nside = cls.nside,
-            simid = str(simid).zfill(4)
-        )
+            simid = str(simid).zfill(4))
+
 
     @classmethod
     def _get_noisedir(cls, freqdatsplit, freq):
@@ -189,8 +189,7 @@ class d90sim:
             freq = freq,
             boloid = cls.boloid[np.where(np.array(cls.freq)==freq)[0][0]],
             nside = cls.nside,
-            simid = str(simid).zfill(4)
-        )
+            simid = str(simid).zfill(4))
 
 
     def _get_cmbdir():
@@ -368,18 +367,18 @@ class Cutoff:
             62: cutoff,
             75: cutoff,
             90: cutoff,
-            108: cutoff,
-            129: cutoff,
-            155: cutoff,
-            186: cutoff,
-            223: cutoff,
-            268: cutoff,
-            321: cutoff,
-            385: cutoff,
-            462: cutoff,
-            555: cutoff,
-            666: cutoff,
-            799: cutoff
+            108: lmaxp1,
+            129: lmaxp1,
+            155: lmaxp1,
+            186: lmaxp1,
+            223: lmaxp1,
+            268: lmaxp1,
+            321: lmaxp1,
+            385: lmaxp1,
+            462: lmaxp1,
+            555: lmaxp1,
+            666: lmaxp1,
+            799: lmaxp1
     }
 
 class Asserter:

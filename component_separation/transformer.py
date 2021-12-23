@@ -93,7 +93,7 @@ def map2cl_ss(qumap, pmask: List, spin, lmax, lmax_mask) -> np.array:
 
     Args:
         qumap ([type]): [description]
-        pmask (List): [description]
+        pmask (np.array): [description]
         spin ([type]): [description]
         lmax ([type]): [description]
         lmax_mask ([type]): [description]
@@ -102,7 +102,7 @@ def map2cl_ss(qumap, pmask: List, spin, lmax, lmax_mask) -> np.array:
         np.array: [description]
     """
     retval = np.array([
-        ps.map2cl_spin(qumap=qumap, spin=spin, mask=pmask['100'], lmax=lmax-1, lmax_mask=lmax_mask)
+        ps.map2cl_spin(qumap=qumap, spin=spin, mask=pmask, lmax=lmax-1, lmax_mask=lmax_mask)
     ])
 
     return retval
